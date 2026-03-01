@@ -27,6 +27,94 @@ const CATEGORY_CODES = {
   'prop_other': 'PROP-O'
 };
 
+// ==================== ROLE-BASED ACCESS CONTROL ====================
+
+/**
+ * Role permission matrix.
+ * Each role lists the operations it can perform.
+ */
+const ROLE_PERMISSIONS = {
+  admin: ['*'],  // full access
+  manager: [
+    'read', 'create', 'update', 'delete',
+    'approve_discount', 'approve_credit_note', 'approve_cancellation',
+    'manage_staff', 'manage_rules', 'run_reports'
+  ],
+  staff: [
+    'read', 'create', 'update',
+    'process_check_in', 'process_check_out', 'create_rental', 'create_payment'
+  ],
+  viewer: ['read']
+};
+
+/**
+ * Get current logged-in staff member using Session.getActiveUser()
+ * @return {Object|null} Staff record or null
+ */
+function getCurrentUser() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) return null;
+    const staff = getSheetData('Staff').find(s =>
+      !s.is_deleted && s.active !== false && s.email === email
+    );
+    return staff || null;
+  } catch (e) {
+    Logger.log('getCurrentUser error: ' + e.toString());
+    return null;
+  }
+}
+
+/**
+ * Check if the current user has a specific permission
+ * @param {string} operation - The operation to check (e.g., 'create', 'approve_discount')
+ * @return {boolean}
+ */
+function checkPermission(operation) {
+  const user = getCurrentUser();
+  if (!user) return false;
+
+  const role = user.role || 'viewer';
+  const perms = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.viewer;
+
+  if (perms.includes('*')) return true;
+  return perms.includes(operation);
+}
+
+/**
+ * Require a specific permission; throw if not met.
+ * @param {string} operation
+ * @param {string} [message]
+ */
+function requirePermission(operation, message) {
+  if (!checkPermission(operation)) {
+    const user = getCurrentUser();
+    const role = user ? user.role : 'unknown';
+    throw new Error(message || `權限不足：角色「${role}」無法執行「${operation}」操作`);
+  }
+}
+
+/**
+ * Get current user info (exposed to frontend)
+ * @return {Object} User info with role and permissions
+ */
+function getCurrentUserInfo() {
+  const user = getCurrentUser();
+  if (!user) {
+    return { authenticated: false, role: 'viewer', permissions: ROLE_PERMISSIONS.viewer };
+  }
+  const role = user.role || 'viewer';
+  return {
+    authenticated: true,
+    staff_id: user.staff_id,
+    name: user.name,
+    email: user.email,
+    role: role,
+    can_approve_discount: user.can_approve_discount === true || user.can_approve_discount === 'true',
+    permissions: ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.viewer
+  };
+}
+
 /**
  * Main entry point for the web app
  */
@@ -52,41 +140,44 @@ function include(filename) {
  */
 
 /**
- * Generate internal equipment code (e.g., CAM-001)
+ * Generate internal equipment code (e.g., CAM-2026-001)
+ * Format: {category_code}-{year}-{3-digit seq}
+ * Sequence resets per category per year.
  */
 function generateInternalCode(categoryKey) {
   const prefix = CATEGORY_CODES[categoryKey] || 'GEN';
+  const year = new Date().getFullYear();
+  const yearPrefix = `${prefix}-${year}-`;
   const units = getSheetData('Equipment_Units');
 
   const codesByPrefix = units
-    .filter(u => u.internal_code && u.internal_code.startsWith(prefix))
+    .filter(u => u.internal_code && u.internal_code.startsWith(yearPrefix))
     .map(u => {
       const match = u.internal_code.match(/(\d+)$/);
       return match ? parseInt(match[1]) : 0;
     });
 
   const nextNum = (Math.max(...codesByPrefix, 0) + 1).toString().padStart(3, '0');
-  return `${prefix}-${nextNum}`;
+  return `${yearPrefix}${nextNum}`;
 }
 
 /**
- * Generate rental ID (RNT-YYYYMMDD-000X)
+ * Generate rental ID (RENT-YYYY-NNN)
  */
 function generateRentalId() {
-  const today = new Date();
-  const dateStr = Utilities.formatDate(today, 'Asia/Taipei', 'yyyyMMdd');
-
-  const rentals = getSheetData('Rentals');
-  const todayRentals = rentals.filter(r => r.rental_id && r.rental_id.includes(dateStr));
-
-  const nextNum = (todayRentals.length + 1).toString().padStart(4, '0');
-  return `RNT-${dateStr}-${nextNum}`;
+  return generateYearBasedId('Rentals', 'rental_id', 'RENT');
 }
 
 /**
- * Generic next ID generator
+ * Generic next ID generator with prefix and zero-padding
+ * @param {string} sheetName - Sheet name
+ * @param {string} idField - ID column name
+ * @param {string} prefix - ID prefix (e.g., 'ET', 'EU', 'CU')
+ * @param {number} padLength - Zero-padding length (default 3)
+ * @return {string} Formatted ID, e.g., 'ET-001'
  */
-function generateNextId(sheetName, idField) {
+function generateNextId(sheetName, idField, prefix, padLength) {
+  padLength = padLength || 3;
   const data = getSheetData(sheetName);
   const ids = data
     .filter(row => row[idField])
@@ -95,7 +186,36 @@ function generateNextId(sheetName, idField) {
       return match ? parseInt(match[1]) : 0;
     });
 
-  return Math.max(...ids, 0) + 1;
+  const nextNum = Math.max(...ids, 0) + 1;
+  if (prefix) {
+    return prefix + '-' + String(nextNum).padStart(padLength, '0');
+  }
+  return nextNum;
+}
+
+/**
+ * Generate year-based sequential ID (e.g., RENT-2026-001, CN-2026-001, SP-2026-001)
+ * @param {string} sheetName - Sheet name
+ * @param {string} idField - ID column name
+ * @param {string} prefix - ID prefix (e.g., 'RENT', 'CN', 'SP')
+ * @param {number} padLength - Zero-padding length (default 3)
+ * @return {string} Formatted ID
+ */
+function generateYearBasedId(sheetName, idField, prefix, padLength) {
+  padLength = padLength || 3;
+  const year = new Date().getFullYear();
+  const yearPrefix = prefix + '-' + year + '-';
+
+  const data = getSheetData(sheetName);
+  const yearIds = data
+    .filter(row => row[idField] && String(row[idField]).startsWith(yearPrefix))
+    .map(row => {
+      const match = String(row[idField]).match(/(\d+)$/);
+      return match ? parseInt(match[1]) : 0;
+    });
+
+  const nextNum = (Math.max(...yearIds, 0) + 1);
+  return yearPrefix + String(nextNum).padStart(padLength, '0');
 }
 
 /**
@@ -107,14 +227,24 @@ function getEquipmentTypes() {
 }
 
 function createEquipmentType(typeData) {
+  requirePermission('create', '無權限建立器材類型');
+
   const validation = validateEquipmentType(typeData);
   if (!validation.valid) {
     throw new Error(validation.errors.join(', '));
   }
 
-  typeData.type_id = 'TYPE-' + generateNextId('Equipment_Types', 'type_id');
+  const currentUser = getCurrentUser();
+  typeData.type_id = generateNextId('Equipment_Types', 'type_id', 'ET');
+  typeData.created_by = currentUser ? currentUser.staff_id : '';
   typeData.created_at = new Date();
   typeData.is_deleted = false;
+  // Schema-required defaults for missing fields
+  typeData.name = typeData.name || typeData.type_name;
+  typeData.replacement_value = typeData.replacement_value || 0;
+  typeData.is_consumable = typeData.is_consumable || false;
+  typeData.is_batch_item = typeData.is_batch_item || false;
+  typeData.active = typeData.active !== undefined ? typeData.active : true;
 
   return appendSheetRow('Equipment_Types', typeData);
 }
@@ -124,14 +254,23 @@ function updateEquipmentType(typeId, updates) {
 }
 
 function deleteEquipmentType(typeId) {
+  requirePermission('delete', '無權限刪除器材類型');
   return updateSheetRow('Equipment_Types', 'type_id', typeId, { is_deleted: true });
 }
 
 function validateEquipmentType(data) {
   const errors = [];
-  if (!data.type_name || data.type_name.trim() === '') errors.push('器材類型名稱必填');
+  // Schema uses 'name' but UI may send 'type_name'
+  if ((!data.name && !data.type_name) || (data.type_name || data.name || '').trim() === '') {
+    errors.push('器材類型名稱必填');
+  }
   if (!data.category || data.category.trim() === '') errors.push('分類必填');
-  if (data.daily_rate && isNaN(parseFloat(data.daily_rate))) errors.push('日租價格必須為數字');
+  if (!data.daily_rate || isNaN(parseFloat(data.daily_rate)) || parseFloat(data.daily_rate) < 0) {
+    errors.push('日租價格必填且為正數');
+  }
+  if (data.replacement_value !== undefined && data.replacement_value !== '' && isNaN(parseFloat(data.replacement_value))) {
+    errors.push('器材市值必須為數字');
+  }
 
   return {
     valid: errors.length === 0,
@@ -148,17 +287,22 @@ function getEquipmentUnits(filters = {}) {
 }
 
 function createEquipmentUnit(unitData) {
+  requirePermission('create', '無權限建立器材個體');
+
   const validation = validateEquipmentUnit(unitData);
   if (!validation.valid) {
     throw new Error(validation.errors.join(', '));
   }
 
+  const currentUser = getCurrentUser();
   const category = unitData.category || 'accessory';
   unitData.internal_code = generateInternalCode(category);
-  unitData.unit_id = 'UNIT-' + generateNextId('Equipment_Units', 'unit_id');
+  unitData.unit_id = generateNextId('Equipment_Units', 'unit_id', 'EU');
   unitData.created_at = new Date();
   unitData.is_deleted = false;
   unitData.status = 'available';
+  unitData.current_condition = unitData.current_condition || 'good';
+  unitData.created_by = currentUser ? currentUser.staff_id : '';
 
   return appendSheetRow('Equipment_Units', unitData);
 }
@@ -168,6 +312,7 @@ function updateEquipmentUnit(unitId, updates) {
 }
 
 function deleteEquipmentUnit(unitId) {
+  requirePermission('delete', '無權限刪除器材個體');
   return updateSheetRow('Equipment_Units', 'unit_id', unitId, { is_deleted: true });
 }
 
@@ -200,10 +345,13 @@ function createCustomer(customerData) {
     throw new Error(validation.errors.join(', '));
   }
 
-  customerData.customer_id = 'CUST-' + generateNextId('Customers', 'customer_id');
+  customerData.customer_id = generateNextId('Customers', 'customer_id', 'CU');
   customerData.created_at = new Date();
   customerData.is_deleted = false;
-  customerData.credit_balance = 0;
+  // Schema-required defaults
+  customerData.blacklisted = customerData.blacklisted || false;
+  customerData.id_doc_verified = customerData.id_doc_verified || false;
+  customerData.id_doc_return_status = customerData.id_doc_return_status || 'na';
 
   return appendSheetRow('Customers', customerData);
 }
@@ -213,15 +361,23 @@ function updateCustomer(customerId, updates) {
 }
 
 function deleteCustomer(customerId) {
+  requirePermission('delete', '無權限刪除客戶');
   return updateSheetRow('Customers', 'customer_id', customerId, { is_deleted: true });
 }
 
 function validateCustomer(data) {
   const errors = [];
-  if (!data.company_name || data.company_name.trim() === '') errors.push('公司名稱必填');
-  if (!data.contact_person || data.contact_person.trim() === '') errors.push('聯絡人必填');
+  // Schema requires 'name' (person name); company_name is optional
+  if (!data.name || data.name.trim() === '') {
+    // Fall back: if only company_name provided, use it as name
+    if (data.company_name && data.company_name.trim() !== '') {
+      data.name = data.name || data.company_name;
+    } else {
+      errors.push('租借人姓名必填');
+    }
+  }
   if (!data.phone || data.phone.trim() === '') errors.push('電話必填');
-  if (!data.email || !isValidEmail(data.email)) errors.push('電子郵件格式不正確');
+  if (data.email && !isValidEmail(data.email)) errors.push('電子郵件格式不正確');
 
   return {
     valid: errors.length === 0,
@@ -243,16 +399,37 @@ function getRentals(filters = {}) {
 }
 
 function createRental(rentalData) {
+  requirePermission('create_rental', '無權限建立租借單');
+
   const validation = validateRental(rentalData);
   if (!validation.valid) {
     throw new Error(validation.errors.join(', '));
   }
 
+  // Normalize date field names to match schema
+  rentalData.rental_start = rentalData.rental_start || rentalData.start_date;
+  rentalData.rental_end = rentalData.rental_end || rentalData.end_date;
+
   rentalData.rental_id = generateRentalId();
   rentalData.created_at = new Date();
+  rentalData.updated_at = new Date();
   rentalData.status = 'draft';
   rentalData.total_amount = 0;
   rentalData.paid_amount = 0;
+  rentalData.subtotal = 0;
+  rentalData.discount_total = 0;
+  rentalData.overdue_fee = 0;
+  rentalData.tax_rate = rentalData.tax_rate || 0.05;
+  rentalData.tax_amount = 0;
+  rentalData.deposit_status = rentalData.deposit_status || 'pending';
+  rentalData.contract_signed = rentalData.contract_signed || false;
+  rentalData.delivery_required = rentalData.delivery_required || false;
+  rentalData.invoice_required = rentalData.invoice_required || false;
+  rentalData.invoice_status = rentalData.invoice_required ? 'pending' : 'not_required';
+
+  const currentUser = getCurrentUser();
+  rentalData.prepared_by = rentalData.prepared_by || (currentUser ? currentUser.staff_id : '');
+  rentalData.handled_by = rentalData.handled_by || (currentUser ? currentUser.staff_id : '');
 
   return appendSheetRow('Rentals', rentalData);
 }
@@ -264,13 +441,22 @@ function updateRental(rentalId, updates) {
 function validateRental(data) {
   const errors = [];
   if (!data.customer_id || data.customer_id.trim() === '') errors.push('客戶必填');
-  if (!data.start_date) errors.push('開始日期必填');
-  if (!data.end_date) errors.push('結束日期必填');
+  if (!data.start_date && !data.rental_start) errors.push('開始日期必填');
+  if (!data.end_date && !data.rental_end) errors.push('結束日期必填');
 
-  const startDate = new Date(data.start_date);
-  const endDate = new Date(data.end_date);
+  const startDate = new Date(data.rental_start || data.start_date);
+  const endDate = new Date(data.rental_end || data.end_date);
   if (endDate <= startDate) {
     errors.push('結束日期必須晚於開始日期');
+  }
+
+  // C4: Blacklist check
+  if (data.customer_id) {
+    const customer = getSheetDataFiltered('Customers', { customer_id: data.customer_id })[0];
+    if (customer && (customer.blacklisted === true || customer.blacklisted === 'true' || customer.blacklisted === '1')) {
+      const reason = customer.blacklist_reason ? `（原因：${customer.blacklist_reason}）` : '';
+      errors.push(`此客戶已列入黑名單，無法建立租借單${reason}`);
+    }
   }
 
   return {
@@ -288,15 +474,44 @@ function getRentalItems(rentalId) {
 }
 
 function createRentalItem(itemData) {
-  itemData.rental_item_id = 'ITEM-' + generateNextId('Rental_Items', 'rental_item_id');
+  itemData.item_id = generateNextId('Rental_Items', 'item_id', 'RI');
   itemData.created_at = new Date();
   itemData.is_deleted = false;
+
+  // Snapshot rates from Equipment_Types at creation time
+  if (itemData.type_id) {
+    const type = getSheetDataFiltered('Equipment_Types', { type_id: itemData.type_id })[0];
+    if (type) {
+      itemData.daily_rate_snapshot = itemData.daily_rate_snapshot || parseFloat(type.daily_rate) || 0;
+      itemData.replacement_value_snapshot = itemData.replacement_value_snapshot || parseFloat(type.replacement_value) || 0;
+    }
+  }
+
+  // Calculate days from parent rental if not provided
+  if (!itemData.days && itemData.rental_id) {
+    const rental = getSheetDataFiltered('Rentals', { rental_id: itemData.rental_id })[0];
+    if (rental) {
+      const start = new Date(rental.rental_start || rental.start_date);
+      const end = new Date(rental.rental_end || rental.end_date);
+      itemData.days = calculateRentalDays(start, end);
+    }
+  }
+
+  // Calculate line_total
+  const rate = parseFloat(itemData.daily_rate_snapshot) || 0;
+  const qty = parseInt(itemData.quantity) || 1;
+  const days = parseInt(itemData.days) || 1;
+  itemData.line_total = Math.round(rate * qty * days);
+  itemData.line_total_after_discount = itemData.line_total;
+
+  // Set initial return status
+  itemData.return_status = itemData.return_status || 'with_customer';
 
   return appendSheetRow('Rental_Items', itemData);
 }
 
 function updateRentalItem(itemId, updates) {
-  return updateSheetRow('Rental_Items', 'rental_item_id', itemId, updates);
+  return updateSheetRow('Rental_Items', 'item_id', itemId, updates);
 }
 
 /**
@@ -308,14 +523,20 @@ function getPayments(filters = {}) {
 }
 
 function createPayment(paymentData) {
+  requirePermission('create_payment', '無權限建立付款紀錄');
+
   const validation = validatePayment(paymentData);
   if (!validation.valid) {
     throw new Error(validation.errors.join(', '));
   }
 
-  paymentData.payment_id = 'PAY-' + generateNextId('Payments', 'payment_id');
-  paymentData.payment_date = new Date();
+  const currentUser = getCurrentUser();
+  paymentData.payment_id = generateNextId('Payments', 'payment_id', 'PAY');
+  paymentData.payment_date = paymentData.payment_date || new Date();
   paymentData.is_deleted = false;
+  paymentData.received_by = paymentData.received_by || (currentUser ? currentUser.staff_id : '');
+  paymentData.receive_channel = paymentData.receive_channel || 'company_direct';
+  paymentData.relay_status = paymentData.receive_channel === 'staff_relay' ? 'pending' : 'na';
 
   // Update rental paid amount
   const rental = getSheetDataFiltered('Rentals', { rental_id: paymentData.rental_id })[0];
@@ -330,9 +551,14 @@ function createPayment(paymentData) {
 function validatePayment(data) {
   const errors = [];
   if (!data.rental_id || data.rental_id.trim() === '') errors.push('租借單必填');
-  if (!data.amount || isNaN(parseFloat(data.amount))) errors.push('金額必填且為數字');
-  if (parseFloat(data.amount) <= 0) errors.push('金額必須大於0');
+  if (data.amount === undefined || data.amount === null || data.amount === '' || isNaN(parseFloat(data.amount))) {
+    errors.push('金額必填且為數字');
+  } else if (parseFloat(data.amount) === 0) {
+    errors.push('金額不可為零');
+  }
+  // Note: negative amounts are valid for refunds and credit notes
   if (!data.payment_method || data.payment_method.trim() === '') errors.push('付款方式必填');
+  if (!data.payment_type || data.payment_type.trim() === '') errors.push('付款類型必填');
 
   return {
     valid: errors.length === 0,
@@ -349,7 +575,7 @@ function getMaintenanceLogs(filters = {}) {
 }
 
 function createMaintenanceLog(logData) {
-  logData.maintenance_id = 'MAINT-' + generateNextId('Maintenance_Logs', 'maintenance_id');
+  logData.log_id = generateNextId('Maintenance_Logs', 'log_id', 'ML');
   logData.logged_at = new Date();
   logData.is_deleted = false;
 
@@ -365,7 +591,7 @@ function getInventoryLogs(filters = {}) {
 }
 
 function createInventoryLog(logData) {
-  logData.inventory_log_id = 'INV-' + generateNextId('Inventory_Logs', 'inventory_log_id');
+  logData.log_id = generateNextId('Inventory_Logs', 'log_id', 'IL');
   logData.logged_at = new Date();
   logData.is_deleted = false;
 
@@ -381,7 +607,7 @@ function getStocktakePlans(filters = {}) {
 }
 
 function createStocktakePlan(planData) {
-  planData.stocktake_plan_id = 'ST-' + generateNextId('Stocktake_Plans', 'stocktake_plan_id');
+  planData.plan_id = generateYearBasedId('Stocktake_Plans', 'plan_id', 'SP');
   planData.created_at = new Date();
   planData.status = 'draft';
   planData.is_deleted = false;
@@ -394,7 +620,7 @@ function getStocktakeResults(planId) {
 }
 
 function createStocktakeResult(resultData) {
-  resultData.stocktake_result_id = 'STR-' + generateNextId('Stocktake_Results', 'stocktake_result_id');
+  resultData.result_id = generateNextId('Stocktake_Results', 'result_id', 'SR');
   resultData.recorded_at = new Date();
   resultData.is_deleted = false;
 
@@ -410,7 +636,7 @@ function getStaff(filters = {}) {
 }
 
 function createStaff(staffData) {
-  staffData.staff_id = 'STAFF-' + generateNextId('Staff', 'staff_id');
+  staffData.staff_id = generateNextId('Staff', 'staff_id', 'S');
   staffData.created_at = new Date();
   staffData.is_deleted = false;
 
@@ -435,8 +661,8 @@ function getDashboardStats() {
   const rentedUnits = equipmentUnits.filter(u => u.status === 'rented').length;
   const maintenanceUnits = equipmentUnits.filter(u => u.status === 'maintenance').length;
 
-  const activeRentals = rentals.filter(r => ['draft', 'confirmed', 'in_progress'].includes(r.status)).length;
-  const completedRentals = rentals.filter(r => r.status === 'completed').length;
+  const activeRentals = rentals.filter(r => ['draft', 'reserved', 'active', 'overdue'].includes(r.status)).length;
+  const completedRentals = rentals.filter(r => r.status === 'returned').length;
 
   const totalRevenue = rentals.reduce((sum, r) => sum + parseFloat(r.total_amount || 0), 0);
 
@@ -462,7 +688,7 @@ function getStorageLocations(filters = {}) {
 }
 
 function createStorageLocation(locationData) {
-  locationData.location_id = 'LOC-' + generateNextId('Storage_Locations', 'location_id');
+  locationData.location_id = generateNextId('Storage_Locations', 'location_id', 'LOC');
   locationData.created_at = new Date();
   locationData.is_deleted = false;
 
@@ -478,7 +704,7 @@ function getDiscountRules(filters = {}) {
 }
 
 function createDiscountRule(ruleData) {
-  ruleData.discount_rule_id = 'DISC-' + generateNextId('Discount_Rules', 'discount_rule_id');
+  ruleData.rule_id = generateNextId('Discount_Rules', 'rule_id', 'DR');
   ruleData.created_at = new Date();
   ruleData.is_deleted = false;
 
@@ -494,7 +720,7 @@ function getAccessoryBindings(filters = {}) {
 }
 
 function createAccessoryBinding(bindingData) {
-  bindingData.binding_id = 'BIND-' + generateNextId('Accessory_Bindings', 'binding_id');
+  bindingData.binding_id = generateNextId('Accessory_Bindings', 'binding_id', 'AB');
   bindingData.created_at = new Date();
   bindingData.is_deleted = false;
 
@@ -510,7 +736,7 @@ function getDamageRecords(filters = {}) {
 }
 
 function createDamageRecord(recordData) {
-  recordData.damage_id = 'DMG-' + generateNextId('Damage_Records', 'damage_id');
+  recordData.damage_id = generateNextId('Damage_Records', 'damage_id', 'DM');
   recordData.created_at = new Date();
   recordData.is_deleted = false;
 
@@ -526,7 +752,7 @@ function getCreditNotes(filters = {}) {
 }
 
 function createCreditNote(noteData) {
-  noteData.credit_note_id = 'CRED-' + generateNextId('Credit_Notes', 'credit_note_id');
+  noteData.credit_note_id = generateYearBasedId('Credit_Notes', 'credit_note_id', 'CN');
   noteData.created_at = new Date();
   noteData.is_deleted = false;
 

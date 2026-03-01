@@ -69,12 +69,60 @@
 
       // Discount Rules
       getDiscountRules: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getDiscountRules, filters),
+      createDiscountRule: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createDiscountRule, data),
 
       // Search and utilities
       searchEquipment: (query) => runAsync(google.script.run.withSuccessHandler(x => x).searchEquipment, query),
       getAvailableEquipment: (startDate, endDate) => runAsync(google.script.run.withSuccessHandler(x => x).getAvailableEquipment, startDate, endDate),
       calculateRentalTotal: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).calculateRentalTotal, rentalId),
       getOverdueRentals: () => runAsync(google.script.run.withSuccessHandler(x => x).getOverdueRentals),
+
+      // Rental workflow
+      advanceRentalStatus: (rentalId, newStatus, metadata) => runAsync(google.script.run.withSuccessHandler(x => x).advanceRentalStatus, rentalId, newStatus, metadata),
+      calculateRentalBreakdown: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).calculateRentalBreakdown, rentalId),
+      recalculateAndUpdateRental: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).recalculateAndUpdateRental, rentalId),
+      updateRentalItem: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateRentalItem, id, data),
+
+      // Service Items
+      getServiceItems: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).getServiceItems, rentalId),
+      createServiceItem: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createServiceItem, data),
+      updateServiceItem: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateServiceItem, id, data),
+      deleteServiceItem: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteServiceItem, id),
+
+      // Rental Addendums
+      getRentalAddendums: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).getRentalAddendums, rentalId),
+      createRentalAddendum: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createRentalAddendum, data),
+
+      // Damage Records
+      getDamageRecords: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getDamageRecords, filters),
+      createDamageRecord: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createDamageRecord, data),
+
+      // Credit Notes
+      getCreditNotes: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getCreditNotes, filters),
+      createCreditNote: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createCreditNote, data),
+
+      // Accessory Bindings
+      getAccessoryBindings: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getAccessoryBindings, filters),
+      createAccessoryBinding: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createAccessoryBinding, data),
+
+      // Overdue & Wear Rules
+      getOverdueRules: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getOverdueRules, filters),
+      createOverdueRule: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createOverdueRule, data),
+      getWearTolerance: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getWearTolerance, filters),
+      createWearTolerance: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createWearTolerance, data),
+
+      // Print Templates
+      getPrintTemplates: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getPrintTemplates, filters),
+      createPrintTemplate: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createPrintTemplate, data),
+
+      // Check-in/out
+      processEquipmentCheckIn: (data) => runAsync(google.script.run.withSuccessHandler(x => x).processEquipmentCheckIn, data),
+
+      // Staff
+      updateStaff: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateStaff, id, data),
+
+      // Auth / User Info
+      getCurrentUserInfo: () => runAsync(google.script.run.withSuccessHandler(x => x).getCurrentUserInfo),
     };
 
     /**

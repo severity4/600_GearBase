@@ -287,7 +287,7 @@ function getEquipmentWithLocations() {
  * @return {number} Total revenue
  */
 function calculateTotalRevenue(startDate = null, endDate = null) {
-  let rentals = getSheetData('Rentals').filter(r => !r.is_deleted && r.status === 'completed');
+  let rentals = getSheetData('Rentals').filter(r => !r.is_deleted && r.status === 'returned');
 
   if (startDate) {
     rentals = rentals.filter(r => new Date(r.return_date) >= new Date(startDate));
@@ -339,7 +339,7 @@ function getEquipmentMaintenanceHistory(unitId) {
 function getEquipmentUsageStats() {
   const types = getSheetData('Equipment_Types').filter(t => !t.is_deleted);
   const units = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
-  const rentals = getSheetData('Rentals').filter(r => !r.is_deleted && r.status === 'completed');
+  const rentals = getSheetData('Rentals').filter(r => !r.is_deleted && r.status === 'returned');
   const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
 
   return types.map(type => {
@@ -369,8 +369,8 @@ function getOverdueRentals() {
 
   return getSheetData('Rentals').filter(r =>
     !r.is_deleted &&
-    ['confirmed', 'in_progress'].includes(r.status) &&
-    new Date(r.end_date) < today
+    ['active', 'overdue'].includes(r.status) &&
+    new Date(r.rental_end || r.end_date) < today
   );
 }
 

@@ -1,6 +1,6 @@
 # 映奧創意工作室 — 器材管理與租賃 App Schema（最終版）
 
-> **版本：** v1.1
+> **版本：** v1.2
 > **日期：** 2026-03-01
 > **平台：** Google Workspace (Sheets + Forms + Docs + Apps Script + Drive)
 
@@ -30,9 +30,11 @@
 20. [列印範本 Print_Templates](#20-列印範本-print_templates)
 21. [盤點計畫 Stocktake_Plans](#21-盤點計畫-stocktake_plans)
 22. [盤點結果明細 Stocktake_Results](#22-盤點結果明細-stocktake_results)
-23. [資料關聯圖](#23-資料關聯圖)
-24. [Google Workspace 對應實作](#24-google-workspace-對應實作)
-25. [設計決策紀錄](#25-設計決策紀錄)
+23. [場地 Venues](#23-場地-venues)
+24. [場地預約 Venue_Bookings](#24-場地預約-venue_bookings)
+25. [資料關聯圖](#25-資料關聯圖)
+26. [Google Workspace 對應實作](#26-google-workspace-對應實作)
+27. [設計決策紀錄](#27-設計決策紀錄)
 
 ---
 
@@ -61,6 +63,8 @@
 | 19 | Print_Templates | 列印範本（租借明細、點檢單、收據、賠償明細） |
 | 20 | Stocktake_Plans | 盤點計畫（定期/循環/抽盤排程管理） |
 | 21 | Stocktake_Results | 盤點結果明細（帳實比對與差異處理） |
+| 22 | Venues | 場地定義（攝影棚、會議室、戶外場地等） |
+| 23 | Venue_Bookings | 場地預約/租借紀錄 |
 
 ---
 
@@ -384,8 +388,9 @@ draft → reserved → active → returned
 | 欄位 | 類型 | 必填 | 說明 |
 |------|------|------|------|
 | `service_item_id` | String (PK) | ✅ | 服務明細 ID |
-| `rental_id` | String (FK) | ✅ | 對應租借單 |
-| `service_type` | Enum | ✅ | `teaching`(教學指導) / `delivery`(運送) / `setup`(架設) / `pickup`(到府取件) / `insurance`(保險加購) / `other`(其他) |
+| `rental_id` | String (FK) | | 對應器材租借單（器材相關服務時填寫） |
+| `booking_id` | String (FK) | | 對應場地預約（場地相關服務時填寫）。rental_id 與 booking_id 至少填一個 |
+| `service_type` | Enum | ✅ | `teaching`(教學指導) / `delivery`(運送) / `setup`(架設) / `pickup`(到府取件) / `insurance`(保險加購) / `venue_setup`(場地佈置) / `venue_cleanup`(場地清潔) / `catering`(餐飲服務) / `other`(其他) |
 | `description` | String | ✅ | 服務內容說明 |
 | `quantity` | Number | ✅ | 數量（例如教學 2 小時） |
 | `unit` | String | ✅ | 單位（例如「小時」「趟」「組」） |
@@ -531,8 +536,9 @@ draft → reserved → active → returned
 | 欄位 | 類型 | 必填 | 說明 |
 |------|------|------|------|
 | `credit_note_id` | String (PK) | ✅ | 折讓單 ID，例如 `CN-2026-001` |
-| `rental_id` | String (FK) | ✅ | 對應租借單 |
-| `credit_type` | Enum | ✅ | `equipment_malfunction`(器材故障折讓) / `early_return`(提前歸還退費) / `service_issue`(服務瑕疵) / `goodwill`(善意折讓) / `deposit_deduction`(押金扣抵後退還) / `overcharge`(多收退還) / `other`(其他) |
+| `rental_id` | String (FK) | | 對應器材租借單（器材相關折讓時填寫） |
+| `booking_id` | String (FK) | | 對應場地預約（場地相關折讓時填寫）。rental_id 與 booking_id 至少填一個 |
+| `credit_type` | Enum | ✅ | `equipment_malfunction`(器材故障折讓) / `early_return`(提前歸還退費) / `service_issue`(服務瑕疵) / `venue_issue`(場地問題折讓) / `goodwill`(善意折讓) / `deposit_deduction`(押金扣抵後退還) / `overcharge`(多收退還) / `other`(其他) |
 | `related_item_id` | String (FK) | | 對應的租借明細 item_id（若針對特定器材） |
 | `related_damage_id` | String (FK) | | 對應的損壞紀錄（若因器材問題給折讓） |
 | `original_amount` | Number | ✅ | 原始應收金額 (NT$) |
@@ -579,8 +585,9 @@ draft → reserved → active → returned
 | 欄位 | 類型 | 必填 | 說明 |
 |------|------|------|------|
 | `payment_id` | String (PK) | ✅ | 付款 ID |
-| `rental_id` | String (FK) | ✅ | 對應租借單 |
-| `payment_type` | Enum | ✅ | `deposit`(押金) / `rental_fee`(租金) / `overdue_fee`(逾期費) / `damage_fee`(賠償金) / `deposit_refund`(押金退還) / `refund`(退款) / `credit_note`(折讓) |
+| `rental_id` | String (FK) | | 對應器材租借單（器材租借付款時填寫） |
+| `booking_id` | String (FK) | | 對應場地預約（場地租借付款時填寫）。rental_id 與 booking_id 至少填一個 |
+| `payment_type` | Enum | ✅ | `deposit`(押金) / `rental_fee`(租金) / `venue_fee`(場地費) / `overdue_fee`(逾期費) / `damage_fee`(賠償金) / `deposit_refund`(押金退還) / `refund`(退款) / `credit_note`(折讓) / `overtime_fee`(場地超時費) |
 | `amount` | Number | ✅ | 金額 (NT$)（收入為正數，退款/折讓為負數） |
 | `credit_note_id` | String (FK) | | 對應折讓單（當 payment_type = credit_note 或 refund 時填寫） |
 | `payment_method` | Enum | ✅ | `cash`(現金) / `transfer`(轉帳) / `credit_card`(信用卡) / `line_pay` / `other` |
@@ -880,14 +887,196 @@ draft → reserved → active → returned
 
 ---
 
-## 23. 資料關聯圖
+## 23. 場地 Venues
 
-> 含盤點系統的關聯
+> 管理可出租的場地空間，例如攝影棚、會議室、活動場地等。
+> 場地可獨立出租，也可搭配器材租借一起預約（透過 Venue_Bookings.rental_id 關聯）。
+
+| 欄位 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `venue_id` | String (PK) | ✅ | 場地 ID，例如 `VN-001` |
+| `name` | String | ✅ | 場地名稱，例如「A 攝影棚」「3F 會議室」 |
+| `venue_type` | Enum | ✅ | `studio`(攝影棚) / `meeting_room`(會議室) / `event_space`(活動場地) / `outdoor`(戶外場地) / `warehouse`(倉庫空間) / `other`(其他) |
+| `address` | String | ✅ | 場地地址 |
+| `floor` | String | | 樓層，例如 `1F`、`B1` |
+| `floor_area_sqm` | Number | | 面積（平方公尺） |
+| `max_capacity` | Number | ✅ | 最大容納人數 |
+| `hourly_rate` | Number | ✅ | 時租費 (NT$/小時) |
+| `half_day_rate` | Number | | 半日租費 (NT$/4小時)，NULL = 不提供半日租 |
+| `daily_rate` | Number | | 日租費 (NT$/天)，NULL = 不提供日租 |
+| `overtime_hourly_rate` | Number | | 超時費率 (NT$/小時)，預設同 hourly_rate |
+| `deposit_required` | Number | | 建議押金 (NT$) |
+| `min_booking_hours` | Number | ✅ | 最低預約時數，例如 `2` |
+| `available_start_time` | String | ✅ | 可預約開始時間，例如 `09:00` |
+| `available_end_time` | String | ✅ | 可預約結束時間，例如 `22:00` |
+| `amenities` | String | | 場地設備（逗號分隔），例如「冷氣,投影機,白板,Wi-Fi,化妝間,更衣室」 |
+| `power_specs` | String | | 電力規格，例如「三相電 60A、獨立迴路 ×4」 |
+| `ceiling_height_m` | Number | | 天花板高度（公尺），攝影棚重要參數 |
+| `has_cyclorama` | Boolean | | 是否有無縫背景牆（Cyclorama / 圓弧牆） |
+| `cyclorama_color` | String | | 無縫牆顏色，例如「白色」「綠幕」 |
+| `has_blackout` | Boolean | | 是否可全遮光（攝影棚用） |
+| `has_loading_dock` | Boolean | | 是否有卸貨區/車道（大型道具進出） |
+| `parking_info` | String | | 停車資訊，例如「地下停車場 5 格、卸貨區可臨停」 |
+| `rules` | String | | 場地使用規範，例如「禁菸、禁食、21:00 後降低音量」 |
+| `description` | String | | 場地詳細描述 |
+| `image_urls` | String | | 場地照片（逗號分隔 Google Drive 連結） |
+| `floor_plan_url` | String | | 場地平面圖 (Google Drive) |
+| `location_id` | String (FK) | | 對應 Storage_Locations 位置（若場地在倉庫/辦公室內） |
+| `active` | Boolean | ✅ | 是否開放預約 |
+| `notes` | String | | 備註 |
+| `created_by` | String (FK) | ✅ | 建立人員（FK → Staff） |
+| `created_at` | Date | ✅ | 建立日期 |
+
+### 場地類型說明
+
+| venue_type 值 | 說明 | 常見用途 |
+|--------------|------|---------|
+| `studio` | 攝影棚 | 商業攝影、影片拍攝、直播 |
+| `meeting_room` | 會議室 | 前期會議、試鏡、讀本 |
+| `event_space` | 活動場地 | 發表會、記者會、小型展覽 |
+| `outdoor` | 戶外場地 | 外景拍攝、戶外活動 |
+| `warehouse` | 倉庫空間 | 大型場景搭建、道具製作 |
+| `other` | 其他 | 未分類場地 |
+
+### 場地範例
+
+```
+VN-001 A 攝影棚（studio）
+  - 50 坪 / 天花板高 4.5m / 白色圓弧牆
+  - 三相電 60A / 可全遮光
+  - 時租 NT$2,000 / 半日 NT$7,000 / 日租 NT$12,000
+
+VN-002 B 攝影棚（studio）
+  - 30 坪 / 天花板高 3.5m / 綠幕
+  - 時租 NT$1,500 / 半日 NT$5,000 / 日租 NT$8,000
+
+VN-003 3F 會議室（meeting_room）
+  - 15 坪 / 容納 12 人
+  - 投影機 + 白板 + Wi-Fi
+  - 時租 NT$500
+
+VN-004 頂樓露台（outdoor）
+  - 80 坪 / 無遮雨棚
+  - 時租 NT$1,000 / 日租 NT$6,000
+```
+
+---
+
+## 24. 場地預約 Venue_Bookings
+
+> 記錄場地的預約與使用紀錄。場地預約可獨立存在，也可透過 rental_id 與器材租借單關聯（場地 + 器材一起租）。
+> 支援時租、半日租、日租等計費方式。付款透過 Payments 表記錄（Payments.booking_id 關聯）。
+
+| 欄位 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `booking_id` | String (PK) | ✅ | 預約 ID，例如 `VB-2026-001`（年份+流水號，自動產生） |
+| `venue_id` | String (FK) | ✅ | 對應場地 |
+| `customer_id` | String (FK) | ✅ | 對應客戶 |
+| `rental_id` | String (FK) | | 對應器材租借單（場地 + 器材一起租時填寫，可為空） |
+| `booking_start` | Timestamp | ✅ | 預約開始時間（含日期和時間） |
+| `booking_end` | Timestamp | ✅ | 預約結束時間（含日期和時間） |
+| `actual_start` | Timestamp | | 實際開始使用時間 |
+| `actual_end` | Timestamp | | 實際結束使用時間 |
+| `total_hours` | Number | | 預約時數（自動計算） |
+| `overtime_hours` | Number | | 超時時數 |
+| `rate_type` | Enum | ✅ | `hourly`(時租) / `half_day`(半日租) / `daily`(日租) / `custom`(自訂) |
+| `unit_rate` | Number | ✅ | 適用費率快照 (NT$)（依 rate_type 從 Venues 帶入） |
+| `rate_quantity` | Number | ✅ | 費率數量（例如 3 小時、2 天） |
+| `subtotal` | Number | | 小計 (NT$) |
+| `overtime_fee` | Number | | 超時費用 (NT$) |
+| `discount_amount` | Number | | 折扣金額 (NT$) |
+| `tax_rate` | Number | ✅ | 稅率，預設 `0.05`（5%） |
+| `tax_amount` | Number | | 營業稅 (NT$) |
+| `total_amount` | Number | | 合計應付金額 (NT$) |
+| `deposit_amount` | Number | | 押金金額 (NT$) |
+| `deposit_status` | Enum | ✅ | `pending` / `received` / `returned` / `deducted` |
+| `attendee_count` | Number | | 預計使用人數 |
+| `use_purpose` | String | | 使用目的，例如「商品攝影」「企業形象影片拍攝」 |
+| `setup_required` | Boolean | ✅ | 是否需要場地佈置 |
+| `setup_notes` | String | | 佈置需求說明（例如「需搬入沙發組、背景架」） |
+| `cleanup_included` | Boolean | ✅ | 是否包含清潔服務 |
+| `special_requirements` | String | | 特殊需求（例如「需全遮光」「需額外電力迴路」） |
+| `contract_url` | String | | 場地租借合約 PDF (Google Drive) |
+| `contract_signed` | Boolean | ✅ | 合約是否已簽署 |
+| `invoice_required` | Boolean | ✅ | 是否需要開立發票 |
+| `invoice_status` | Enum | ✅ | `not_required` / `pending` / `issued` / `voided` |
+| `invoice_number` | String | | 發票號碼 |
+| `invoice_url` | String | | 發票檔案連結 (Google Drive) |
+| `prepared_by` | String (FK) | ✅ | 場地準備人員（FK → Staff） |
+| `handled_by` | String (FK) | ✅ | 當天承辦人員（FK → Staff） |
+| `approved_by` | String (FK) | | 核准人（如有折扣需主管核准） |
+| `status` | Enum | ✅ | `draft` / `reserved` / `confirmed` / `active` / `completed` / `cancelled` |
+| `cancellation_date` | Date | | 取消日期 |
+| `cancellation_reason` | String | | 取消原因 |
+| `cancellation_fee` | Number | | 取消手續費 (NT$) |
+| `post_use_condition` | String | | 使用後場地狀況描述 |
+| `post_use_photos` | String | | 使用後照片（逗號分隔 Google Drive 連結） |
+| `damage_description` | String | | 場地損壞描述（若有） |
+| `damage_fee` | Number | | 場地損壞費用 (NT$) |
+| `notes` | String | | 備註 |
+| `created_at` | Timestamp | ✅ | 建立時間 |
+| `updated_at` | Timestamp | ✅ | 最後更新時間 |
+
+### 狀態流程
+
+```
+draft → reserved → confirmed → active → completed
+                       ↓
+                    cancelled
+         ↓
+      cancelled
+```
+
+- **draft：** 初步建立，尚未確認
+- **reserved：** 已預約（時段已鎖定），等待客戶確認/付訂金
+- **confirmed：** 已確認（已付訂金或簽約），確定使用
+- **active：** 使用中（當天）
+- **completed：** 已完成使用，等待結算
+- **cancelled：** 已取消
+
+### 計費方式說明
+
+| rate_type | 計算方式 | 範例 |
+|-----------|---------|------|
+| `hourly` | unit_rate × rate_quantity | NT$2,000/hr × 3hr = NT$6,000 |
+| `half_day` | unit_rate × rate_quantity | NT$7,000/半日 × 1 = NT$7,000 |
+| `daily` | unit_rate × rate_quantity | NT$12,000/天 × 2天 = NT$24,000 |
+| `custom` | 自訂總價（特殊協議） | 與客戶另行議價 |
+
+### 場地 + 器材聯合租借範例
+
+```
+情境：客戶預約 A 攝影棚拍攝廣告，同時租借攝影器材
+
+1. 建立 Venue_Booking（VB-2026-001）
+   ├── venue_id: VN-001（A 攝影棚）
+   ├── booking_start: 2026-03-15 09:00
+   ├── booking_end: 2026-03-15 18:00
+   ├── rate_type: daily
+   └── rental_id: RENT-2026-005（關聯器材租借單）
+
+2. 建立 Rental（RENT-2026-005）
+   ├── Rental_Items: Chronos 攝影機 + Nikon 鏡頭 + 燈光
+   └── Service_Items: 攝影教學 2hr
+
+3. 付款
+   ├── PAY-010: 場地押金（booking_id: VB-2026-001）
+   ├── PAY-011: 器材押金（rental_id: RENT-2026-005）
+   └── PAY-012: 場地租金 + 器材租金（booking_id + rental_id）
+```
+
+---
+
+## 25. 資料關聯圖
+
+> 含盤點系統與場地租借的關聯
 
 ```
 Storage_Locations ──< Storage_Locations (parent 階層)
        │
-       └──< Equipment_Units (存放位置)
+       ├──< Equipment_Units (存放位置)
+       │
+       └──< Venues (場地位置，選填)
 
 Equipment_Types ──< Equipment_Units
        │                    │
@@ -902,24 +1091,40 @@ Equipment_Types ──< Equipment_Units
        └── Discount_Rules (by type/category)
 
 Customers ──< Rentals ──< Rental_Items ──> Equipment_Types
-                │              │                    │
-                │              │              Equipment_Units
-                │              │
-                ├── Service_Items (服務項目)
-                │
-                ├── Rental_Addendums (附約)
-                │
-                ├── Damage_Records ──> Equipment_Units
-                │
-                ├── Credit_Notes (折讓/退款) ──> Damage_Records
-                │        │
-                │        └──> Payments (核准後自動建立負數 Payment)
-                │
-                ├── Payments (多筆，含退款)
-                │
-                ├── Overdue_Rules (計算逾期費)
-                │
-                └── Staff (prepared_by / handled_by / approved_by)
+    │           │              │                    │
+    │           │              │              Equipment_Units
+    │           │              │
+    │           ├── Service_Items (服務項目) <── Venue_Bookings (場地服務)
+    │           │
+    │           ├── Rental_Addendums (附約)
+    │           │
+    │           ├── Damage_Records ──> Equipment_Units
+    │           │
+    │           ├── Credit_Notes (折讓/退款) ──> Damage_Records
+    │           │        │                  <── Venue_Bookings (場地折讓)
+    │           │        └──> Payments (核准後自動建立負數 Payment)
+    │           │
+    │           ├── Payments (多筆，含退款) <── Venue_Bookings (場地付款)
+    │           │
+    │           ├── Overdue_Rules (計算逾期費)
+    │           │
+    │           └── Staff (prepared_by / handled_by / approved_by)
+    │
+    └──< Venue_Bookings ──> Venues
+              │                │
+              ├── rental_id ──> Rentals（場地+器材聯合租借，選填）
+              │
+              ├── Payments (booking_id，場地付款)
+              │
+              ├── Service_Items (booking_id，場地服務)
+              │
+              ├── Credit_Notes (booking_id，場地折讓)
+              │
+              └── Staff (prepared_by / handled_by / approved_by)
+
+Venues ──< Venue_Bookings
+   │
+   └── Storage_Locations (location_id，選填)
 
 Print_Templates ──> Rentals (rental_detail PDF)
                ──> Inventory_Logs (checklist PDF)
@@ -940,11 +1145,13 @@ Staff ──> Rentals
      ──> Storage_Locations (responsible_staff)
      ──> Stocktake_Plans (assigned_to / supervised_by / created_by)
      ──> Stocktake_Results (counted_by / resolved_by)
+     ──> Venues (created_by)
+     ──> Venue_Bookings (prepared_by / handled_by / approved_by)
 ```
 
 ---
 
-## 24. Google Workspace 對應實作
+## 26. Google Workspace 對應實作
 
 | Schema 表 | Google 工具 | 說明 |
 |-----------|------------|------|
@@ -969,13 +1176,15 @@ Staff ──> Rentals
 | Print_Templates | Google Sheets + Docs + Apps Script + Drive | 範本管理 + 套印產生 PDF + 存檔 |
 | Stocktake_Plans | Google Sheets + Apps Script | 盤點計畫排程 + 自動產生待盤清單 |
 | Stocktake_Results | Google Sheets + Forms + Drive + Apps Script | 盤點結果填報（可用 Forms）+ 照片 + 差異報告 PDF |
+| Venues | Google Sheets + Drive | 場地資料 + 照片/平面圖 |
+| Venue_Bookings | Google Sheets + Apps Script + Docs | 場地預約 + 自動編號 + 合約產生 |
 | 合約產生 | Google Docs + Apps Script | 範本套印 → PDF → Drive |
 | 租借申請入口 | Google Forms → Sheets | 客戶線上申請 |
 | 電子簽署 | Google Forms / Docs | 線上確認簽署 |
 
 ---
 
-## 25. 設計決策紀錄
+## 27. 設計決策紀錄
 
 | # | 議題 | 決策 | 原因 |
 |---|------|------|------|
@@ -1011,3 +1220,9 @@ Staff ──> Rentals
 | 30 | 運送地址 | Rentals 加入 delivery 欄位群 + Service_Items 加入 service_address | 運送服務需客戶填寫地址與現場聯絡人，個別服務可指定不同地點 |
 | 31 | 登記人員追蹤 | Equipment_Types 與 Equipment_Units 加入 created_by (FK → Staff) | 追蹤每筆器材類型與個體資料是由哪位員工建立的，便於稽核與問題追溯 |
 | 32 | 盤點系統 | 新增 Stocktake_Plans + Stocktake_Results 兩張表 | 分層盤點（高價月盤、中價季盤、道具半年盤）+ 年度全面盤點，記錄帳實差異與處理結果，支援循環盤點與抽盤 |
+| 33 | 場地出租 | 新增 Venues + Venue_Bookings 兩張表 | 場地與器材為不同業務類型，獨立管理但可透過 rental_id 聯合租借 |
+| 34 | 場地計費方式 | Venue_Bookings 支援 hourly/half_day/daily/custom 四種費率 | 攝影棚租借通常以時段計費，需彈性支援不同計費方式 |
+| 35 | 場地+器材聯合租借 | Venue_Bookings.rental_id（選填）關聯器材租借單 | 客戶常場地+器材一起租，透過選填 FK 鬆耦合兩種訂單，各自獨立管理但可追蹤關聯 |
+| 36 | 場地付款/服務/折讓 | Payments、Service_Items、Credit_Notes 加入 booking_id FK | 複用既有表結構，避免為場地重複建立付款/服務/折讓表，rental_id 與 booking_id 至少填一個 |
+| 37 | 場地超時費 | Venue_Bookings 記錄 overtime_hours + overtime_fee | 攝影棚常有超時情況，需獨立追蹤超時時數與費用 |
+| 38 | 攝影棚專用欄位 | Venues 加入 ceiling_height、cyclorama、blackout 等欄位 | 攝影棚有特殊需求（天花板高度、圓弧牆、遮光能力），需記錄以供客戶參考與搜尋 |
