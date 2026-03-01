@@ -399,9 +399,14 @@ function getCurrentUser() {
   try {
     const email = Session.getActiveUser().getEmail();
     if (!email) return null;
-    const staff = getSheetData('Staff').find(s =>
-      !s.is_deleted && s.active !== false && s.email === email
-    );
+    const emailLower = email.toLowerCase().trim();
+    const staff = getSheetData('Staff').find(s => {
+      const deleted = s.is_deleted;
+      if (deleted === true || deleted === 'true' || deleted === 'TRUE') return false;
+      const active = s.active;
+      if (active === false || active === 'false' || active === 'FALSE') return false;
+      return String(s.email || '').toLowerCase().trim() === emailLower;
+    });
     return staff || null;
   } catch (e) {
     Logger.log('getCurrentUser error: ' + e.toString());
