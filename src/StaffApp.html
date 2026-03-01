@@ -1137,27 +1137,27 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label required">租借人姓名</label>
-                <input type="text" id="new-cust-name" class="form-input" placeholder="姓名">
+                <input type="text" id="new-cust-name" class="form-input" placeholder="例如：王小明">
               </div>
               <div class="form-group">
                 <label class="form-label">公司名稱</label>
-                <input type="text" id="new-cust-company" class="form-input" placeholder="公司（選填）">
+                <input type="text" id="new-cust-company" class="form-input" placeholder="選填">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label required">電話</label>
-                <input type="tel" id="new-cust-phone" class="form-input" placeholder="電話">
+                <input type="tel" id="new-cust-phone" class="form-input" placeholder="例如：0912-345-678">
               </div>
               <div class="form-group">
                 <label class="form-label">電郵</label>
-                <input type="email" id="new-cust-email" class="form-input" placeholder="email（選填）">
+                <input type="email" id="new-cust-email" class="form-input" placeholder="例如：name@example.com">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">身分證/統編</label>
-                <input type="text" id="new-cust-id-number" class="form-input" placeholder="選填">
+                <input type="text" id="new-cust-id-number" class="form-input" placeholder="例如：A123456789 或 12345678">
               </div>
               <div class="form-group">
                 <label class="form-label">備註</label>
@@ -1197,6 +1197,7 @@
         panel.style.display = 'block';
         select.removeAttribute('required');
         select.value = '';
+        attachCustomerValidation('#inline-customer-form', 'new-cust');
       } else {
         panel.style.display = 'none';
         select.setAttribute('required', '');
@@ -1207,16 +1208,26 @@
       const name = document.getElementById('new-cust-name').value.trim();
       const phone = document.getElementById('new-cust-phone').value.trim();
 
-      if (!name) { showError('租借人姓名必填'); return; }
-      if (!phone) { showError('電話必填'); return; }
+      // Validate using shared logic
+      const errors = [];
+      if (!name) errors.push('租借人姓名必填');
+      else if (name.length < 2) errors.push('姓名至少需要 2 個字');
+      if (!phone) errors.push('電話必填');
+      else if (!isValidPhone(phone)) errors.push('請輸入有效的台灣電話號碼（例如 0912-345-678）');
 
-      const custData = { name, phone };
-      const company = document.getElementById('new-cust-company').value.trim();
       const email = document.getElementById('new-cust-email').value.trim();
+      if (email && !isValidEmail(email)) errors.push('電子郵件格式不正確');
+
       const idNumber = document.getElementById('new-cust-id-number').value.trim();
+      if (idNumber && !isValidIdNumber(idNumber)) errors.push('身分證字號或統一編號格式不正確');
+
+      if (errors.length > 0) { showError(errors[0]); return; }
+
+      const custData = { name, phone: formatPhone(phone) };
+      const company = document.getElementById('new-cust-company').value.trim();
       const notes = document.getElementById('new-cust-notes').value.trim();
       if (company) custData.company_name = company;
-      if (email) custData.email = email;
+      if (email) custData.email = email.toLowerCase();
       if (idNumber) custData.id_number = idNumber;
       if (notes) custData.notes = notes;
 
@@ -2042,27 +2053,27 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">租借人姓名</label>
-              <input type="text" name="name" class="form-input" required>
+              <input type="text" name="name" class="form-input" required placeholder="例如：王小明">
             </div>
             <div class="form-group">
               <label class="form-label">公司名稱</label>
-              <input type="text" name="company_name" class="form-input">
+              <input type="text" name="company_name" class="form-input" placeholder="選填">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
-              <input type="tel" name="phone" class="form-input" required>
+              <input type="tel" name="phone" class="form-input" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
               <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input">
+              <input type="email" name="email" class="form-input" placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">身分證/統編</label>
-              <input type="text" name="id_number" class="form-input">
+              <input type="text" name="id_number" class="form-input" placeholder="例如：A123456789 或 12345678">
             </div>
             <div class="form-group">
               <label class="form-label">證件驗證</label>
@@ -2083,19 +2094,24 @@
       `);
 
       modal.open();
+      attachCustomerValidation('#customer-form', 'cust');
     }
 
     async function saveCustomer(e) {
       const form = document.getElementById('customer-form');
-      const validation = validateForm(form);
+      const errors = validateCustomerForm(form);
 
-      if (!validation.valid) {
-        showError(validation.errors[0]);
+      if (errors.length > 0) {
+        showError(errors[0]);
         return;
       }
 
       try {
         const data = getFormData(form);
+        // Ensure consistent formatting
+        if (data.phone) data.phone = formatPhone(data.phone);
+        if (data.email) data.email = data.email.trim().toLowerCase();
+        if (data.id_number) data.id_number = data.id_number.trim();
         await API.createCustomer(data);
         showSuccess('客戶已新增');
         document.querySelector('.modal-overlay').remove();
@@ -2103,6 +2119,35 @@
       } catch (error) {
         showError('保存失敗: ' + error.message);
       }
+    }
+
+    /**
+     * Validate customer form fields before submission
+     */
+    function validateCustomerForm(form) {
+      const errors = [];
+      const name = (form.querySelector('[name="name"]') || form.querySelector('#new-cust-name'));
+      const phone = (form.querySelector('[name="phone"]') || form.querySelector('#new-cust-phone'));
+      const email = (form.querySelector('[name="email"]') || form.querySelector('#new-cust-email'));
+      const idNum = (form.querySelector('[name="id_number"]') || form.querySelector('#new-cust-id-number'));
+
+      if (name) {
+        const v = name.value.trim();
+        if (!v) errors.push('租借人姓名必填');
+        else if (v.length < 2) errors.push('姓名至少需要 2 個字');
+      }
+      if (phone) {
+        const v = phone.value.trim();
+        if (!v) errors.push('電話必填');
+        else if (!isValidPhone(v)) errors.push('請輸入有效的台灣電話號碼（例如 0912-345-678）');
+      }
+      if (email && email.value.trim()) {
+        if (!isValidEmail(email.value.trim())) errors.push('電子郵件格式不正確');
+      }
+      if (idNum && idNum.value.trim()) {
+        if (!isValidIdNumber(idNum.value.trim())) errors.push('身分證字號或統一編號格式不正確');
+      }
+      return errors;
     }
 
     function openEditCustomerModal(button) {
@@ -2118,27 +2163,27 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">租借人姓名</label>
-              <input type="text" name="name" class="form-input" value="${customer.name || ''}" required>
+              <input type="text" name="name" class="form-input" value="${customer.name || ''}" required placeholder="例如：王小明">
             </div>
             <div class="form-group">
               <label class="form-label">公司名稱</label>
-              <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}">
+              <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}" placeholder="選填">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
-              <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required>
+              <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
               <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input" value="${customer.email || ''}">
+              <input type="email" name="email" class="form-input" value="${customer.email || ''}" placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">身分證/統編</label>
-              <input type="text" name="id_number" class="form-input" value="${customer.id_number || ''}">
+              <input type="text" name="id_number" class="form-input" value="${customer.id_number || ''}" placeholder="例如：A123456789 或 12345678">
             </div>
             <div class="form-group">
               <label class="form-label">證件驗證</label>
@@ -2181,19 +2226,23 @@
       `);
 
       modal.open();
+      attachCustomerValidation('#edit-customer-form', 'edit-cust');
     }
 
     async function updateCustomerForm(customerId, e) {
       const form = document.getElementById('edit-customer-form');
-      const validation = validateForm(form);
+      const errors = validateCustomerForm(form);
 
-      if (!validation.valid) {
-        showError(validation.errors[0]);
+      if (errors.length > 0) {
+        showError(errors[0]);
         return;
       }
 
       try {
         const data = getFormData(form);
+        if (data.phone) data.phone = formatPhone(data.phone);
+        if (data.email) data.email = data.email.trim().toLowerCase();
+        if (data.id_number) data.id_number = data.id_number.trim();
         await API.updateCustomer(customerId, data);
         showSuccess('客戶已更新');
         document.querySelector('.modal-overlay').remove();
