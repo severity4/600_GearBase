@@ -1,0 +1,21 @@
+{
+  "name": "600-gearbase",
+  "version": "1.1.0",
+  "description": "映奧創意工作室 - 器材管理與租賃系統 (Google Apps Script Web App)",
+  "private": true,
+  "scripts": {
+    "push": "clasp push",
+    "push:watch": "clasp push --watch",
+    "pull": "clasp pull",
+    "deploy": "clasp push --force && clasp deploy -d \"Manual deploy $(date +%Y-%m-%d_%H:%M)\"",
+    "open": "clasp open",
+    "open:web": "clasp open --webapp",
+    "logs": "clasp logs",
+    "status": "clasp status",
+    "versions": "clasp versions"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.83"
+  }
+}

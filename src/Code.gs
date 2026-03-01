@@ -31,30 +31,20 @@ const CATEGORY_CODES = {
  * Main entry point for the web app
  */
 function doGet(e) {
-  const page = e.parameter.page || 'dashboard';
   const mode = e.parameter.mode || 'staff';
+  const template = mode === 'customer' ? 'CustomerApp' : 'StaffApp';
 
-  if (mode === 'customer') {
-    return HtmlService.createHtmlOutput(include('CustomerApp'))
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-  }
-
-  // Staff mode - return staff app
-  return HtmlService.createHtmlOutput(include('StaffApp'))
+  return HtmlService.createTemplateFromFile(template)
+    .evaluate()
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 /**
- * Include HTML/CSS/JS files
+ * Include HTML/CSS/JS partial files (used in templates via <?!= include('Styles') ?>)
  */
 function include(filename) {
-  return HtmlService.createHtmlOutput(
-    SpreadsheetApp.getActiveSpreadsheet()
-      .getRangeByName(filename)
-      .getValue()
-  ).getContent();
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /**
