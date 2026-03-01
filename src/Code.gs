@@ -869,6 +869,43 @@ function createStocktakeResult(resultData) {
 }
 
 /**
+ * Bootstrap: seed the first admin account when Staff sheet is empty.
+ * Uses the currently logged-in Google account as the admin.
+ * Can only be called once (no-ops if any staff exist).
+ * @return {Object} result
+ */
+function bootstrapFirstAdmin() {
+  const allStaff = getSheetData('Staff');
+  if (allStaff.length > 0) {
+    throw new Error('系統已有員工資料，無法使用此功能。請以管理員帳號登入後新增員工。');
+  }
+
+  const email = Session.getActiveUser().getEmail();
+  if (!email) {
+    throw new Error('無法取得目前登入者的 Email，請確認已授權 Google 帳號。');
+  }
+
+  const staffData = {
+    staff_id: generateNextId('Staff', 'staff_id', 'S'),
+    name: email.split('@')[0],
+    email: email,
+    phone: '',
+    role: 'admin',
+    can_approve_discount: true,
+    active: true,
+    created_at: new Date(),
+    is_deleted: false
+  };
+
+  appendSheetRow('Staff', staffData);
+  return {
+    success: true,
+    message: `已建立管理員帳號：${email}`,
+    staff: staffData
+  };
+}
+
+/**
  * ==================== STAFF FUNCTIONS ====================
  */
 

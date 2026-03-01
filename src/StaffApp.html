@@ -3580,10 +3580,17 @@
 
     async function loadStaffPage() {
       try {
-        // Load staff list and current user in parallel
-        const [staffData, userInfo, permData] = await Promise.all([
+        const userInfo = await API.getCurrentUserInfo();
+
+        // If not authenticated, check if Staff sheet is empty for bootstrap
+        if (!userInfo || !userInfo.authenticated) {
+          renderCurrentUser(userInfo);
+          return;
+        }
+
+        // Load staff list and permissions in parallel
+        const [staffData, permData] = await Promise.all([
           API.getStaff(),
-          API.getCurrentUserInfo(),
           API.getRolePermissions()
         ]);
 
@@ -3607,10 +3614,29 @@
       }
     }
 
+    async function bootstrapAdmin() {
+      if (!confirm('確定要將目前登入的 Google 帳號設為系統管理員？\n此操作僅在系統無任何員工時可使用。')) return;
+      try {
+        const result = await runAsync('bootstrapFirstAdmin');
+        showSuccess(result.message);
+        loadStaffPage();
+      } catch (e) {
+        showError('初始化失敗: ' + e.message);
+      }
+    }
+
     function renderCurrentUser(userInfo) {
       const el = document.getElementById('current-user-info');
       if (!userInfo || !userInfo.authenticated) {
-        el.innerHTML = '<div style="color:var(--danger-color);">未登入或無員工資料</div>';
+        el.innerHTML = `
+          <div style="color:var(--danger-color);">未登入或無員工資料</div>
+          <button class="btn btn-primary" onclick="bootstrapAdmin()" style="margin-left:12px;">
+            初始化管理員帳號
+          </button>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
+            首次使用系統時，點此將您的 Google 帳號設為管理員
+          </div>
+        `;
         return;
       }
 
