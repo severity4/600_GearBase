@@ -330,6 +330,14 @@ function doGet(e) {
 }
 
 /**
+ * Get the customer-facing URL
+ * @return {string} URL with ?mode=customer
+ */
+function getCustomerAppUrl() {
+  return ScriptApp.getService().getUrl() + '?mode=customer';
+}
+
+/**
  * Include HTML/CSS/JS partial files (used in templates via <?!= include('Styles') ?>)
  */
 function include(filename) {

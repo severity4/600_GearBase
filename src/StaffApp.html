@@ -723,7 +723,8 @@
     <div class="main-content">
       <div class="header">
         <h1>映奧創意工作室 - 器材管理租借系統</h1>
-        <div id="user-info" style="text-align: right;">
+        <div id="user-info" style="text-align: right; display:flex; align-items:center; gap:12px;">
+          <button class="btn btn-sm btn-outline" onclick="openCustomerApp()" title="開啟客戶前台" style="white-space:nowrap;">🌐 客戶前台</button>
           <div id="current-time" style="font-size: 12px; color: var(--text-secondary);"></div>
         </div>
       </div>
@@ -1392,6 +1393,19 @@
     let locations = [];
     let venues = [];
     let venueBookings = [];
+
+    // ==================== CUSTOMER APP LINK ====================
+
+    async function openCustomerApp() {
+      try {
+        const url = await API.getCustomerAppUrl();
+        window.open(url, '_blank');
+      } catch (e) {
+        // Fallback: construct URL manually
+        const currentUrl = window.location.href.split('?')[0];
+        window.open(currentUrl + '?mode=customer', '_blank');
+      }
+    }
 
     // ==================== INITIALIZATION ====================
 
