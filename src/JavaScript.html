@@ -148,6 +148,23 @@
       calculateVenueBookingBreakdown: (id) => runAsync('calculateVenueBookingBreakdown', id),
       checkVenueAvailability: (venueId, start, end, excludeId) => runAsync('checkVenueAvailability', venueId, start, end, excludeId),
       getVenueSchedule: (venueId, start, end) => runAsync('getVenueSchedule', venueId, start, end),
+
+      // Schedule / Calendar
+      getScheduleData: (startDate, endDate) => runAsync('getScheduleData', startDate, endDate),
+
+      // Receipt / Print
+      generateRentalReceipt: (rentalId) => runAsync('generateRentalReceipt', rentalId),
+      generateVenueBookingReceipt: (bookingId) => runAsync('generateVenueBookingReceipt', bookingId),
+
+      // QR Code
+      getEquipmentQRData: (unitId) => runAsync('getEquipmentQRData', unitId),
+      getEquipmentQRBatch: (unitIds) => runAsync('getEquipmentQRBatch', unitIds),
+
+      // Email
+      sendRentalConfirmationEmail: (rentalId) => runAsync('sendRentalConfirmationEmail', rentalId),
+      sendVenueBookingConfirmationEmail: (bookingId) => runAsync('sendVenueBookingConfirmationEmail', bookingId),
+      sendReturnReminderEmail: (rentalId) => runAsync('sendReturnReminderEmail', rentalId),
+      sendOverdueNoticeEmail: (rentalId) => runAsync('sendOverdueNoticeEmail', rentalId),
     };
 
     // Debug mode flag (mirrors server-side)
@@ -516,11 +533,57 @@
     }
 
     /**
-     * Validate phone (Taiwan)
+     * Validate phone (Taiwan) - mobile or landline
+     * Mobile: 09xx-xxx-xxx (10 digits)
+     * Landline: 0x-xxxx-xxxx or 0xx-xxx-xxxx (9-10 digits)
      */
     function isValidPhone(phone) {
-      const phoneRegex = /^[0-9\-\+\(\)\s]{10,}$/;
-      return phoneRegex.test(phone);
+      const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+      // Taiwan mobile: 09xxxxxxxx (10 digits)
+      if (/^09\d{8}$/.test(cleaned)) return true;
+      // Taiwan landline: 0x-xxxxxxxx (9-10 digits)
+      if (/^0[2-8]\d{7,8}$/.test(cleaned)) return true;
+      return false;
+    }
+
+    /**
+     * Format phone number for display consistency
+     * Mobile: 0912-345-678
+     * Landline: 02-1234-5678 or 04-1234-5678
+     */
+    function formatPhone(phone) {
+      const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+      // Mobile: 09xx-xxx-xxx
+      if (/^09\d{8}$/.test(cleaned)) {
+        return cleaned.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1-$2-$3');
+      }
+      // Taipei landline (02): 02-xxxx-xxxx
+      if (/^02\d{8}$/.test(cleaned)) {
+        return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, '$1-$2-$3');
+      }
+      // Other landline: 0x-xxx-xxxx or 0xx-xxx-xxxx
+      if (/^0[3-8]\d{7,8}$/.test(cleaned)) {
+        if (cleaned.length === 9) {
+          return cleaned.replace(/^(\d{2})(\d{3})(\d{4})$/, '$1-$2-$3');
+        }
+        return cleaned.replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, '$1-$2-$3');
+      }
+      return phone; // return as-is if unrecognized
+    }
+
+    /**
+     * Validate Taiwan ID number (身分證) or Tax ID (統一編號)
+     * ID: 1 letter + 9 digits
+     * Tax ID: 8 digits
+     */
+    function isValidIdNumber(idNumber) {
+      const cleaned = idNumber.trim();
+      if (!cleaned) return true; // optional field
+      // Taiwan National ID: letter + 9 digits
+      if (/^[A-Z][12]\d{8}$/i.test(cleaned)) return true;
+      // Tax ID (統一編號): 8 digits
+      if (/^\d{8}$/.test(cleaned)) return true;
+      return false;
     }
 
     /**
@@ -528,6 +591,132 @@
      */
     function isValidNumber(value) {
       return !isNaN(value) && value !== '';
+    }
+
+    /**
+     * Set field validation state with hint message
+     * @param {HTMLElement} input - The input element
+     * @param {string|null} error - Error message (null = valid)
+     */
+    function setFieldState(input, error) {
+      input.classList.remove('is-valid', 'is-invalid');
+      let hint = input.parentElement.querySelector('.form-hint');
+      if (!hint) {
+        hint = document.createElement('span');
+        hint.className = 'form-hint';
+        input.parentElement.appendChild(hint);
+      }
+      if (error) {
+        input.classList.add('is-invalid');
+        hint.className = 'form-hint error';
+        hint.textContent = error;
+      } else if (input.value.trim()) {
+        input.classList.add('is-valid');
+        hint.className = 'form-hint success';
+        hint.textContent = '';
+      } else {
+        hint.textContent = '';
+      }
+    }
+
+    /**
+     * Attach real-time validation to all customer fields in a container
+     * @param {HTMLElement|string} container - DOM element or selector
+     * @param {string} prefix - ID prefix for fields (e.g., 'cust' for id="cust-name")
+     */
+    function attachCustomerValidation(container, prefix) {
+      const el = typeof container === 'string' ? document.querySelector(container) : container;
+      if (!el) return;
+
+      const field = (name) => el.querySelector(`#${prefix}-name, [name="${name}"]`);
+
+      // Name field
+      const nameInput = el.querySelector(`#${prefix}-name`) || el.querySelector('[name="name"]');
+      if (nameInput) {
+        nameInput.addEventListener('input', () => {
+          const v = nameInput.value.trim();
+          if (!v) { setFieldState(nameInput, '姓名為必填欄位'); }
+          else if (v.length < 2) { setFieldState(nameInput, '姓名至少需要 2 個字'); }
+          else { setFieldState(nameInput, null); }
+        });
+        nameInput.addEventListener('blur', () => {
+          // Auto-trim whitespace
+          nameInput.value = nameInput.value.trim();
+          nameInput.dispatchEvent(new Event('input'));
+        });
+      }
+
+      // Phone field
+      const phoneInput = el.querySelector(`#${prefix}-phone`) || el.querySelector('[name="phone"]');
+      if (phoneInput) {
+        phoneInput.addEventListener('input', () => {
+          const v = phoneInput.value.trim();
+          if (!v) { setFieldState(phoneInput, '電話為必填欄位'); }
+          else {
+            const cleaned = v.replace(/[\s\-\(\)]/g, '');
+            if (!/^\d+$/.test(cleaned) && cleaned.length > 0) {
+              setFieldState(phoneInput, '電話只能包含數字和 -');
+            } else if (cleaned.length > 0 && cleaned.length < 9) {
+              setFieldState(phoneInput, '電話號碼不完整');
+            } else if (cleaned.length >= 9 && !isValidPhone(v)) {
+              setFieldState(phoneInput, '請輸入有效的台灣電話號碼');
+            } else if (isValidPhone(v)) {
+              setFieldState(phoneInput, null);
+            } else {
+              setFieldState(phoneInput, null);
+            }
+          }
+        });
+        phoneInput.addEventListener('blur', () => {
+          const v = phoneInput.value.trim();
+          if (v && isValidPhone(v)) {
+            phoneInput.value = formatPhone(v);
+            setFieldState(phoneInput, null);
+          }
+        });
+      }
+
+      // Email field
+      const emailInput = el.querySelector(`#${prefix}-email`) || el.querySelector('[name="email"]');
+      if (emailInput) {
+        emailInput.addEventListener('input', () => {
+          const v = emailInput.value.trim();
+          if (!v) { setFieldState(emailInput, null); emailInput.classList.remove('is-valid'); }
+          else if (!isValidEmail(v)) { setFieldState(emailInput, '電子郵件格式不正確，例如 name@example.com'); }
+          else { setFieldState(emailInput, null); }
+        });
+        emailInput.addEventListener('blur', () => {
+          emailInput.value = emailInput.value.trim().toLowerCase();
+          emailInput.dispatchEvent(new Event('input'));
+        });
+      }
+
+      // ID number field
+      const idInput = el.querySelector(`#${prefix}-id-number`) || el.querySelector('[name="id_number"]');
+      if (idInput) {
+        idInput.addEventListener('input', () => {
+          const v = idInput.value.trim();
+          if (!v) { setFieldState(idInput, null); idInput.classList.remove('is-valid'); }
+          else if (!isValidIdNumber(v)) { setFieldState(idInput, '請輸入有效的身分證字號或統一編號'); }
+          else { setFieldState(idInput, null); }
+        });
+        idInput.addEventListener('blur', () => {
+          // Uppercase ID letters
+          const v = idInput.value.trim();
+          if (v && /^[a-z]/i.test(v)) {
+            idInput.value = v.charAt(0).toUpperCase() + v.slice(1);
+          }
+          idInput.dispatchEvent(new Event('input'));
+        });
+      }
+
+      // Company name field (optional, just trim)
+      const companyInput = el.querySelector(`#${prefix}-company`) || el.querySelector('[name="company_name"]');
+      if (companyInput) {
+        companyInput.addEventListener('blur', () => {
+          companyInput.value = companyInput.value.trim();
+        });
+      }
     }
 
     // ==================== ARRAY UTILITIES ====================

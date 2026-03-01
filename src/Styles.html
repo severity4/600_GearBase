@@ -366,6 +366,33 @@
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
+    .form-input.is-invalid,
+    .form-select.is-invalid {
+      border-color: var(--danger-color);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+
+    .form-input.is-valid,
+    .form-select.is-valid {
+      border-color: var(--success-color);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    }
+
+    .form-hint {
+      display: block;
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    .form-hint.error {
+      color: var(--danger-color);
+    }
+
+    .form-hint.success {
+      color: var(--success-color);
+    }
+
     .form-textarea {
       resize: vertical;
       min-height: 100px;

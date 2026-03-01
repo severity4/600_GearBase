@@ -1165,3 +1165,505 @@ function calculateRentalAmount(dailyRate, days, discountPercent = 0) {
   const discount = baseAmount * (parseFloat(discountPercent || 0) / 100);
   return baseAmount - discount;
 }
+
+/**
+ * ==================== SCHEDULE / CALENDAR ====================
+ */
+
+/**
+ * Get schedule data for calendar view
+ * @param {string} startDate - YYYY-MM-DD
+ * @param {string} endDate - YYYY-MM-DD
+ * @return {Object} {rentals: [...], bookings: [...]}
+ */
+function getScheduleData(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59);
+
+  // Get active rentals in range
+  const allRentals = getSheetData('Rentals').filter(r =>
+    !r.is_deleted && r.status !== 'cancelled'
+  );
+  const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
+  const types = getSheetData('Equipment_Types');
+  const units = getSheetData('Equipment_Units');
+  const allCustomers = getSheetData('Customers');
+
+  const typeMap = {};
+  types.forEach(t => { typeMap[t.type_id] = t; });
+  const unitMap = {};
+  units.forEach(u => { unitMap[u.unit_id] = u; });
+  const custMap = {};
+  allCustomers.forEach(c => { custMap[c.customer_id] = c; });
+
+  const scheduleRentals = [];
+  allRentals.forEach(rental => {
+    const rStart = new Date(rental.rental_start);
+    const rEnd = new Date(rental.rental_end);
+    if (rEnd < start || rStart > end) return;
+
+    const items = rentalItems.filter(ri => ri.rental_id === rental.rental_id);
+    const cust = custMap[rental.customer_id] || {};
+    scheduleRentals.push({
+      rental_id: rental.rental_id,
+      customer_name: cust.name || '未知',
+      start: rental.rental_start,
+      end: rental.rental_end,
+      status: rental.status,
+      item_count: items.length,
+      items: items.map(i => ({
+        unit_id: i.unit_id,
+        type_name: (typeMap[i.type_id] || {}).type_name || i.type_id,
+        internal_code: (unitMap[i.unit_id] || {}).internal_code || i.unit_id
+      }))
+    });
+  });
+
+  // Get venue bookings in range
+  const allBookings = getSheetData('Venue_Bookings').filter(b =>
+    !b.is_deleted && b.status !== 'cancelled'
+  );
+  const allVenues = getSheetData('Venues');
+  const venueMap = {};
+  allVenues.forEach(v => { venueMap[v.venue_id] = v; });
+
+  const scheduleBookings = [];
+  allBookings.forEach(booking => {
+    const bStart = new Date(booking.booking_start);
+    const bEnd = new Date(booking.booking_end);
+    if (bEnd < start || bStart > end) return;
+
+    const venue = venueMap[booking.venue_id] || {};
+    const cust = custMap[booking.customer_id] || {};
+    scheduleBookings.push({
+      booking_id: booking.booking_id,
+      venue_name: venue.name || venue.venue_name || '未知',
+      customer_name: cust.name || '未知',
+      start: booking.booking_start,
+      end: booking.booking_end,
+      status: booking.status,
+      rate_type: booking.rate_type
+    });
+  });
+
+  return { rentals: scheduleRentals, bookings: scheduleBookings };
+}
+
+/**
+ * ==================== RECEIPT / PRINT ====================
+ */
+
+/**
+ * Generate rental receipt HTML for printing
+ * @param {string} rentalId
+ * @return {Object} Receipt data for client-side rendering
+ */
+function generateRentalReceipt(rentalId) {
+  const rental = getSheetData('Rentals').find(r => r.rental_id === rentalId && !r.is_deleted);
+  if (!rental) throw new Error('找不到租借單: ' + rentalId);
+
+  const customer = getSheetData('Customers').find(c => c.customer_id === rental.customer_id);
+  const items = getSheetData('Rental_Items').filter(ri => ri.rental_id === rentalId && !ri.is_deleted);
+  const types = getSheetData('Equipment_Types');
+  const units = getSheetData('Equipment_Units');
+  const payments = getSheetData('Payments').filter(p => p.rental_id === rentalId && !p.is_deleted);
+  const serviceItems = getSheetData('Service_Items').filter(s => s.rental_id === rentalId && !s.is_deleted);
+
+  const typeMap = {};
+  types.forEach(t => { typeMap[t.type_id] = t; });
+  const unitMap = {};
+  units.forEach(u => { unitMap[u.unit_id] = u; });
+
+  const days = calculateRentalDays(rental.rental_start, rental.rental_end);
+
+  const enrichedItems = items.map(item => {
+    const type = typeMap[item.type_id] || {};
+    const unit = unitMap[item.unit_id] || {};
+    return {
+      type_name: type.type_name || item.type_id,
+      internal_code: unit.internal_code || item.unit_id,
+      serial_number: unit.serial_number || '',
+      daily_rate: parseFloat(item.daily_rate_snapshot || type.daily_rate || 0),
+      days: days,
+      line_total: parseFloat(item.line_total || 0),
+      discount_amount: parseFloat(item.discount_amount || 0)
+    };
+  });
+
+  return {
+    rental_id: rentalId,
+    customer: {
+      name: customer ? customer.name : '未知',
+      company: customer ? customer.company_name : '',
+      phone: customer ? customer.phone : '',
+      email: customer ? customer.email : ''
+    },
+    rental_start: rental.rental_start,
+    rental_end: rental.rental_end,
+    days: days,
+    status: rental.status,
+    items: enrichedItems,
+    services: serviceItems.map(s => ({
+      description: s.description || s.service_type,
+      unit_price: parseFloat(s.unit_price || 0),
+      quantity: parseInt(s.quantity || 1),
+      line_total: parseFloat(s.line_total || 0)
+    })),
+    total_amount: parseFloat(rental.total_amount || 0),
+    paid_amount: parseFloat(rental.paid_amount || 0),
+    tax_rate: parseFloat(rental.tax_rate || 0.05),
+    deposit_status: rental.deposit_status || '',
+    payments: payments.map(p => ({
+      payment_id: p.payment_id,
+      amount: parseFloat(p.amount || 0),
+      method: p.payment_method || '',
+      date: p.payment_date || ''
+    })),
+    notes: rental.notes || '',
+    created_at: rental.created_at,
+    generated_at: new Date().toISOString()
+  };
+}
+
+/**
+ * Generate venue booking receipt data
+ * @param {string} bookingId
+ * @return {Object} Booking receipt data
+ */
+function generateVenueBookingReceipt(bookingId) {
+  const booking = getSheetData('Venue_Bookings').find(b => b.booking_id === bookingId && !b.is_deleted);
+  if (!booking) throw new Error('找不到預約單: ' + bookingId);
+
+  const customer = getSheetData('Customers').find(c => c.customer_id === booking.customer_id);
+  const venue = getSheetData('Venues').find(v => v.venue_id === booking.venue_id);
+  const payments = getSheetData('Payments').filter(p => p.booking_id === bookingId && !p.is_deleted);
+
+  return {
+    booking_id: bookingId,
+    venue: {
+      name: venue ? (venue.name || venue.venue_name) : '未知',
+      type: venue ? venue.venue_type : '',
+      address: venue ? venue.address : ''
+    },
+    customer: {
+      name: customer ? customer.name : '未知',
+      company: customer ? customer.company_name : '',
+      phone: customer ? customer.phone : '',
+      email: customer ? customer.email : ''
+    },
+    booking_start: booking.booking_start,
+    booking_end: booking.booking_end,
+    rate_type: booking.rate_type,
+    total_amount: parseFloat(booking.total_amount || 0),
+    paid_amount: parseFloat(booking.paid_amount || 0),
+    status: booking.status,
+    special_requirements: booking.special_requirements || '',
+    payments: payments.map(p => ({
+      payment_id: p.payment_id,
+      amount: parseFloat(p.amount || 0),
+      method: p.payment_method || '',
+      date: p.payment_date || ''
+    })),
+    created_at: booking.created_at,
+    generated_at: new Date().toISOString()
+  };
+}
+
+/**
+ * ==================== QR CODE ====================
+ */
+
+/**
+ * Generate QR code URL for equipment unit
+ * Uses Google Charts API for QR generation
+ * @param {string} unitId
+ * @return {Object} QR code info
+ */
+function getEquipmentQRData(unitId) {
+  const unit = getSheetData('Equipment_Units').find(u => u.unit_id === unitId && !u.is_deleted);
+  if (!unit) throw new Error('找不到器材: ' + unitId);
+
+  const type = getSheetData('Equipment_Types').find(t => t.type_id === unit.type_id);
+  const location = getSheetData('Storage_Locations').find(l => l.location_id === unit.location_id);
+
+  const qrData = JSON.stringify({
+    id: unit.unit_id,
+    code: unit.internal_code,
+    type: type ? type.type_name : unit.type_id,
+    sn: unit.serial_number || ''
+  });
+
+  return {
+    unit_id: unit.unit_id,
+    internal_code: unit.internal_code || unit.unit_id,
+    type_name: type ? type.type_name : unit.type_id,
+    category: type ? type.category : '',
+    serial_number: unit.serial_number || '',
+    status: unit.status,
+    location_name: location ? location.location_name : '',
+    daily_rate: type ? parseFloat(type.daily_rate || 0) : 0,
+    replacement_value: type ? parseFloat(type.replacement_value || 0) : 0,
+    qr_url: 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(qrData)
+  };
+}
+
+/**
+ * Get QR data for multiple units (batch label printing)
+ * @param {string[]} unitIds - Array of unit IDs (optional, all if empty)
+ * @return {Object[]} Array of QR data objects
+ */
+function getEquipmentQRBatch(unitIds) {
+  const allUnits = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
+  const types = getSheetData('Equipment_Types');
+  const locations = getSheetData('Storage_Locations');
+
+  const typeMap = {};
+  types.forEach(t => { typeMap[t.type_id] = t; });
+  const locMap = {};
+  locations.forEach(l => { locMap[l.location_id] = l; });
+
+  let targetUnits = allUnits;
+  if (unitIds && unitIds.length > 0) {
+    targetUnits = allUnits.filter(u => unitIds.includes(u.unit_id));
+  }
+
+  return targetUnits.map(unit => {
+    const type = typeMap[unit.type_id] || {};
+    const loc = locMap[unit.location_id] || {};
+    const qrData = JSON.stringify({
+      id: unit.unit_id,
+      code: unit.internal_code,
+      type: type.type_name || unit.type_id,
+      sn: unit.serial_number || ''
+    });
+
+    return {
+      unit_id: unit.unit_id,
+      internal_code: unit.internal_code || unit.unit_id,
+      type_name: type.type_name || unit.type_id,
+      category: type.category || '',
+      serial_number: unit.serial_number || '',
+      daily_rate: parseFloat(type.daily_rate || 0),
+      location_name: loc.location_name || '',
+      qr_url: 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(qrData)
+    };
+  });
+}
+
+/**
+ * ==================== EMAIL NOTIFICATIONS ====================
+ */
+
+/**
+ * Send rental confirmation email
+ * @param {string} rentalId
+ */
+function sendRentalConfirmationEmail(rentalId) {
+  const receipt = generateRentalReceipt(rentalId);
+  if (!receipt.customer.email) {
+    return { success: false, message: '客戶沒有設定電子郵件' };
+  }
+
+  const itemLines = receipt.items.map(i =>
+    `  - ${i.type_name} (${i.internal_code}) × ${i.days}天 = NT$${i.line_total.toLocaleString()}`
+  ).join('\n');
+
+  const subject = `【映奧創意】租借確認 - ${rentalId}`;
+  const body = `${receipt.customer.name} 您好，
+
+感謝您的租借！以下是您的租借確認資訊：
+
+租借單號：${receipt.rental_id}
+租借期間：${formatDate(receipt.rental_start)} 至 ${formatDate(receipt.rental_end)}（共 ${receipt.days} 天）
+
+租借器材：
+${itemLines}
+
+合計金額：NT$${receipt.total_amount.toLocaleString()}
+已付金額：NT$${receipt.paid_amount.toLocaleString()}
+
+注意事項：
+1. 請於租借開始日前來取件
+2. 請於租借結束日當天歸還
+3. 逾期將產生額外費用
+
+如有任何問題，請聯繫我們。
+
+映奧創意工作室
+`;
+
+  try {
+    MailApp.sendEmail({
+      to: receipt.customer.email,
+      subject: subject,
+      body: body
+    });
+    return { success: true, message: `確認信已寄送至 ${receipt.customer.email}` };
+  } catch (e) {
+    return { success: false, message: '寄信失敗: ' + e.message };
+  }
+}
+
+/**
+ * Send venue booking confirmation email
+ * @param {string} bookingId
+ */
+function sendVenueBookingConfirmationEmail(bookingId) {
+  const receipt = generateVenueBookingReceipt(bookingId);
+  if (!receipt.customer.email) {
+    return { success: false, message: '客戶沒有設定電子郵件' };
+  }
+
+  const rateLabels = { hourly: '時租', half_day: '半日租', daily: '日租' };
+
+  const subject = `【映奧創意】場地預約確認 - ${bookingId}`;
+  const body = `${receipt.customer.name} 您好，
+
+感謝您的場地預約！以下是您的預約確認資訊：
+
+預約單號：${receipt.booking_id}
+場地名稱：${receipt.venue.name}
+預約時段：${receipt.booking_start} 至 ${receipt.booking_end}
+計費方式：${rateLabels[receipt.rate_type] || receipt.rate_type}
+
+合計金額：NT$${receipt.total_amount.toLocaleString()}
+${receipt.special_requirements ? '特殊需求：' + receipt.special_requirements : ''}
+
+注意事項：
+1. 請於預約時段準時到達
+2. 使用完畢請恢復場地原貌
+3. 如需取消請提前通知
+
+如有任何問題，請聯繫我們。
+
+映奧創意工作室
+`;
+
+  try {
+    MailApp.sendEmail({
+      to: receipt.customer.email,
+      subject: subject,
+      body: body
+    });
+    return { success: true, message: `確認信已寄送至 ${receipt.customer.email}` };
+  } catch (e) {
+    return { success: false, message: '寄信失敗: ' + e.message };
+  }
+}
+
+/**
+ * Send return reminder email (for rentals ending soon)
+ * @param {string} rentalId
+ */
+function sendReturnReminderEmail(rentalId) {
+  const receipt = generateRentalReceipt(rentalId);
+  if (!receipt.customer.email) {
+    return { success: false, message: '客戶沒有設定電子郵件' };
+  }
+
+  const subject = `【映奧創意】歸還提醒 - ${rentalId}`;
+  const body = `${receipt.customer.name} 您好，
+
+提醒您，以下租借單即將到期：
+
+租借單號：${receipt.rental_id}
+歸還日期：${formatDate(receipt.rental_end)}
+
+請準時歸還以避免產生逾期費用。
+
+映奧創意工作室
+`;
+
+  try {
+    MailApp.sendEmail({
+      to: receipt.customer.email,
+      subject: subject,
+      body: body
+    });
+    return { success: true, message: `提醒信已寄送至 ${receipt.customer.email}` };
+  } catch (e) {
+    return { success: false, message: '寄信失敗: ' + e.message };
+  }
+}
+
+/**
+ * Send overdue notice email
+ * @param {string} rentalId
+ */
+function sendOverdueNoticeEmail(rentalId) {
+  const receipt = generateRentalReceipt(rentalId);
+  if (!receipt.customer.email) {
+    return { success: false, message: '客戶沒有設定電子郵件' };
+  }
+
+  const subject = `【映奧創意】逾期通知 - ${rentalId}`;
+  const body = `${receipt.customer.name} 您好，
+
+您的租借單已逾期，請盡速歸還：
+
+租借單號：${receipt.rental_id}
+原定歸還日期：${formatDate(receipt.rental_end)}
+
+逾期將持續產生額外費用，請儘速與我們聯繫處理。
+
+映奧創意工作室
+`;
+
+  try {
+    MailApp.sendEmail({
+      to: receipt.customer.email,
+      subject: subject,
+      body: body
+    });
+    return { success: true, message: `逾期通知已寄送至 ${receipt.customer.email}` };
+  } catch (e) {
+    return { success: false, message: '寄信失敗: ' + e.message };
+  }
+}
+
+/**
+ * Scheduled function: check and send reminders for rentals due tomorrow
+ * Set up as a daily time-driven trigger
+ */
+function scheduledSendReturnReminders() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = formatDate(tomorrow);
+
+  const rentals = getSheetData('Rentals').filter(r =>
+    !r.is_deleted &&
+    (r.status === 'active' || r.status === 'reserved') &&
+    formatDate(r.rental_end) === tomorrowStr
+  );
+
+  const results = [];
+  rentals.forEach(rental => {
+    const result = sendReturnReminderEmail(rental.rental_id);
+    results.push({ rental_id: rental.rental_id, ...result });
+  });
+
+  return { sent: results.length, results: results };
+}
+
+/**
+ * Scheduled function: check and send overdue notices
+ * Set up as a daily time-driven trigger
+ */
+function scheduledSendOverdueNotices() {
+  const today = new Date();
+  const todayStr = formatDate(today);
+
+  const rentals = getSheetData('Rentals').filter(r =>
+    !r.is_deleted &&
+    r.status === 'overdue'
+  );
+
+  const results = [];
+  rentals.forEach(rental => {
+    const result = sendOverdueNoticeEmail(rental.rental_id);
+    results.push({ rental_id: rental.rental_id, ...result });
+  });
+
+  return { sent: results.length, results: results };
+}

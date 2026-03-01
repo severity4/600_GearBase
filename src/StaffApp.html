@@ -26,7 +26,9 @@
     }
 
     .dashboard-grid {
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
     }
 
     .stat-card {
@@ -62,6 +64,573 @@
       padding: 0;
       border-radius: 6px;
     }
+
+    /* ==================== POS Layout ==================== */
+    .pos-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 0;
+      height: calc(100vh - 80px);
+      margin: -24px;
+    }
+
+    .pos-catalog {
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg-secondary, #f8f9fa);
+    }
+
+    .pos-order {
+      border-left: 2px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      background: white;
+      overflow: hidden;
+    }
+
+    .pos-order-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pos-order-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .pos-order-footer {
+      border-top: 2px solid var(--border-color);
+      padding: 16px 20px;
+      background: white;
+    }
+
+    .pos-section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .pos-section {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .pos-section:last-child {
+      border-bottom: none;
+    }
+
+    /* Equipment / venue catalog cards */
+    .pos-catalog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+
+    .pos-catalog-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .pos-filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .pos-filter-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .pos-filter-chip:hover,
+    .pos-filter-chip.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+
+    .pos-items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .pos-item-card {
+      background: white;
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .pos-item-card:hover {
+      border-color: var(--primary-color);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .pos-item-card.unavailable {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pos-item-card.selected {
+      border-color: var(--primary-color);
+      background: rgba(59, 130, 246, 0.05);
+    }
+
+    .pos-item-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .pos-item-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+
+    .pos-item-detail {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .pos-item-price {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-top: 8px;
+    }
+
+    .pos-item-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .pos-item-badge.available {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .pos-item-badge.rented {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Order items list */
+    .pos-order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .pos-order-item:last-child {
+      border-bottom: none;
+    }
+
+    .pos-order-item-info {
+      flex: 1;
+    }
+
+    .pos-order-item-name {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .pos-order-item-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .pos-order-item-price {
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+
+    .pos-order-item-remove {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: #fee2e2;
+      color: #dc2626;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
+    .pos-order-item-remove:hover {
+      background: #dc2626;
+      color: white;
+    }
+
+    /* Totals area */
+    .pos-total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 14px;
+    }
+
+    .pos-total-row.grand-total {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary-color);
+      padding-top: 8px;
+      border-top: 2px solid var(--text-primary);
+      margin-top: 4px;
+    }
+
+    .pos-empty-hint {
+      text-align: center;
+      color: var(--text-secondary);
+      padding: 32px 16px;
+      font-size: 14px;
+    }
+
+    .pos-customer-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary, #f8f9fa);
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .pos-customer-display .name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .pos-customer-display .phone {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 1024px) {
+      .pos-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+      }
+      .pos-order {
+        border-left: none;
+        border-top: 2px solid var(--border-color);
+      }
+    }
+
+    /* ==================== Calendar / Schedule View ==================== */
+    .cal-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cal-nav-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border-color);
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cal-nav-btn:hover { background: var(--bg-secondary, #f0f0f0); }
+
+    .cal-title {
+      font-size: 18px;
+      font-weight: 700;
+      min-width: 200px;
+      text-align: center;
+    }
+
+    .cal-legend {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      align-items: center;
+    }
+
+    .cal-legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .cal-header-cell {
+      padding: 10px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 13px;
+      background: var(--primary-color);
+      color: white;
+      border-right: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .cal-header-cell:last-child { border-right: none; }
+
+    .cal-cell {
+      min-height: 100px;
+      padding: 4px;
+      border-right: 1px solid var(--border-color);
+      border-top: 1px solid var(--border-color);
+      background: white;
+      position: relative;
+      vertical-align: top;
+    }
+
+    .cal-cell:nth-child(7n) { border-right: none; }
+    .cal-cell.other-month { background: #f9fafb; }
+    .cal-cell.today { background: #eff6ff; }
+
+    .cal-day-num {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 2px 6px;
+      color: var(--text-secondary);
+    }
+
+    .cal-cell.today .cal-day-num {
+      background: var(--primary-color);
+      color: white;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cal-event {
+      font-size: 11px;
+      padding: 2px 6px;
+      margin: 1px 0;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+
+    .cal-event:hover { opacity: 0.85; }
+
+    .cal-event.rental {
+      background: #dbeafe;
+      color: #1e40af;
+      border-left: 3px solid #3b82f6;
+    }
+
+    .cal-event.rental.active { background: #dcfce7; color: #166534; border-left-color: #22c55e; }
+    .cal-event.rental.overdue { background: #fee2e2; color: #991b1b; border-left-color: #ef4444; }
+
+    .cal-event.booking {
+      background: #f3e8ff;
+      color: #6b21a8;
+      border-left: 3px solid #8b5cf6;
+    }
+
+    .cal-more {
+      font-size: 11px;
+      color: var(--primary-color);
+      padding: 2px 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    /* ==================== QR Label Print ==================== */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .qr-label {
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      background: white;
+      page-break-inside: avoid;
+    }
+
+    .qr-label img {
+      width: 140px;
+      height: 140px;
+      margin-bottom: 8px;
+    }
+
+    .qr-label-code {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .qr-label-name {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .qr-label-detail {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    @media print {
+      .sidebar, .header, .no-print { display: none !important; }
+      .main-content { margin: 0; padding: 0; }
+      .content { padding: 0; }
+      .qr-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .qr-label { border: 1px solid #ccc; padding: 12px; }
+      .cal-grid { font-size: 10px; }
+      .cal-event { font-size: 9px; }
+    }
+
+    /* ==================== Receipt Print ==================== */
+    .receipt-container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+
+    .receipt-header {
+      text-align: center;
+      border-bottom: 2px solid var(--text-primary);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .receipt-header h2 { margin: 0 0 4px 0; font-size: 20px; }
+    .receipt-header .subtitle { font-size: 13px; color: var(--text-secondary); }
+
+    .receipt-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    .receipt-info-grid .label {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    .receipt-table th {
+      background: var(--bg-secondary, #f8f9fa);
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 600;
+    }
+
+    .receipt-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .receipt-table .text-right { text-align: right; }
+
+    .receipt-totals {
+      text-align: right;
+      font-size: 14px;
+    }
+
+    .receipt-totals .row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 24px;
+      padding: 4px 0;
+    }
+
+    .receipt-totals .grand {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-color);
+      border-top: 2px solid var(--text-primary);
+      padding-top: 8px;
+      margin-top: 4px;
+    }
+
+    .receipt-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border-color);
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
   </style>
 </head>
 <body class="staff-app">
@@ -70,39 +639,63 @@
     <div class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">📹 GearBase</div>
-        <div class="sidebar-subtitle">器材管理系統</div>
+        <div class="sidebar-subtitle">映奧創意工作室</div>
       </div>
 
       <div class="nav-section">
-        <div class="nav-section-title">主菜單</div>
+        <div class="nav-section-title">營運</div>
         <div class="nav-item active" data-page="dashboard">
           <div class="nav-icon">📊</div>
           <span>儀表板</span>
         </div>
+        <div class="nav-item" data-page="pos-rental">
+          <div class="nav-icon">🛒</div>
+          <span>新增租借單</span>
+        </div>
+        <div class="nav-item" data-page="pos-venue">
+          <div class="nav-icon">📅</div>
+          <span>場地預約</span>
+        </div>
+        <div class="nav-item" data-page="schedule">
+          <div class="nav-icon">📆</div>
+          <span>排程日曆</span>
+        </div>
       </div>
 
       <div class="nav-section">
-        <div class="nav-section-title">管理</div>
-        <div class="nav-item" data-page="equipment">
-          <div class="nav-icon">📦</div>
-          <span>器材管理</span>
-        </div>
+        <div class="nav-section-title">紀錄</div>
         <div class="nav-item" data-page="rentals">
           <div class="nav-icon">📋</div>
-          <span>租借管理</span>
+          <span>租借紀錄</span>
         </div>
-        <div class="nav-item" data-page="venues">
-          <div class="nav-icon">🏢</div>
-          <span>場地管理</span>
+        <div class="nav-item" data-page="venue-bookings">
+          <div class="nav-icon">📑</div>
+          <span>場地預約紀錄</span>
         </div>
         <div class="nav-item" data-page="customers">
           <div class="nav-icon">👥</div>
           <span>客戶管理</span>
         </div>
+        <div class="nav-item" data-page="payments">
+          <div class="nav-icon">💳</div>
+          <span>付款紀錄</span>
+        </div>
       </div>
 
       <div class="nav-section">
-        <div class="nav-section-title">進階</div>
+        <div class="nav-section-title">設定</div>
+        <div class="nav-item" data-page="equipment">
+          <div class="nav-icon">📦</div>
+          <span>器材設定</span>
+        </div>
+        <div class="nav-item" data-page="qr-labels">
+          <div class="nav-icon">🏷️</div>
+          <span>QR 標籤</span>
+        </div>
+        <div class="nav-item" data-page="venues">
+          <div class="nav-icon">🏢</div>
+          <span>場地設定</span>
+        </div>
         <div class="nav-item" data-page="inventory">
           <div class="nav-icon">📊</div>
           <span>庫存管理</span>
@@ -110,10 +703,6 @@
         <div class="nav-item" data-page="stocktake">
           <div class="nav-icon">✓</div>
           <span>盤點</span>
-        </div>
-        <div class="nav-item" data-page="payments">
-          <div class="nav-icon">💳</div>
-          <span>付款</span>
         </div>
         <div class="nav-item" data-page="reports">
           <div class="nav-icon">📈</div>
@@ -138,9 +727,9 @@
           <div id="dashboard-stats" class="dashboard-grid"></div>
         </div>
 
-        <!-- Equipment Page -->
+        <!-- Equipment Settings Page -->
         <div id="equipment" class="page-content">
-          <div class="section-title">器材管理</div>
+          <div class="section-title">器材設定</div>
 
           <!-- Equipment Types Section -->
           <div class="card mb-3">
@@ -196,9 +785,235 @@
           </div>
         </div>
 
-        <!-- Rentals Page -->
+        <!-- POS Rental Page -->
+        <div id="pos-rental" class="page-content">
+          <div class="pos-layout">
+            <div class="pos-catalog">
+              <div class="pos-catalog-header">
+                <h2>選擇器材</h2>
+                <div class="search-box" style="flex: 1; max-width: 280px;">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" id="pos-equip-search" placeholder="搜尋器材名稱或編號...">
+                </div>
+              </div>
+              <div class="pos-filter-bar" id="pos-category-filters"></div>
+              <div class="pos-items-grid" id="pos-equip-grid"></div>
+            </div>
+            <div class="pos-order">
+              <div class="pos-order-header">
+                <span>租借單</span>
+                <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.3);" onclick="posRentalClear()">清除</button>
+              </div>
+              <div class="pos-order-body">
+                <!-- Customer -->
+                <div class="pos-section">
+                  <div class="pos-section-label">客戶</div>
+                  <div id="pos-rental-customer">
+                    <div style="display:flex; gap:8px;">
+                      <select id="pos-rental-customer-select" class="form-select" style="flex:1; font-size:13px;">
+                        <option value="">選擇客戶...</option>
+                      </select>
+                      <button type="button" class="btn btn-sm btn-outline" onclick="posRentalAddCustomer()">+ 新增</button>
+                    </div>
+                    <div id="pos-rental-new-customer" style="display:none; margin-top:10px; background:var(--bg-secondary,#f8f9fa); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                      <div style="font-size:13px; font-weight:600; margin-bottom:8px;">快速新增客戶</div>
+                      <input type="text" id="pos-nc-name" class="form-input" placeholder="姓名 *" style="margin-bottom:6px; font-size:13px; padding:8px;">
+                      <input type="tel" id="pos-nc-phone" class="form-input" placeholder="電話 * (0912-345-678)" style="margin-bottom:6px; font-size:13px; padding:8px;">
+                      <input type="text" id="pos-nc-company" class="form-input" placeholder="公司名稱（選填）" style="margin-bottom:8px; font-size:13px; padding:8px;">
+                      <div style="display:flex; gap:6px;">
+                        <button class="btn btn-primary btn-sm" onclick="posRentalSaveNewCustomer()" style="flex:1;">確認新增</button>
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pos-rental-new-customer').style.display='none'">取消</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Dates -->
+                <div class="pos-section">
+                  <div class="pos-section-label">租借日期</div>
+                  <div class="form-row" style="gap:8px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label" style="font-size:12px;">開始</label>
+                      <input type="date" id="pos-rental-start" class="form-input" style="font-size:13px; padding:8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label" style="font-size:12px;">結束</label>
+                      <input type="date" id="pos-rental-end" class="form-input" style="font-size:13px; padding:8px;">
+                    </div>
+                  </div>
+                  <div id="pos-rental-days" style="font-size:12px; color:var(--text-secondary); margin-top:6px;"></div>
+                </div>
+                <!-- Items -->
+                <div class="pos-section" style="flex:1;">
+                  <div class="pos-section-label">已選器材 (<span id="pos-rental-item-count">0</span>)</div>
+                  <div id="pos-rental-items">
+                    <div class="pos-empty-hint">點選左側器材加入租借單</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pos-order-footer">
+                <div class="pos-total-row">
+                  <span>小計</span>
+                  <span id="pos-rental-subtotal">$0</span>
+                </div>
+                <div class="pos-total-row">
+                  <span>稅金 (5%)</span>
+                  <span id="pos-rental-tax">$0</span>
+                </div>
+                <div class="pos-total-row grand-total">
+                  <span>合計</span>
+                  <span id="pos-rental-total">$0</span>
+                </div>
+                <button class="btn btn-primary w-100" style="margin-top:12px; padding:14px; font-size:16px; font-weight:700;" onclick="posRentalSubmit()">建立租借單</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- POS Venue Booking Page -->
+        <div id="pos-venue" class="page-content">
+          <div class="pos-layout">
+            <div class="pos-catalog">
+              <div class="pos-catalog-header">
+                <h2>選擇場地</h2>
+                <div class="search-box" style="flex: 1; max-width: 280px;">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" id="pos-venue-search" placeholder="搜尋場地名稱...">
+                </div>
+              </div>
+              <div class="pos-filter-bar" id="pos-venue-type-filters"></div>
+              <div class="pos-items-grid" id="pos-venue-grid"></div>
+            </div>
+            <div class="pos-order">
+              <div class="pos-order-header">
+                <span>場地預約單</span>
+                <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.3);" onclick="posVenueClear()">清除</button>
+              </div>
+              <div class="pos-order-body">
+                <!-- Customer -->
+                <div class="pos-section">
+                  <div class="pos-section-label">客戶</div>
+                  <div id="pos-venue-customer">
+                    <div style="display:flex; gap:8px;">
+                      <select id="pos-venue-customer-select" class="form-select" style="flex:1; font-size:13px;">
+                        <option value="">選擇客戶...</option>
+                      </select>
+                      <button type="button" class="btn btn-sm btn-outline" onclick="posVenueAddCustomer()">+ 新增</button>
+                    </div>
+                    <div id="pos-venue-new-customer" style="display:none; margin-top:10px; background:var(--bg-secondary,#f8f9fa); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                      <div style="font-size:13px; font-weight:600; margin-bottom:8px;">快速新增客戶</div>
+                      <input type="text" id="pos-vnc-name" class="form-input" placeholder="姓名 *" style="margin-bottom:6px; font-size:13px; padding:8px;">
+                      <input type="tel" id="pos-vnc-phone" class="form-input" placeholder="電話 * (0912-345-678)" style="margin-bottom:6px; font-size:13px; padding:8px;">
+                      <input type="text" id="pos-vnc-company" class="form-input" placeholder="公司名稱（選填）" style="margin-bottom:8px; font-size:13px; padding:8px;">
+                      <div style="display:flex; gap:6px;">
+                        <button class="btn btn-primary btn-sm" onclick="posVenueSaveNewCustomer()" style="flex:1;">確認新增</button>
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pos-venue-new-customer').style.display='none'">取消</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Selected venue -->
+                <div class="pos-section">
+                  <div class="pos-section-label">已選場地</div>
+                  <div id="pos-venue-selected">
+                    <div class="pos-empty-hint">點選左側場地進行預約</div>
+                  </div>
+                </div>
+                <!-- Time -->
+                <div class="pos-section">
+                  <div class="pos-section-label">預約時段</div>
+                  <div class="form-row" style="gap:8px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label" style="font-size:12px;">開始時間</label>
+                      <input type="datetime-local" id="pos-venue-start" class="form-input" style="font-size:13px; padding:8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                      <label class="form-label" style="font-size:12px;">結束時間</label>
+                      <input type="datetime-local" id="pos-venue-end" class="form-input" style="font-size:13px; padding:8px;">
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-top:8px; margin-bottom:0;">
+                    <label class="form-label" style="font-size:12px;">計費方式</label>
+                    <select id="pos-venue-rate-type" class="form-select" style="font-size:13px;">
+                      <option value="hourly">時租</option>
+                      <option value="half_day">半日租</option>
+                      <option value="daily">日租</option>
+                    </select>
+                  </div>
+                </div>
+                <!-- Notes -->
+                <div class="pos-section">
+                  <div class="pos-section-label">特殊需求 / 備註</div>
+                  <textarea id="pos-venue-notes" class="form-textarea" style="min-height:60px; font-size:13px;" placeholder="選填"></textarea>
+                </div>
+              </div>
+              <div class="pos-order-footer">
+                <div class="pos-total-row">
+                  <span>場地費用</span>
+                  <span id="pos-venue-fee">$0</span>
+                </div>
+                <div class="pos-total-row">
+                  <span>稅金 (5%)</span>
+                  <span id="pos-venue-tax">$0</span>
+                </div>
+                <div class="pos-total-row grand-total">
+                  <span>合計</span>
+                  <span id="pos-venue-total">$0</span>
+                </div>
+                <button class="btn btn-primary w-100" style="margin-top:12px; padding:14px; font-size:16px; font-weight:700;" onclick="posVenueSubmit()">建立場地預約</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule Calendar Page -->
+        <div id="schedule" class="page-content">
+          <div class="cal-toolbar no-print">
+            <div class="cal-nav">
+              <button class="cal-nav-btn" onclick="calNavPrev()">&lt;</button>
+              <div class="cal-title" id="cal-title"></div>
+              <button class="cal-nav-btn" onclick="calNavNext()">&gt;</button>
+              <button class="btn btn-sm btn-outline" style="margin-left:8px;" onclick="calNavToday()">今天</button>
+            </div>
+            <div class="cal-legend">
+              <span><span class="cal-legend-dot" style="background:#3b82f6;"></span> 器材租借</span>
+              <span><span class="cal-legend-dot" style="background:#8b5cf6;"></span> 場地預約</span>
+              <span><span class="cal-legend-dot" style="background:#22c55e;"></span> 進行中</span>
+              <span><span class="cal-legend-dot" style="background:#ef4444;"></span> 逾期</span>
+            </div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+
+        <!-- QR Labels Page -->
+        <div id="qr-labels" class="page-content">
+          <div class="section-title">QR Code 器材標籤</div>
+          <div class="card no-print" style="margin-bottom:16px;">
+            <div class="table-toolbar">
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="qr-filter-category" class="form-select" style="width:180px; font-size:13px;">
+                  <option value="all">全部分類</option>
+                </select>
+                <select id="qr-filter-status" class="form-select" style="width:140px; font-size:13px;">
+                  <option value="all">全部狀態</option>
+                  <option value="available">可用</option>
+                  <option value="rented">租出</option>
+                  <option value="maintenance">維護中</option>
+                </select>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" onclick="loadQRLabels()">產生標籤</button>
+                <button class="btn btn-outline" onclick="window.print()">列印</button>
+              </div>
+            </div>
+          </div>
+          <div class="qr-grid" id="qr-grid">
+            <div class="pos-empty-hint" style="grid-column:1/-1;">選擇篩選條件後點選「產生標籤」</div>
+          </div>
+        </div>
+
+        <!-- Rentals Record Page -->
         <div id="rentals" class="page-content">
-          <div class="section-title">租借管理</div>
+          <div class="section-title">租借紀錄</div>
           <div class="card">
             <div class="table-toolbar">
               <div class="search-box" style="flex: 1; max-width: 300px;">
@@ -226,13 +1041,10 @@
           </div>
         </div>
 
-        <!-- Venues Page -->
+        <!-- Venues Settings Page -->
         <div id="venues" class="page-content">
-          <div class="section-title">場地管理</div>
-
-          <!-- Venues List -->
-          <div class="card mb-3">
-            <div class="card-header">場地列表</div>
+          <div class="section-title">場地設定</div>
+          <div class="card">
             <div class="table-toolbar">
               <div class="search-box" style="flex: 1; max-width: 300px;">
                 <span class="search-icon">🔍</span>
@@ -258,16 +1070,17 @@
               </table>
             </div>
           </div>
+        </div>
 
-          <!-- Venue Bookings -->
+        <!-- Venue Bookings Record Page -->
+        <div id="venue-bookings" class="page-content">
+          <div class="section-title">場地預約紀錄</div>
           <div class="card">
-            <div class="card-header">場地預約</div>
             <div class="table-toolbar">
               <div class="search-box" style="flex: 1; max-width: 300px;">
                 <span class="search-icon">🔍</span>
                 <input type="text" id="booking-search" placeholder="搜尋預約...">
               </div>
-              <button class="btn btn-primary" id="create-booking-btn">+ 新增預約</button>
             </div>
             <div class="table-wrapper">
               <table id="bookings-table">
@@ -512,6 +1325,18 @@
 
       // Load page data
       switch(page) {
+        case 'pos-rental':
+          loadPosRentalPage();
+          break;
+        case 'pos-venue':
+          loadPosVenuePage();
+          break;
+        case 'schedule':
+          loadSchedulePage();
+          break;
+        case 'qr-labels':
+          loadQRLabelsPage();
+          break;
         case 'equipment':
           loadEquipmentPage();
           break;
@@ -522,7 +1347,10 @@
           loadCustomersPage();
           break;
         case 'venues':
-          loadVenuesPage();
+          loadVenueSettingsPage();
+          break;
+        case 'venue-bookings':
+          loadVenueBookingsPage();
           break;
         case 'inventory':
           loadInventoryPage();
@@ -574,15 +1402,25 @@
         filterTable(document.getElementById('customers-table'), e.target.value, 0);
       });
 
-      // Venues
+      // Venue Settings
       document.getElementById('add-venue-btn').addEventListener('click', openAddVenueModal);
-      document.getElementById('create-booking-btn').addEventListener('click', openCreateBookingModal);
       document.getElementById('venue-search').addEventListener('input', (e) => {
         filterTable(document.getElementById('venues-table'), e.target.value, 0);
       });
       document.getElementById('booking-search').addEventListener('input', (e) => {
         filterTable(document.getElementById('bookings-table'), e.target.value, 1);
       });
+
+      // POS date change handlers
+      document.getElementById('pos-rental-start').addEventListener('change', posRentalUpdateDays);
+      document.getElementById('pos-rental-end').addEventListener('change', posRentalUpdateDays);
+      document.getElementById('pos-venue-start').addEventListener('change', posVenueRecalc);
+      document.getElementById('pos-venue-end').addEventListener('change', posVenueRecalc);
+      document.getElementById('pos-venue-rate-type').addEventListener('change', posVenueRecalc);
+
+      // POS search handlers
+      document.getElementById('pos-equip-search').addEventListener('input', debounce(posRentalFilterItems, 200));
+      document.getElementById('pos-venue-search').addEventListener('input', debounce(posVenueFilterItems, 200));
 
       // Inventory
       document.getElementById('add-location-btn').addEventListener('click', openAddLocationModal);
@@ -1105,6 +1943,8 @@
           <td><span class="badge badge-info">${rental.status || 'unknown'}</span></td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" data-id="${rental.rental_id}" onclick="openViewRentalModal(this)">查看</button>
+            <button class="btn btn-sm btn-outline" data-id="${rental.rental_id}" onclick="openRentalReceipt('${rental.rental_id}')" title="收據">🧾</button>
+            <button class="btn btn-sm btn-outline" data-id="${rental.rental_id}" onclick="sendRentalEmail('${rental.rental_id}','confirmation')" title="寄確認信">✉️</button>
             <button class="btn btn-sm btn-danger" data-id="${rental.rental_id}" onclick="deleteRental(this)">刪除</button>
           </td>
         `;
@@ -1117,11 +1957,54 @@
         <form id="rental-form">
           <div class="form-group">
             <label class="form-label required">客戶</label>
-            <select name="customer_id" class="form-select" required>
-              <option value="">選擇客戶...</option>
-              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
-            </select>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select name="customer_id" id="rental-customer-select" class="form-select" required style="flex:1;">
+                <option value="">選擇客戶...</option>
+                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+              </select>
+              <button type="button" class="btn btn-sm btn-outline" onclick="toggleInlineCustomerForm()" title="新增客戶">+ 新增</button>
+            </div>
           </div>
+
+          <!-- Inline new customer form (hidden by default) -->
+          <div id="inline-customer-form" style="display:none; background:var(--bg-secondary,#f8f9fa); border:1px solid var(--border-color,#dee2e6); border-radius:8px; padding:16px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <strong style="font-size:14px;">新增客戶資料</strong>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="toggleInlineCustomerForm()">取消</button>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">租借人姓名</label>
+                <input type="text" id="new-cust-name" class="form-input" placeholder="例如：王小明">
+              </div>
+              <div class="form-group">
+                <label class="form-label">公司名稱</label>
+                <input type="text" id="new-cust-company" class="form-input" placeholder="選填">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">電話</label>
+                <input type="tel" id="new-cust-phone" class="form-input" placeholder="例如：0912-345-678">
+              </div>
+              <div class="form-group">
+                <label class="form-label">電郵</label>
+                <input type="email" id="new-cust-email" class="form-input" placeholder="例如：name@example.com">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">身分證/統編</label>
+                <input type="text" id="new-cust-id-number" class="form-input" placeholder="例如：A123456789 或 12345678">
+              </div>
+              <div class="form-group">
+                <label class="form-label">備註</label>
+                <input type="text" id="new-cust-notes" class="form-input" placeholder="選填">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveInlineCustomer()" style="width:100%;">確認新增客戶</button>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">開始日期</label>
@@ -1143,6 +2026,69 @@
       `);
 
       modal.open();
+    }
+
+    function toggleInlineCustomerForm() {
+      const panel = document.getElementById('inline-customer-form');
+      const select = document.getElementById('rental-customer-select');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        select.removeAttribute('required');
+        select.value = '';
+        attachCustomerValidation('#inline-customer-form', 'new-cust');
+      } else {
+        panel.style.display = 'none';
+        select.setAttribute('required', '');
+      }
+    }
+
+    async function saveInlineCustomer() {
+      const name = document.getElementById('new-cust-name').value.trim();
+      const phone = document.getElementById('new-cust-phone').value.trim();
+
+      // Validate using shared logic
+      const errors = [];
+      if (!name) errors.push('租借人姓名必填');
+      else if (name.length < 2) errors.push('姓名至少需要 2 個字');
+      if (!phone) errors.push('電話必填');
+      else if (!isValidPhone(phone)) errors.push('請輸入有效的台灣電話號碼（例如 0912-345-678）');
+
+      const email = document.getElementById('new-cust-email').value.trim();
+      if (email && !isValidEmail(email)) errors.push('電子郵件格式不正確');
+
+      const idNumber = document.getElementById('new-cust-id-number').value.trim();
+      if (idNumber && !isValidIdNumber(idNumber)) errors.push('身分證字號或統一編號格式不正確');
+
+      if (errors.length > 0) { showError(errors[0]); return; }
+
+      const custData = { name, phone: formatPhone(phone) };
+      const company = document.getElementById('new-cust-company').value.trim();
+      const notes = document.getElementById('new-cust-notes').value.trim();
+      if (company) custData.company_name = company;
+      if (email) custData.email = email.toLowerCase();
+      if (idNumber) custData.id_number = idNumber;
+      if (notes) custData.notes = notes;
+
+      try {
+        const newCustomer = await API.createCustomer(custData);
+        // Refresh global customers list
+        customers = await API.getCustomers();
+        // Update select dropdown and auto-select the new customer
+        const select = document.getElementById('rental-customer-select');
+        select.innerHTML = '<option value="">選擇客戶...</option>' +
+          customers.filter(c => !c.is_deleted).map(c =>
+            `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`
+          ).join('');
+        // Select the newly created customer (last CU-xxx ID)
+        const newId = newCustomer.customer_id || customers[customers.length - 1]?.customer_id;
+        if (newId) select.value = newId;
+        select.setAttribute('required', '');
+        // Hide inline form
+        document.getElementById('inline-customer-form').style.display = 'none';
+        showSuccess(`客戶「${name}」已新增`);
+      } catch (error) {
+        showError('新增客戶失敗: ' + error.message);
+      }
     }
 
     async function saveRental(e) {
@@ -1296,15 +2242,24 @@
       cancelled: '已取消'
     };
 
-    async function loadVenuesPage() {
+    async function loadVenueSettingsPage() {
       try {
         venues = await API.getVenues();
-        venueBookings = await API.getVenueBookings();
-        if (!customers.length) customers = await API.getCustomers();
         renderVenues();
-        renderVenueBookings();
       } catch (error) {
         showError('載入場地數據失敗');
+        console.error(error);
+      }
+    }
+
+    async function loadVenueBookingsPage() {
+      try {
+        venueBookings = await API.getVenueBookings();
+        if (!venues.length) venues = await API.getVenues();
+        if (!customers.length) customers = await API.getCustomers();
+        renderVenueBookings();
+      } catch (error) {
+        showError('載入場地預約失敗');
         console.error(error);
       }
     }
@@ -1364,6 +2319,8 @@
           <td><span class="badge ${statusClass[booking.status] || 'badge-info'}">${BOOKING_STATUS_LABELS[booking.status] || booking.status || '-'}</span></td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" data-id="${booking.booking_id}" onclick="openViewBookingModal(this)">查看</button>
+            <button class="btn btn-sm btn-outline" onclick="openVenueBookingReceipt('${booking.booking_id}')" title="收據">🧾</button>
+            <button class="btn btn-sm btn-outline" onclick="sendVenueBookingEmail('${booking.booking_id}')" title="寄確認信">✉️</button>
             <button class="btn btn-sm btn-danger" data-id="${booking.booking_id}" onclick="deleteBookingItem(this)">刪除</button>
           </td>
         `;
@@ -1945,27 +2902,27 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">租借人姓名</label>
-              <input type="text" name="name" class="form-input" required>
+              <input type="text" name="name" class="form-input" required placeholder="例如：王小明">
             </div>
             <div class="form-group">
               <label class="form-label">公司名稱</label>
-              <input type="text" name="company_name" class="form-input">
+              <input type="text" name="company_name" class="form-input" placeholder="選填">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
-              <input type="tel" name="phone" class="form-input" required>
+              <input type="tel" name="phone" class="form-input" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
               <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input">
+              <input type="email" name="email" class="form-input" placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">身分證/統編</label>
-              <input type="text" name="id_number" class="form-input">
+              <input type="text" name="id_number" class="form-input" placeholder="例如：A123456789 或 12345678">
             </div>
             <div class="form-group">
               <label class="form-label">證件驗證</label>
@@ -1986,19 +2943,24 @@
       `);
 
       modal.open();
+      attachCustomerValidation('#customer-form', 'cust');
     }
 
     async function saveCustomer(e) {
       const form = document.getElementById('customer-form');
-      const validation = validateForm(form);
+      const errors = validateCustomerForm(form);
 
-      if (!validation.valid) {
-        showError(validation.errors[0]);
+      if (errors.length > 0) {
+        showError(errors[0]);
         return;
       }
 
       try {
         const data = getFormData(form);
+        // Ensure consistent formatting
+        if (data.phone) data.phone = formatPhone(data.phone);
+        if (data.email) data.email = data.email.trim().toLowerCase();
+        if (data.id_number) data.id_number = data.id_number.trim();
         await API.createCustomer(data);
         showSuccess('客戶已新增');
         document.querySelector('.modal-overlay').remove();
@@ -2006,6 +2968,35 @@
       } catch (error) {
         showError('保存失敗: ' + error.message);
       }
+    }
+
+    /**
+     * Validate customer form fields before submission
+     */
+    function validateCustomerForm(form) {
+      const errors = [];
+      const name = (form.querySelector('[name="name"]') || form.querySelector('#new-cust-name'));
+      const phone = (form.querySelector('[name="phone"]') || form.querySelector('#new-cust-phone'));
+      const email = (form.querySelector('[name="email"]') || form.querySelector('#new-cust-email'));
+      const idNum = (form.querySelector('[name="id_number"]') || form.querySelector('#new-cust-id-number'));
+
+      if (name) {
+        const v = name.value.trim();
+        if (!v) errors.push('租借人姓名必填');
+        else if (v.length < 2) errors.push('姓名至少需要 2 個字');
+      }
+      if (phone) {
+        const v = phone.value.trim();
+        if (!v) errors.push('電話必填');
+        else if (!isValidPhone(v)) errors.push('請輸入有效的台灣電話號碼（例如 0912-345-678）');
+      }
+      if (email && email.value.trim()) {
+        if (!isValidEmail(email.value.trim())) errors.push('電子郵件格式不正確');
+      }
+      if (idNum && idNum.value.trim()) {
+        if (!isValidIdNumber(idNum.value.trim())) errors.push('身分證字號或統一編號格式不正確');
+      }
+      return errors;
     }
 
     function openEditCustomerModal(button) {
@@ -2021,27 +3012,27 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">租借人姓名</label>
-              <input type="text" name="name" class="form-input" value="${customer.name || ''}" required>
+              <input type="text" name="name" class="form-input" value="${customer.name || ''}" required placeholder="例如：王小明">
             </div>
             <div class="form-group">
               <label class="form-label">公司名稱</label>
-              <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}">
+              <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}" placeholder="選填">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
-              <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required>
+              <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
               <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input" value="${customer.email || ''}">
+              <input type="email" name="email" class="form-input" value="${customer.email || ''}" placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">身分證/統編</label>
-              <input type="text" name="id_number" class="form-input" value="${customer.id_number || ''}">
+              <input type="text" name="id_number" class="form-input" value="${customer.id_number || ''}" placeholder="例如：A123456789 或 12345678">
             </div>
             <div class="form-group">
               <label class="form-label">證件驗證</label>
@@ -2084,19 +3075,23 @@
       `);
 
       modal.open();
+      attachCustomerValidation('#edit-customer-form', 'edit-cust');
     }
 
     async function updateCustomerForm(customerId, e) {
       const form = document.getElementById('edit-customer-form');
-      const validation = validateForm(form);
+      const errors = validateCustomerForm(form);
 
-      if (!validation.valid) {
-        showError(validation.errors[0]);
+      if (errors.length > 0) {
+        showError(errors[0]);
         return;
       }
 
       try {
         const data = getFormData(form);
+        if (data.phone) data.phone = formatPhone(data.phone);
+        if (data.email) data.email = data.email.trim().toLowerCase();
+        if (data.id_number) data.id_number = data.id_number.trim();
         await API.updateCustomer(customerId, data);
         showSuccess('客戶已更新');
         document.querySelector('.modal-overlay').remove();
@@ -2449,6 +3444,860 @@
       } catch (error) {
         showLoading(false);
         showError('生成報告失敗: ' + error.message);
+      }
+    }
+
+    // ==================== SCHEDULE / CALENDAR ====================
+
+    let calCurrentDate = new Date();
+    let calScheduleData = { rentals: [], bookings: [] };
+
+    async function loadSchedulePage() {
+      calCurrentDate = new Date();
+      await calFetchAndRender();
+    }
+
+    async function calFetchAndRender() {
+      const year = calCurrentDate.getFullYear();
+      const month = calCurrentDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      // Extend range to cover full calendar grid
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - startDate.getDay()); // Sunday
+      const endDate = new Date(lastDay);
+      endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // Saturday
+
+      const startStr = formatDate(startDate);
+      const endStr = formatDate(endDate);
+
+      try {
+        calScheduleData = await API.getScheduleData(startStr, endStr);
+      } catch (e) {
+        showError('載入排程失敗');
+        console.error(e);
+        calScheduleData = { rentals: [], bookings: [] };
+      }
+
+      calRender(year, month, startDate, endDate);
+    }
+
+    function calRender(year, month, gridStart, gridEnd) {
+      const titleEl = document.getElementById('cal-title');
+      titleEl.textContent = `${year} 年 ${month + 1} 月`;
+
+      const grid = document.getElementById('cal-grid');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const days = ['日', '一', '二', '三', '四', '五', '六'];
+      let html = days.map(d => `<div class="cal-header-cell">${d}</div>`).join('');
+
+      const cursor = new Date(gridStart);
+      while (cursor <= gridEnd) {
+        const dateStr = formatDate(cursor);
+        const isOther = cursor.getMonth() !== month;
+        const isToday = cursor.getTime() === today.getTime();
+
+        let cellClass = 'cal-cell';
+        if (isOther) cellClass += ' other-month';
+        if (isToday) cellClass += ' today';
+
+        // Find events for this day
+        const dayEvents = calGetEventsForDate(dateStr);
+        const maxShow = 3;
+        const eventsHtml = dayEvents.slice(0, maxShow).map(ev => {
+          const cls = ev.type === 'rental'
+            ? `cal-event rental ${ev.status === 'active' ? 'active' : ev.status === 'overdue' ? 'overdue' : ''}`
+            : 'cal-event booking';
+          const label = ev.type === 'rental'
+            ? `${ev.customer_name} (${ev.item_count}件)`
+            : `${ev.venue_name} - ${ev.customer_name}`;
+          return `<div class="${cls}" title="${label}">${label}</div>`;
+        }).join('');
+
+        const moreHtml = dayEvents.length > maxShow
+          ? `<div class="cal-more">+${dayEvents.length - maxShow} 更多</div>`
+          : '';
+
+        html += `<div class="${cellClass}">
+          <div class="cal-day-num">${cursor.getDate()}</div>
+          ${eventsHtml}${moreHtml}
+        </div>`;
+
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function calGetEventsForDate(dateStr) {
+      const events = [];
+      const d = new Date(dateStr);
+
+      calScheduleData.rentals.forEach(r => {
+        const rStart = new Date(r.start);
+        const rEnd = new Date(r.end);
+        rStart.setHours(0, 0, 0, 0);
+        rEnd.setHours(23, 59, 59, 999);
+        if (d >= rStart && d <= rEnd) {
+          events.push({
+            type: 'rental',
+            id: r.rental_id,
+            customer_name: r.customer_name,
+            status: r.status,
+            item_count: r.item_count
+          });
+        }
+      });
+
+      calScheduleData.bookings.forEach(b => {
+        const bStart = new Date(b.start);
+        const bEnd = new Date(b.end);
+        bStart.setHours(0, 0, 0, 0);
+        bEnd.setHours(23, 59, 59, 999);
+        if (d >= bStart && d <= bEnd) {
+          events.push({
+            type: 'booking',
+            id: b.booking_id,
+            venue_name: b.venue_name,
+            customer_name: b.customer_name,
+            status: b.status
+          });
+        }
+      });
+
+      return events;
+    }
+
+    function calNavPrev() {
+      calCurrentDate.setMonth(calCurrentDate.getMonth() - 1);
+      calFetchAndRender();
+    }
+
+    function calNavNext() {
+      calCurrentDate.setMonth(calCurrentDate.getMonth() + 1);
+      calFetchAndRender();
+    }
+
+    function calNavToday() {
+      calCurrentDate = new Date();
+      calFetchAndRender();
+    }
+
+    // ==================== QR LABELS ====================
+
+    async function loadQRLabelsPage() {
+      try {
+        if (!equipmentTypes.length) equipmentTypes = await API.getEquipmentTypes();
+        // Populate category filter
+        const catSelect = document.getElementById('qr-filter-category');
+        const cats = [...new Set(equipmentTypes.filter(t => !t.is_deleted).map(t => t.category || '其他'))];
+        catSelect.innerHTML = '<option value="all">全部分類</option>' +
+          cats.map(c => `<option value="${c}">${c}</option>`).join('');
+      } catch (e) {
+        showError('載入分類失敗');
+      }
+    }
+
+    async function loadQRLabels() {
+      const catFilter = document.getElementById('qr-filter-category').value;
+      const statusFilter = document.getElementById('qr-filter-status').value;
+
+      try {
+        const allLabels = await API.getEquipmentQRBatch([]);
+        let filtered = allLabels;
+        if (catFilter !== 'all') {
+          filtered = filtered.filter(l => l.category === catFilter);
+        }
+        if (statusFilter !== 'all') {
+          // Need unit status - fetch units if needed
+          if (!equipmentUnits.length) equipmentUnits = await API.getEquipmentUnits();
+          const unitStatusMap = {};
+          equipmentUnits.forEach(u => { unitStatusMap[u.unit_id] = u.status; });
+          filtered = filtered.filter(l => unitStatusMap[l.unit_id] === statusFilter);
+        }
+
+        const grid = document.getElementById('qr-grid');
+        if (filtered.length === 0) {
+          grid.innerHTML = '<div class="pos-empty-hint" style="grid-column:1/-1;">沒有符合條件的器材</div>';
+          return;
+        }
+
+        grid.innerHTML = filtered.map(label => `
+          <div class="qr-label">
+            <img src="${label.qr_url}" alt="QR ${label.internal_code}">
+            <div class="qr-label-code">${label.internal_code}</div>
+            <div class="qr-label-name">${label.type_name}</div>
+            <div class="qr-label-detail">${label.category || ''} | ${label.serial_number || '無序號'}</div>
+            <div class="qr-label-detail">日租 ${formatCurrency(label.daily_rate)}</div>
+          </div>
+        `).join('');
+
+        showSuccess(`已產生 ${filtered.length} 張標籤`);
+      } catch (e) {
+        showError('產生標籤失敗: ' + e.message);
+      }
+    }
+
+    // ==================== RECEIPT / PRINT ====================
+
+    async function openRentalReceipt(rentalId) {
+      try {
+        const receipt = await API.generateRentalReceipt(rentalId);
+        renderReceipt(receipt, 'rental');
+      } catch (e) {
+        showError('產生收據失敗: ' + e.message);
+      }
+    }
+
+    async function openVenueBookingReceipt(bookingId) {
+      try {
+        const receipt = await API.generateVenueBookingReceipt(bookingId);
+        renderReceipt(receipt, 'venue');
+      } catch (e) {
+        showError('產生收據失敗: ' + e.message);
+      }
+    }
+
+    function renderReceipt(data, type) {
+      const rateLabels = { hourly: '時租', half_day: '半日租', daily: '日租' };
+      const statusLabels = { draft: '草稿', reserved: '已預約', active: '進行中', completed: '已完成', returned: '已歸還', overdue: '逾期', cancelled: '已取消' };
+
+      let html = '<div class="receipt-container">';
+      html += `<div class="receipt-header">
+        <h2>映奧創意工作室</h2>
+        <div class="subtitle">${type === 'rental' ? '器材租借確認單' : '場地預約確認單'}</div>
+      </div>`;
+
+      // Info
+      html += '<div class="receipt-info-grid">';
+      if (type === 'rental') {
+        html += `
+          <div><span class="label">單號：</span>${data.rental_id}</div>
+          <div><span class="label">狀態：</span>${statusLabels[data.status] || data.status}</div>
+          <div><span class="label">客戶：</span>${data.customer.name}${data.customer.company ? ' (' + data.customer.company + ')' : ''}</div>
+          <div><span class="label">電話：</span>${data.customer.phone || '-'}</div>
+          <div><span class="label">租借期間：</span>${formatDateDisplay(data.rental_start)} ~ ${formatDateDisplay(data.rental_end)}</div>
+          <div><span class="label">天數：</span>${data.days} 天</div>
+        `;
+      } else {
+        html += `
+          <div><span class="label">單號：</span>${data.booking_id}</div>
+          <div><span class="label">狀態：</span>${statusLabels[data.status] || data.status}</div>
+          <div><span class="label">場地：</span>${data.venue.name}</div>
+          <div><span class="label">客戶：</span>${data.customer.name}</div>
+          <div><span class="label">預約時段：</span>${data.booking_start} ~ ${data.booking_end}</div>
+          <div><span class="label">計費：</span>${rateLabels[data.rate_type] || data.rate_type}</div>
+        `;
+      }
+      html += '</div>';
+
+      // Items table
+      if (type === 'rental' && data.items && data.items.length > 0) {
+        html += `<table class="receipt-table">
+          <thead><tr><th>器材名稱</th><th>編號</th><th>日租</th><th>天數</th><th class="text-right">小計</th></tr></thead>
+          <tbody>`;
+        data.items.forEach(item => {
+          html += `<tr>
+            <td>${item.type_name}</td>
+            <td>${item.internal_code}</td>
+            <td>${formatCurrency(item.daily_rate)}</td>
+            <td>${item.days}</td>
+            <td class="text-right">${formatCurrency(item.line_total)}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      }
+
+      // Services
+      if (type === 'rental' && data.services && data.services.length > 0) {
+        html += `<table class="receipt-table">
+          <thead><tr><th>附加服務</th><th>單價</th><th>數量</th><th class="text-right">小計</th></tr></thead>
+          <tbody>`;
+        data.services.forEach(s => {
+          html += `<tr>
+            <td>${s.description}</td>
+            <td>${formatCurrency(s.unit_price)}</td>
+            <td>${s.quantity}</td>
+            <td class="text-right">${formatCurrency(s.line_total)}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      }
+
+      // Totals
+      const taxAmount = Math.round(data.total_amount * (data.tax_rate || 0.05) / (1 + (data.tax_rate || 0.05)));
+      const subtotal = data.total_amount - taxAmount;
+      html += `<div class="receipt-totals">
+        <div class="row"><span>小計</span><span>${formatCurrency(subtotal)}</span></div>
+        <div class="row"><span>稅金</span><span>${formatCurrency(taxAmount)}</span></div>
+        <div class="row grand"><span>合計</span><span>${formatCurrency(data.total_amount)}</span></div>
+        <div class="row"><span>已付</span><span>${formatCurrency(data.paid_amount)}</span></div>
+        <div class="row"><span>未付</span><span>${formatCurrency(data.total_amount - data.paid_amount)}</span></div>
+      </div>`;
+
+      // Payment history
+      if (data.payments && data.payments.length > 0) {
+        html += '<div style="margin-top:16px; font-size:12px;"><strong>付款紀錄：</strong><br>';
+        data.payments.forEach(p => {
+          html += `${p.date ? formatDateDisplay(p.date) : '-'} | ${p.method || '-'} | ${formatCurrency(p.amount)}<br>`;
+        });
+        html += '</div>';
+      }
+
+      if (data.notes) {
+        html += `<div style="margin-top:12px; font-size:12px;"><strong>備註：</strong>${data.notes}</div>`;
+      }
+
+      html += `<div class="receipt-footer">
+        <div>產生時間：${new Date().toLocaleString('zh-TW')}</div>
+        <div style="margin-top:24px;">
+          <span style="display:inline-block; width:200px; border-top:1px solid #ccc; padding-top:4px;">客戶簽名</span>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <span style="display:inline-block; width:200px; border-top:1px solid #ccc; padding-top:4px;">經手人</span>
+        </div>
+      </div>`;
+
+      html += '</div>';
+
+      // Show in modal
+      const modal = showModal('收據預覽', `
+        <div>${html}</div>
+        <div class="no-print" style="text-align:center; margin-top:16px; display:flex; gap:8px; justify-content:center;">
+          <button class="btn btn-primary" onclick="window.print()">列印</button>
+          <button class="btn btn-outline" onclick="closeModal()">關閉</button>
+        </div>
+      `, 'lg');
+    }
+
+    // ==================== EMAIL NOTIFICATIONS ====================
+
+    async function sendRentalEmail(rentalId, type) {
+      const typeLabels = {
+        confirmation: '確認信',
+        reminder: '歸還提醒',
+        overdue: '逾期通知'
+      };
+
+      try {
+        let result;
+        switch(type) {
+          case 'confirmation':
+            result = await API.sendRentalConfirmationEmail(rentalId);
+            break;
+          case 'reminder':
+            result = await API.sendReturnReminderEmail(rentalId);
+            break;
+          case 'overdue':
+            result = await API.sendOverdueNoticeEmail(rentalId);
+            break;
+        }
+        if (result.success) {
+          showSuccess(result.message);
+        } else {
+          showWarning(result.message);
+        }
+      } catch (e) {
+        showError(`寄送${typeLabels[type] || '郵件'}失敗: ` + e.message);
+      }
+    }
+
+    async function sendVenueBookingEmail(bookingId) {
+      try {
+        const result = await API.sendVenueBookingConfirmationEmail(bookingId);
+        if (result.success) {
+          showSuccess(result.message);
+        } else {
+          showWarning(result.message);
+        }
+      } catch (e) {
+        showError('寄送確認信失敗: ' + e.message);
+      }
+    }
+
+    // ==================== POS RENTAL ====================
+
+    let posRentalSelectedItems = []; // [{unit_id, type_name, internal_code, daily_rate}, ...]
+
+    async function loadPosRentalPage() {
+      try {
+        if (!equipmentTypes.length) equipmentTypes = await API.getEquipmentTypes();
+        if (!equipmentUnits.length) equipmentUnits = await API.getEquipmentUnits();
+        if (!customers.length) customers = await API.getCustomers();
+        posRentalRenderCatalog();
+        posRentalPopulateCustomers();
+        // Set default dates
+        const today = formatDate(new Date());
+        const tomorrow = formatDate(new Date(Date.now() + 86400000));
+        document.getElementById('pos-rental-start').value = today;
+        document.getElementById('pos-rental-end').value = tomorrow;
+        posRentalUpdateDays();
+      } catch (error) {
+        showError('載入器材資料失敗');
+        console.error(error);
+      }
+    }
+
+    function posRentalPopulateCustomers() {
+      const select = document.getElementById('pos-rental-customer-select');
+      select.innerHTML = '<option value="">選擇客戶...</option>' +
+        customers.filter(c => !c.is_deleted).map(c =>
+          `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''} - ${c.phone || ''}</option>`
+        ).join('');
+    }
+
+    function posRentalRenderCatalog() {
+      // Render category filters
+      const filterBar = document.getElementById('pos-category-filters');
+      const categories = [...new Set(equipmentTypes.filter(t => !t.is_deleted).map(t => t.category || '其他'))];
+      filterBar.innerHTML = '<div class="pos-filter-chip active" data-cat="all">全部</div>' +
+        categories.map(c => `<div class="pos-filter-chip" data-cat="${c}">${c}</div>`).join('');
+
+      filterBar.querySelectorAll('.pos-filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          filterBar.querySelectorAll('.pos-filter-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          posRentalFilterItems();
+        });
+      });
+
+      posRentalFilterItems();
+    }
+
+    function posRentalFilterItems() {
+      const grid = document.getElementById('pos-equip-grid');
+      const searchVal = (document.getElementById('pos-equip-search').value || '').toLowerCase();
+      const activeChip = document.querySelector('#pos-category-filters .pos-filter-chip.active');
+      const catFilter = activeChip ? activeChip.dataset.cat : 'all';
+
+      const activeUnits = equipmentUnits.filter(u => !u.is_deleted);
+
+      // Group units by type
+      let types = equipmentTypes.filter(t => !t.is_deleted);
+      if (catFilter !== 'all') {
+        types = types.filter(t => (t.category || '其他') === catFilter);
+      }
+      if (searchVal) {
+        types = types.filter(t =>
+          (t.type_name || '').toLowerCase().includes(searchVal) ||
+          (t.type_id || '').toLowerCase().includes(searchVal)
+        );
+      }
+
+      grid.innerHTML = '';
+      if (types.length === 0) {
+        grid.innerHTML = '<div class="pos-empty-hint" style="grid-column:1/-1;">沒有找到符合條件的器材</div>';
+        return;
+      }
+
+      types.forEach(type => {
+        const units = activeUnits.filter(u => u.type_id === type.type_id);
+        const availableCount = units.filter(u => u.status === 'available').length;
+        const totalCount = units.length;
+
+        const card = document.createElement('div');
+        card.className = 'pos-item-card' + (availableCount === 0 ? ' unavailable' : '');
+        card.innerHTML = `
+          <div class="pos-item-badge ${availableCount > 0 ? 'available' : 'rented'}">${availableCount}/${totalCount} 可用</div>
+          <div class="pos-item-icon">📷</div>
+          <div class="pos-item-name">${type.type_name || type.type_id}</div>
+          <div class="pos-item-detail">${type.category || '一般'}</div>
+          <div class="pos-item-price">${formatCurrency(type.daily_rate || 0)}/天</div>
+        `;
+
+        if (availableCount > 0) {
+          card.addEventListener('click', () => posRentalAddItem(type, units));
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    function posRentalAddItem(type, units) {
+      // Find first available unit not already selected
+      const selectedIds = posRentalSelectedItems.map(i => i.unit_id);
+      const available = units.filter(u => u.status === 'available' && !selectedIds.includes(u.unit_id));
+
+      if (available.length === 0) {
+        showWarning('此類型已無可用器材');
+        return;
+      }
+
+      const unit = available[0];
+      posRentalSelectedItems.push({
+        unit_id: unit.unit_id,
+        type_id: type.type_id,
+        type_name: type.type_name || type.type_id,
+        internal_code: unit.internal_code || unit.unit_id,
+        daily_rate: parseFloat(type.daily_rate) || 0
+      });
+
+      posRentalRenderOrderItems();
+      posRentalRecalc();
+      posRentalFilterItems(); // refresh availability badges
+    }
+
+    function posRentalRemoveItem(idx) {
+      posRentalSelectedItems.splice(idx, 1);
+      posRentalRenderOrderItems();
+      posRentalRecalc();
+      posRentalFilterItems();
+    }
+
+    function posRentalRenderOrderItems() {
+      const container = document.getElementById('pos-rental-items');
+      const countEl = document.getElementById('pos-rental-item-count');
+      countEl.textContent = posRentalSelectedItems.length;
+
+      if (posRentalSelectedItems.length === 0) {
+        container.innerHTML = '<div class="pos-empty-hint">點選左側器材加入租借單</div>';
+        return;
+      }
+
+      container.innerHTML = posRentalSelectedItems.map((item, idx) => `
+        <div class="pos-order-item">
+          <div class="pos-order-item-info">
+            <div class="pos-order-item-name">${item.type_name}</div>
+            <div class="pos-order-item-sub">${item.internal_code}</div>
+          </div>
+          <div class="pos-order-item-price">${formatCurrency(item.daily_rate)}/天</div>
+          <button class="pos-order-item-remove" onclick="posRentalRemoveItem(${idx})">x</button>
+        </div>
+      `).join('');
+    }
+
+    function posRentalUpdateDays() {
+      const start = document.getElementById('pos-rental-start').value;
+      const end = document.getElementById('pos-rental-end').value;
+      const el = document.getElementById('pos-rental-days');
+      if (start && end) {
+        const days = getDateRange(start, end);
+        el.textContent = days > 0 ? `共 ${days} 天` : '結束日期須晚於開始日期';
+      } else {
+        el.textContent = '';
+      }
+      posRentalRecalc();
+    }
+
+    function posRentalRecalc() {
+      const start = document.getElementById('pos-rental-start').value;
+      const end = document.getElementById('pos-rental-end').value;
+      const days = (start && end) ? Math.max(getDateRange(start, end), 0) : 0;
+
+      let subtotal = 0;
+      posRentalSelectedItems.forEach(item => {
+        subtotal += item.daily_rate * days;
+      });
+
+      const tax = Math.round(subtotal * 0.05);
+      const total = subtotal + tax;
+
+      document.getElementById('pos-rental-subtotal').textContent = formatCurrency(subtotal);
+      document.getElementById('pos-rental-tax').textContent = formatCurrency(tax);
+      document.getElementById('pos-rental-total').textContent = formatCurrency(total);
+    }
+
+    function posRentalClear() {
+      posRentalSelectedItems = [];
+      document.getElementById('pos-rental-customer-select').value = '';
+      const today = formatDate(new Date());
+      const tomorrow = formatDate(new Date(Date.now() + 86400000));
+      document.getElementById('pos-rental-start').value = today;
+      document.getElementById('pos-rental-end').value = tomorrow;
+      document.getElementById('pos-rental-new-customer').style.display = 'none';
+      posRentalRenderOrderItems();
+      posRentalRecalc();
+      posRentalUpdateDays();
+      posRentalFilterItems();
+    }
+
+    function posRentalAddCustomer() {
+      document.getElementById('pos-rental-new-customer').style.display = 'block';
+      attachCustomerValidation('#pos-rental-new-customer', 'pos-nc');
+    }
+
+    async function posRentalSaveNewCustomer() {
+      const name = document.getElementById('pos-nc-name').value.trim();
+      const phone = document.getElementById('pos-nc-phone').value.trim();
+      if (!name) { showError('姓名必填'); return; }
+      if (!phone) { showError('電話必填'); return; }
+      if (!isValidPhone(phone)) { showError('請輸入有效的台灣電話號碼'); return; }
+
+      const custData = { name, phone: formatPhone(phone) };
+      const company = document.getElementById('pos-nc-company').value.trim();
+      if (company) custData.company_name = company;
+
+      try {
+        await API.createCustomer(custData);
+        customers = await API.getCustomers();
+        posRentalPopulateCustomers();
+        // Auto-select new customer
+        const newCust = customers[customers.length - 1];
+        if (newCust) document.getElementById('pos-rental-customer-select').value = newCust.customer_id;
+        document.getElementById('pos-rental-new-customer').style.display = 'none';
+        showSuccess(`客戶「${name}」已新增`);
+      } catch (error) {
+        showError('新增客戶失敗: ' + error.message);
+      }
+    }
+
+    async function posRentalSubmit() {
+      const customerId = document.getElementById('pos-rental-customer-select').value;
+      const start = document.getElementById('pos-rental-start').value;
+      const end = document.getElementById('pos-rental-end').value;
+
+      if (!customerId) { showError('請選擇客戶'); return; }
+      if (!start || !end) { showError('請選擇租借日期'); return; }
+      if (new Date(end) <= new Date(start)) { showError('結束日期必須晚於開始日期'); return; }
+      if (posRentalSelectedItems.length === 0) { showError('請至少選擇一項器材'); return; }
+
+      try {
+        // Create rental
+        const rental = await API.createRental({
+          customer_id: customerId,
+          rental_start: start,
+          rental_end: end
+        });
+
+        // Create rental items
+        for (const item of posRentalSelectedItems) {
+          await API.createRentalItem({
+            rental_id: rental.rental_id,
+            unit_id: item.unit_id,
+            daily_rate: item.daily_rate
+          });
+        }
+
+        showSuccess(`租借單 ${rental.rental_id} 已建立，共 ${posRentalSelectedItems.length} 項器材`);
+        posRentalClear();
+        // Refresh units data
+        equipmentUnits = await API.getEquipmentUnits();
+        posRentalFilterItems();
+      } catch (error) {
+        showError('建立租借單失敗: ' + error.message);
+      }
+    }
+
+    // ==================== POS VENUE BOOKING ====================
+
+    let posVenueSelectedVenue = null; // {venue_id, venue_name, hourly_rate, half_day_rate, daily_rate, ...}
+
+    async function loadPosVenuePage() {
+      try {
+        if (!venues.length) venues = await API.getVenues();
+        if (!customers.length) customers = await API.getCustomers();
+        posVenueRenderCatalog();
+        posVenuePopulateCustomers();
+      } catch (error) {
+        showError('載入場地資料失敗');
+        console.error(error);
+      }
+    }
+
+    function posVenuePopulateCustomers() {
+      const select = document.getElementById('pos-venue-customer-select');
+      select.innerHTML = '<option value="">選擇客戶...</option>' +
+        customers.filter(c => !c.is_deleted).map(c =>
+          `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''} - ${c.phone || ''}</option>`
+        ).join('');
+    }
+
+    const POS_VENUE_TYPE_LABELS = {
+      studio: '攝影棚',
+      meeting_room: '會議室',
+      event_hall: '活動廳',
+      outdoor: '戶外場地',
+      other: '其他'
+    };
+
+    function posVenueRenderCatalog() {
+      // Type filters
+      const filterBar = document.getElementById('pos-venue-type-filters');
+      const types = [...new Set(venues.filter(v => !v.is_deleted).map(v => v.venue_type || 'other'))];
+      filterBar.innerHTML = '<div class="pos-filter-chip active" data-type="all">全部</div>' +
+        types.map(t => `<div class="pos-filter-chip" data-type="${t}">${POS_VENUE_TYPE_LABELS[t] || t}</div>`).join('');
+
+      filterBar.querySelectorAll('.pos-filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          filterBar.querySelectorAll('.pos-filter-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          posVenueFilterItems();
+        });
+      });
+
+      posVenueFilterItems();
+    }
+
+    function posVenueFilterItems() {
+      const grid = document.getElementById('pos-venue-grid');
+      const searchVal = (document.getElementById('pos-venue-search').value || '').toLowerCase();
+      const activeChip = document.querySelector('#pos-venue-type-filters .pos-filter-chip.active');
+      const typeFilter = activeChip ? activeChip.dataset.type : 'all';
+
+      let filtered = venues.filter(v => !v.is_deleted && v.active !== false && v.active !== 'false');
+      if (typeFilter !== 'all') {
+        filtered = filtered.filter(v => (v.venue_type || 'other') === typeFilter);
+      }
+      if (searchVal) {
+        filtered = filtered.filter(v =>
+          (v.venue_name || '').toLowerCase().includes(searchVal)
+        );
+      }
+
+      grid.innerHTML = '';
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="pos-empty-hint" style="grid-column:1/-1;">沒有找到符合條件的場地</div>';
+        return;
+      }
+
+      filtered.forEach(venue => {
+        const isSelected = posVenueSelectedVenue && posVenueSelectedVenue.venue_id === venue.venue_id;
+        const card = document.createElement('div');
+        card.className = 'pos-item-card' + (isSelected ? ' selected' : '');
+        card.innerHTML = `
+          <div class="pos-item-icon">${venue.venue_type === 'studio' ? '🎬' : venue.venue_type === 'meeting_room' ? '🏛️' : venue.venue_type === 'event_hall' ? '🎪' : '🏢'}</div>
+          <div class="pos-item-name">${venue.venue_name}</div>
+          <div class="pos-item-detail">${POS_VENUE_TYPE_LABELS[venue.venue_type] || venue.venue_type} / ${venue.capacity || '?'}人</div>
+          <div class="pos-item-price">${formatCurrency(venue.hourly_rate || 0)}/hr</div>
+          <div class="pos-item-detail" style="margin-top:2px;">半日 ${formatCurrency(venue.half_day_rate || 0)} | 全日 ${formatCurrency(venue.daily_rate || 0)}</div>
+        `;
+
+        card.addEventListener('click', () => posVenueSelectVenue(venue));
+        grid.appendChild(card);
+      });
+    }
+
+    function posVenueSelectVenue(venue) {
+      posVenueSelectedVenue = venue;
+      const container = document.getElementById('pos-venue-selected');
+      container.innerHTML = `
+        <div class="pos-customer-display">
+          <div>
+            <div class="name">${venue.venue_name}</div>
+            <div class="phone">${POS_VENUE_TYPE_LABELS[venue.venue_type] || ''} / 容納 ${venue.capacity || '?'} 人</div>
+          </div>
+          <button class="pos-order-item-remove" onclick="posVenueClearSelection()">x</button>
+        </div>
+      `;
+      posVenueRecalc();
+      posVenueFilterItems(); // refresh to show selected state
+    }
+
+    function posVenueClearSelection() {
+      posVenueSelectedVenue = null;
+      document.getElementById('pos-venue-selected').innerHTML = '<div class="pos-empty-hint">點選左側場地進行預約</div>';
+      posVenueRecalc();
+      posVenueFilterItems();
+    }
+
+    function posVenueRecalc() {
+      if (!posVenueSelectedVenue) {
+        document.getElementById('pos-venue-fee').textContent = formatCurrency(0);
+        document.getElementById('pos-venue-tax').textContent = formatCurrency(0);
+        document.getElementById('pos-venue-total').textContent = formatCurrency(0);
+        return;
+      }
+
+      const rateType = document.getElementById('pos-venue-rate-type').value;
+      const start = document.getElementById('pos-venue-start').value;
+      const end = document.getElementById('pos-venue-end').value;
+
+      let fee = 0;
+      if (start && end) {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const diffMs = endDate - startDate;
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        if (rateType === 'hourly') {
+          fee = Math.ceil(diffHours) * (parseFloat(posVenueSelectedVenue.hourly_rate) || 0);
+        } else if (rateType === 'half_day') {
+          const halfDays = Math.ceil(diffHours / 4);
+          fee = halfDays * (parseFloat(posVenueSelectedVenue.half_day_rate) || 0);
+        } else if (rateType === 'daily') {
+          const days = Math.ceil(diffHours / 24);
+          fee = days * (parseFloat(posVenueSelectedVenue.daily_rate) || 0);
+        }
+      }
+
+      const tax = Math.round(fee * 0.05);
+      const total = fee + tax;
+
+      document.getElementById('pos-venue-fee').textContent = formatCurrency(fee);
+      document.getElementById('pos-venue-tax').textContent = formatCurrency(tax);
+      document.getElementById('pos-venue-total').textContent = formatCurrency(total);
+    }
+
+    function posVenueClear() {
+      posVenueSelectedVenue = null;
+      document.getElementById('pos-venue-customer-select').value = '';
+      document.getElementById('pos-venue-start').value = '';
+      document.getElementById('pos-venue-end').value = '';
+      document.getElementById('pos-venue-rate-type').value = 'hourly';
+      document.getElementById('pos-venue-notes').value = '';
+      document.getElementById('pos-venue-new-customer').style.display = 'none';
+      document.getElementById('pos-venue-selected').innerHTML = '<div class="pos-empty-hint">點選左側場地進行預約</div>';
+      posVenueRecalc();
+      posVenueFilterItems();
+    }
+
+    function posVenueAddCustomer() {
+      document.getElementById('pos-venue-new-customer').style.display = 'block';
+      attachCustomerValidation('#pos-venue-new-customer', 'pos-vnc');
+    }
+
+    async function posVenueSaveNewCustomer() {
+      const name = document.getElementById('pos-vnc-name').value.trim();
+      const phone = document.getElementById('pos-vnc-phone').value.trim();
+      if (!name) { showError('姓名必填'); return; }
+      if (!phone) { showError('電話必填'); return; }
+      if (!isValidPhone(phone)) { showError('請輸入有效的台灣電話號碼'); return; }
+
+      const custData = { name, phone: formatPhone(phone) };
+      const company = document.getElementById('pos-vnc-company').value.trim();
+      if (company) custData.company_name = company;
+
+      try {
+        await API.createCustomer(custData);
+        customers = await API.getCustomers();
+        posVenuePopulateCustomers();
+        const newCust = customers[customers.length - 1];
+        if (newCust) document.getElementById('pos-venue-customer-select').value = newCust.customer_id;
+        document.getElementById('pos-venue-new-customer').style.display = 'none';
+        showSuccess(`客戶「${name}」已新增`);
+      } catch (error) {
+        showError('新增客戶失敗: ' + error.message);
+      }
+    }
+
+    async function posVenueSubmit() {
+      const customerId = document.getElementById('pos-venue-customer-select').value;
+      const start = document.getElementById('pos-venue-start').value;
+      const end = document.getElementById('pos-venue-end').value;
+      const rateType = document.getElementById('pos-venue-rate-type').value;
+      const notes = document.getElementById('pos-venue-notes').value.trim();
+
+      if (!customerId) { showError('請選擇客戶'); return; }
+      if (!posVenueSelectedVenue) { showError('請選擇場地'); return; }
+      if (!start || !end) { showError('請選擇預約時段'); return; }
+      if (new Date(end) <= new Date(start)) { showError('結束時間必須晚於開始時間'); return; }
+
+      try {
+        const booking = await API.createVenueBooking({
+          venue_id: posVenueSelectedVenue.venue_id,
+          customer_id: customerId,
+          booking_start: start,
+          booking_end: end,
+          rate_type: rateType,
+          special_requirements: notes
+        });
+
+        showSuccess(`場地預約 ${booking.booking_id} 已建立`);
+        posVenueClear();
+      } catch (error) {
+        showError('建立預約失敗: ' + error.message);
       }
     }
 
