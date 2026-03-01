@@ -14,150 +14,157 @@
      */
     const API = {
       // Equipment Types
-      getEquipmentTypes: () => runAsync(google.script.run.withSuccessHandler(x => x).getEquipmentTypes),
-      createEquipmentType: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createEquipmentType, data),
-      updateEquipmentType: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateEquipmentType, id, data),
-      deleteEquipmentType: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteEquipmentType, id),
+      getEquipmentTypes: () => runAsync('getEquipmentTypes'),
+      createEquipmentType: (data) => runAsync('createEquipmentType', data),
+      updateEquipmentType: (id, data) => runAsync('updateEquipmentType', id, data),
+      deleteEquipmentType: (id) => runAsync('deleteEquipmentType', id),
 
       // Equipment Units
-      getEquipmentUnits: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getEquipmentUnits, filters),
-      createEquipmentUnit: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createEquipmentUnit, data),
-      updateEquipmentUnit: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateEquipmentUnit, id, data),
-      deleteEquipmentUnit: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteEquipmentUnit, id),
+      getEquipmentUnits: (filters) => runAsync('getEquipmentUnits', filters),
+      createEquipmentUnit: (data) => runAsync('createEquipmentUnit', data),
+      updateEquipmentUnit: (id, data) => runAsync('updateEquipmentUnit', id, data),
+      deleteEquipmentUnit: (id) => runAsync('deleteEquipmentUnit', id),
 
       // Customers
-      getCustomers: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getCustomers, filters),
-      createCustomer: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createCustomer, data),
-      updateCustomer: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateCustomer, id, data),
-      deleteCustomer: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteCustomer, id),
+      getCustomers: (filters) => runAsync('getCustomers', filters),
+      createCustomer: (data) => runAsync('createCustomer', data),
+      updateCustomer: (id, data) => runAsync('updateCustomer', id, data),
+      deleteCustomer: (id) => runAsync('deleteCustomer', id),
 
       // Rentals
-      getRentals: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getRentals, filters),
-      createRental: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createRental, data),
-      updateRental: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateRental, id, data),
-      getRentalItems: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).getRentalItems, rentalId),
-      createRentalItem: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createRentalItem, data),
+      getRentals: (filters) => runAsync('getRentals', filters),
+      createRental: (data) => runAsync('createRental', data),
+      updateRental: (id, data) => runAsync('updateRental', id, data),
+      getRentalItems: (rentalId) => runAsync('getRentalItems', rentalId),
+      createRentalItem: (data) => runAsync('createRentalItem', data),
 
       // Payments
-      getPayments: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getPayments, filters),
-      createPayment: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createPayment, data),
+      getPayments: (filters) => runAsync('getPayments', filters),
+      createPayment: (data) => runAsync('createPayment', data),
 
       // Maintenance
-      getMaintenanceLogs: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getMaintenanceLogs, filters),
-      createMaintenanceLog: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createMaintenanceLog, data),
+      getMaintenanceLogs: (filters) => runAsync('getMaintenanceLogs', filters),
+      createMaintenanceLog: (data) => runAsync('createMaintenanceLog', data),
 
       // Inventory
-      getInventoryLogs: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getInventoryLogs, filters),
-      createInventoryLog: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createInventoryLog, data),
+      getInventoryLogs: (filters) => runAsync('getInventoryLogs', filters),
+      createInventoryLog: (data) => runAsync('createInventoryLog', data),
 
       // Stocktake
-      getStocktakePlans: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getStocktakePlans, filters),
-      createStocktakePlan: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStocktakePlan, data),
-      getStocktakeResults: (planId) => runAsync(google.script.run.withSuccessHandler(x => x).getStocktakeResults, planId),
-      createStocktakeResult: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStocktakeResult, data),
+      getStocktakePlans: (filters) => runAsync('getStocktakePlans', filters),
+      createStocktakePlan: (data) => runAsync('createStocktakePlan', data),
+      getStocktakeResults: (planId) => runAsync('getStocktakeResults', planId),
+      createStocktakeResult: (data) => runAsync('createStocktakeResult', data),
 
       // Staff
-      getStaff: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getStaff, filters),
-      createStaff: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStaff, data),
+      getStaff: (filters) => runAsync('getStaff', filters),
+      createStaff: (data) => runAsync('createStaff', data),
 
       // Dashboard
-      getDashboardStats: () => runAsync(google.script.run.withSuccessHandler(x => x).getDashboardStats),
+      getDashboardStats: () => runAsync('getDashboardStats'),
 
       // Storage Locations
-      getStorageLocations: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getStorageLocations, filters),
-      createStorageLocation: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStorageLocation, data),
+      getStorageLocations: (filters) => runAsync('getStorageLocations', filters),
+      createStorageLocation: (data) => runAsync('createStorageLocation', data),
 
       // Discount Rules
-      getDiscountRules: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getDiscountRules, filters),
-      createDiscountRule: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createDiscountRule, data),
+      getDiscountRules: (filters) => runAsync('getDiscountRules', filters),
+      createDiscountRule: (data) => runAsync('createDiscountRule', data),
 
       // Search and utilities
-      searchEquipment: (query) => runAsync(google.script.run.withSuccessHandler(x => x).searchEquipment, query),
-      getAvailableEquipment: (startDate, endDate) => runAsync(google.script.run.withSuccessHandler(x => x).getAvailableEquipment, startDate, endDate),
-      calculateRentalTotal: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).calculateRentalTotal, rentalId),
-      getOverdueRentals: () => runAsync(google.script.run.withSuccessHandler(x => x).getOverdueRentals),
+      searchEquipment: (query) => runAsync('searchEquipment', query),
+      getAvailableEquipment: (startDate, endDate) => runAsync('getAvailableEquipment', startDate, endDate),
+      calculateRentalTotal: (rentalId) => runAsync('calculateRentalTotal', rentalId),
+      getOverdueRentals: () => runAsync('getOverdueRentals'),
 
       // Rental workflow
-      advanceRentalStatus: (rentalId, newStatus, metadata) => runAsync(google.script.run.withSuccessHandler(x => x).advanceRentalStatus, rentalId, newStatus, metadata),
-      calculateRentalBreakdown: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).calculateRentalBreakdown, rentalId),
-      recalculateAndUpdateRental: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).recalculateAndUpdateRental, rentalId),
-      updateRentalItem: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateRentalItem, id, data),
+      advanceRentalStatus: (rentalId, newStatus, metadata) => runAsync('advanceRentalStatus', rentalId, newStatus, metadata),
+      calculateRentalBreakdown: (rentalId) => runAsync('calculateRentalBreakdown', rentalId),
+      recalculateAndUpdateRental: (rentalId) => runAsync('recalculateAndUpdateRental', rentalId),
+      updateRentalItem: (id, data) => runAsync('updateRentalItem', id, data),
 
       // Service Items
-      getServiceItems: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).getServiceItems, rentalId),
-      createServiceItem: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createServiceItem, data),
-      updateServiceItem: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateServiceItem, id, data),
-      deleteServiceItem: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteServiceItem, id),
+      getServiceItems: (rentalId) => runAsync('getServiceItems', rentalId),
+      createServiceItem: (data) => runAsync('createServiceItem', data),
+      updateServiceItem: (id, data) => runAsync('updateServiceItem', id, data),
+      deleteServiceItem: (id) => runAsync('deleteServiceItem', id),
 
       // Rental Addendums
-      getRentalAddendums: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).getRentalAddendums, rentalId),
-      createRentalAddendum: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createRentalAddendum, data),
+      getRentalAddendums: (rentalId) => runAsync('getRentalAddendums', rentalId),
+      createRentalAddendum: (data) => runAsync('createRentalAddendum', data),
 
       // Damage Records
-      getDamageRecords: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getDamageRecords, filters),
-      createDamageRecord: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createDamageRecord, data),
+      getDamageRecords: (filters) => runAsync('getDamageRecords', filters),
+      createDamageRecord: (data) => runAsync('createDamageRecord', data),
 
       // Credit Notes
-      getCreditNotes: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getCreditNotes, filters),
-      createCreditNote: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createCreditNote, data),
+      getCreditNotes: (filters) => runAsync('getCreditNotes', filters),
+      createCreditNote: (data) => runAsync('createCreditNote', data),
 
       // Accessory Bindings
-      getAccessoryBindings: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getAccessoryBindings, filters),
-      createAccessoryBinding: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createAccessoryBinding, data),
+      getAccessoryBindings: (filters) => runAsync('getAccessoryBindings', filters),
+      createAccessoryBinding: (data) => runAsync('createAccessoryBinding', data),
 
       // Overdue & Wear Rules
-      getOverdueRules: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getOverdueRules, filters),
-      createOverdueRule: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createOverdueRule, data),
-      getWearTolerance: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getWearTolerance, filters),
-      createWearTolerance: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createWearTolerance, data),
+      getOverdueRules: (filters) => runAsync('getOverdueRules', filters),
+      createOverdueRule: (data) => runAsync('createOverdueRule', data),
+      getWearTolerance: (filters) => runAsync('getWearTolerance', filters),
+      createWearTolerance: (data) => runAsync('createWearTolerance', data),
 
       // Print Templates
-      getPrintTemplates: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getPrintTemplates, filters),
-      createPrintTemplate: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createPrintTemplate, data),
+      getPrintTemplates: (filters) => runAsync('getPrintTemplates', filters),
+      createPrintTemplate: (data) => runAsync('createPrintTemplate', data),
 
       // Check-in/out
-      processEquipmentCheckIn: (data) => runAsync(google.script.run.withSuccessHandler(x => x).processEquipmentCheckIn, data),
+      processEquipmentCheckIn: (data) => runAsync('processEquipmentCheckIn', data),
 
       // Staff
-      updateStaff: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateStaff, id, data),
+      updateStaff: (id, data) => runAsync('updateStaff', id, data),
 
       // Auth / User Info
-      getCurrentUserInfo: () => runAsync(google.script.run.withSuccessHandler(x => x).getCurrentUserInfo),
+      getCurrentUserInfo: () => runAsync('getCurrentUserInfo'),
 
       // Venues
-      getVenues: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getVenues, filters),
-      createVenue: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createVenue, data),
-      updateVenue: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateVenue, id, data),
-      deleteVenue: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteVenue, id),
-      getActiveVenues: () => runAsync(google.script.run.withSuccessHandler(x => x).getActiveVenues),
-      searchVenues: (query) => runAsync(google.script.run.withSuccessHandler(x => x).searchVenues, query),
-      getAvailableVenues: (start, end) => runAsync(google.script.run.withSuccessHandler(x => x).getAvailableVenues, start, end),
+      getVenues: (filters) => runAsync('getVenues', filters),
+      createVenue: (data) => runAsync('createVenue', data),
+      updateVenue: (id, data) => runAsync('updateVenue', id, data),
+      deleteVenue: (id) => runAsync('deleteVenue', id),
+      getActiveVenues: () => runAsync('getActiveVenues'),
+      searchVenues: (query) => runAsync('searchVenues', query),
+      getAvailableVenues: (start, end) => runAsync('getAvailableVenues', start, end),
 
       // Debug / Diagnostics
-      debugCheckSheets: () => runAsync(google.script.run.withSuccessHandler(x => x).debugCheckSheets),
-      debugHealthCheck: () => runAsync(google.script.run.withSuccessHandler(x => x).debugHealthCheck),
-      ensureRequiredSheets: () => runAsync(google.script.run.withSuccessHandler(x => x).ensureRequiredSheets),
-      debugCall: (fnName, ...args) => runAsync(google.script.run.withSuccessHandler(x => x).debugCall, fnName, ...args),
+      debugCheckSheets: () => runAsync('debugCheckSheets'),
+      debugHealthCheck: () => runAsync('debugHealthCheck'),
+      ensureRequiredSheets: () => runAsync('ensureRequiredSheets'),
+      debugCall: (fnName, ...args) => runAsync('debugCall', fnName, ...args),
 
       // Venue Bookings
-      getVenueBookings: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getVenueBookings, filters),
-      createVenueBooking: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createVenueBooking, data),
-      updateVenueBooking: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateVenueBooking, id, data),
-      deleteVenueBooking: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteVenueBooking, id),
-      advanceVenueBookingStatus: (id, status, meta) => runAsync(google.script.run.withSuccessHandler(x => x).advanceVenueBookingStatus, id, status, meta),
-      calculateVenueBookingBreakdown: (id) => runAsync(google.script.run.withSuccessHandler(x => x).calculateVenueBookingBreakdown, id),
-      checkVenueAvailability: (venueId, start, end, excludeId) => runAsync(google.script.run.withSuccessHandler(x => x).checkVenueAvailability, venueId, start, end, excludeId),
-      getVenueSchedule: (venueId, start, end) => runAsync(google.script.run.withSuccessHandler(x => x).getVenueSchedule, venueId, start, end),
+      getVenueBookings: (filters) => runAsync('getVenueBookings', filters),
+      createVenueBooking: (data) => runAsync('createVenueBooking', data),
+      updateVenueBooking: (id, data) => runAsync('updateVenueBooking', id, data),
+      deleteVenueBooking: (id) => runAsync('deleteVenueBooking', id),
+      advanceVenueBookingStatus: (id, status, meta) => runAsync('advanceVenueBookingStatus', id, status, meta),
+      calculateVenueBookingBreakdown: (id) => runAsync('calculateVenueBookingBreakdown', id),
+      checkVenueAvailability: (venueId, start, end, excludeId) => runAsync('checkVenueAvailability', venueId, start, end, excludeId),
+      getVenueSchedule: (venueId, start, end) => runAsync('getVenueSchedule', venueId, start, end),
     };
 
     // Debug mode flag (mirrors server-side)
     const CLIENT_DEBUG = true;
 
     /**
-     * Run async function with loading indicator and debug logging
+     * Run async GAS server function with loading indicator and debug logging.
+     * Uses google.script.run.withSuccessHandler/withFailureHandler pattern.
+     * @param {string} fnName - Server-side function name
+     * @param {...*} args - Arguments to pass (must be JSON-serializable, no functions)
      */
-    function runAsync(fn, ...args) {
-      const fnName = fn.name || 'unknown';
+    function runAsync(fnName, ...args) {
+      // Strip trailing undefined args to avoid GAS serialization issues
+      while (args.length > 0 && args[args.length - 1] === undefined) {
+        args.pop();
+      }
+
       const startTime = Date.now();
 
       if (CLIENT_DEBUG) {
@@ -167,12 +174,16 @@
       return new Promise((resolve, reject) => {
         showLoading(true);
         try {
-          const runner = google.script.run
+          google.script.run
             .withSuccessHandler((result) => {
               showLoading(false);
               if (CLIENT_DEBUG) {
                 const elapsed = Date.now() - startTime;
-                const summary = Array.isArray(result) ? `[${result.length} items]` : (typeof result === 'object' ? JSON.stringify(result).substring(0, 200) : result);
+                const summary = Array.isArray(result)
+                  ? `[${result.length} items]`
+                  : (typeof result === 'object' && result !== null
+                    ? JSON.stringify(result).substring(0, 200)
+                    : result);
                 console.log(`[API] << ${fnName} (${elapsed}ms)`, summary);
               }
               resolve(result);
@@ -182,18 +193,8 @@
               const elapsed = Date.now() - startTime;
               console.error(`[API] !! ${fnName} FAILED (${elapsed}ms):`, error.message || error);
               reject(error);
-            });
-
-          // Call the actual server function
-          fn(...args, (result) => {
-            showLoading(false);
-            if (CLIENT_DEBUG) {
-              const elapsed = Date.now() - startTime;
-              const summary = Array.isArray(result) ? `[${result.length} items]` : (typeof result === 'object' ? JSON.stringify(result).substring(0, 200) : result);
-              console.log(`[API] << ${fnName} (${elapsed}ms)`, summary);
-            }
-            resolve(result);
-          });
+            })
+            [fnName](...args);
         } catch (error) {
           showLoading(false);
           const elapsed = Date.now() - startTime;
