@@ -594,7 +594,11 @@ function validateCustomer(data) {
     }
   }
   if (!data.phone || data.phone.trim() === '') errors.push('電話必填');
-  if (data.email && !isValidEmail(data.email)) errors.push('電子郵件格式不正確');
+  if (!data.email || data.email.trim() === '') {
+    errors.push('電子郵件必填');
+  } else if (!isValidEmail(data.email)) {
+    errors.push('電子郵件格式不正確');
+  }
 
   return {
     valid: errors.length === 0,
