@@ -42,7 +42,8 @@ function debugCheckSheets() {
     { name: 'Stocktake_Plans', headers: ['plan_id','plan_name','plan_type','scope_location_id','scheduled_date','status','assigned_to','supervised_by','created_by','created_at','is_deleted'] },
     { name: 'Stocktake_Results', headers: ['result_id','plan_id','unit_id','expected_location','actual_location','physical_count','system_count','condition_found','discrepancy_type','resolution','resolved_by','counted_by','recorded_at','is_deleted'] },
     { name: 'Venues', headers: ['venue_id','name','venue_type','address','floor','floor_area_sqm','max_capacity','hourly_rate','half_day_rate','daily_rate','overtime_hourly_rate','deposit_required','min_booking_hours','available_start_time','available_end_time','amenities','power_specs','ceiling_height_m','has_cyclorama','cyclorama_color','has_blackout','has_loading_dock','parking_info','rules','description','image_urls','floor_plan_url','location_id','active','notes','created_by','created_at','is_deleted'] },
-    { name: 'Venue_Bookings', headers: ['booking_id','venue_id','customer_id','rental_id','booking_start','booking_end','actual_start','actual_end','total_hours','overtime_hours','rate_type','unit_rate','rate_quantity','subtotal','overtime_fee','discount_amount','tax_rate','tax_amount','total_amount','deposit_amount','deposit_status','attendee_count','use_purpose','setup_required','setup_notes','cleanup_included','special_requirements','contract_url','contract_signed','invoice_required','invoice_status','invoice_number','prepared_by','handled_by','approved_by','status','cancellation_date','cancellation_reason','cancellation_fee','post_use_condition','damage_description','damage_fee','notes','paid_amount','created_at','updated_at','is_deleted'] }
+    { name: 'Venue_Bookings', headers: ['booking_id','venue_id','customer_id','rental_id','booking_start','booking_end','actual_start','actual_end','total_hours','overtime_hours','rate_type','unit_rate','rate_quantity','subtotal','overtime_fee','discount_amount','tax_rate','tax_amount','total_amount','deposit_amount','deposit_status','attendee_count','use_purpose','setup_required','setup_notes','cleanup_included','special_requirements','contract_url','contract_signed','invoice_required','invoice_status','invoice_number','prepared_by','handled_by','approved_by','status','cancellation_date','cancellation_reason','cancellation_fee','post_use_condition','damage_description','damage_fee','notes','paid_amount','created_at','updated_at','is_deleted'] },
+    { name: 'Activity_Logs', headers: ['log_id','staff_id','staff_name','action','target_type','target_id','description','ip_info','created_at'] }
   ];
 
   const results = {
@@ -857,6 +858,81 @@ function createStaff(staffData) {
 
 function updateStaff(staffId, updates) {
   return updateSheetRow('Staff', 'staff_id', staffId, updates);
+}
+
+function deleteStaff(staffId) {
+  return updateSheetRow('Staff', 'staff_id', staffId, { is_deleted: true, active: false });
+}
+
+/**
+ * Get role permission definitions for frontend display
+ */
+function getRolePermissions() {
+  return {
+    roles: ROLE_PERMISSIONS,
+    labels: {
+      admin: '管理員',
+      manager: '經理',
+      staff: '員工',
+      viewer: '僅檢視'
+    },
+    permissionLabels: {
+      '*': '完整權限',
+      'read': '查看資料',
+      'create': '新增資料',
+      'update': '編輯資料',
+      'delete': '刪除資料',
+      'approve_discount': '核准折扣',
+      'approve_credit_note': '核准折讓單',
+      'approve_cancellation': '核准取消',
+      'manage_staff': '管理員工',
+      'manage_rules': '管理規則',
+      'run_reports': '執行報表',
+      'process_check_in': '處理取件',
+      'process_check_out': '處理還件',
+      'create_rental': '建立租借單',
+      'create_payment': '收款'
+    }
+  };
+}
+
+/**
+ * ==================== ACTIVITY LOGS ====================
+ */
+
+function logActivity(action, targetType, targetId, description) {
+  const user = getCurrentUser();
+  const logData = {
+    log_id: 'AL-' + Date.now(),
+    staff_id: user ? user.staff_id : 'system',
+    staff_name: user ? user.name : '系統',
+    action: action,
+    target_type: targetType || '',
+    target_id: targetId || '',
+    description: description || '',
+    ip_info: '',
+    created_at: new Date()
+  };
+
+  try {
+    appendSheetRow('Activity_Logs', logData);
+  } catch (e) {
+    Logger.log('logActivity error: ' + e.toString());
+  }
+  return logData;
+}
+
+function getActivityLogs(filters = {}) {
+  const logs = getSheetDataFiltered('Activity_Logs', filters);
+  // Sort by created_at descending
+  logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  return logs;
+}
+
+function getRecentActivityLogs(limit) {
+  const count = limit || 50;
+  const logs = getActivityLogs();
+  return logs.slice(0, count);
 }
 
 /**

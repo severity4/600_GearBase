@@ -120,6 +120,13 @@
 
       // Staff
       updateStaff: (id, data) => runAsync('updateStaff', id, data),
+      deleteStaff: (id) => runAsync('deleteStaff', id),
+      getRolePermissions: () => runAsync('getRolePermissions'),
+
+      // Activity Logs
+      getActivityLogs: (filters) => runAsync('getActivityLogs', filters),
+      getRecentActivityLogs: (limit) => runAsync('getRecentActivityLogs', limit),
+      logActivity: (action, targetType, targetId, desc) => runAsync('logActivity', action, targetType, targetId, desc),
 
       // Auth / User Info
       getCurrentUserInfo: () => runAsync('getCurrentUserInfo'),
