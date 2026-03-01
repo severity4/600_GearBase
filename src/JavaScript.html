@@ -133,6 +133,12 @@
       searchVenues: (query) => runAsync(google.script.run.withSuccessHandler(x => x).searchVenues, query),
       getAvailableVenues: (start, end) => runAsync(google.script.run.withSuccessHandler(x => x).getAvailableVenues, start, end),
 
+      // Debug / Diagnostics
+      debugCheckSheets: () => runAsync(google.script.run.withSuccessHandler(x => x).debugCheckSheets),
+      debugHealthCheck: () => runAsync(google.script.run.withSuccessHandler(x => x).debugHealthCheck),
+      ensureRequiredSheets: () => runAsync(google.script.run.withSuccessHandler(x => x).ensureRequiredSheets),
+      debugCall: (fnName, ...args) => runAsync(google.script.run.withSuccessHandler(x => x).debugCall, fnName, ...args),
+
       // Venue Bookings
       getVenueBookings: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getVenueBookings, filters),
       createVenueBooking: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createVenueBooking, data),
@@ -144,19 +150,54 @@
       getVenueSchedule: (venueId, start, end) => runAsync(google.script.run.withSuccessHandler(x => x).getVenueSchedule, venueId, start, end),
     };
 
+    // Debug mode flag (mirrors server-side)
+    const CLIENT_DEBUG = true;
+
     /**
-     * Run async function with loading indicator
+     * Run async function with loading indicator and debug logging
      */
     function runAsync(fn, ...args) {
+      const fnName = fn.name || 'unknown';
+      const startTime = Date.now();
+
+      if (CLIENT_DEBUG) {
+        console.log(`[API] >> ${fnName}`, args.length ? args : '');
+      }
+
       return new Promise((resolve, reject) => {
         showLoading(true);
         try {
+          const runner = google.script.run
+            .withSuccessHandler((result) => {
+              showLoading(false);
+              if (CLIENT_DEBUG) {
+                const elapsed = Date.now() - startTime;
+                const summary = Array.isArray(result) ? `[${result.length} items]` : (typeof result === 'object' ? JSON.stringify(result).substring(0, 200) : result);
+                console.log(`[API] << ${fnName} (${elapsed}ms)`, summary);
+              }
+              resolve(result);
+            })
+            .withFailureHandler((error) => {
+              showLoading(false);
+              const elapsed = Date.now() - startTime;
+              console.error(`[API] !! ${fnName} FAILED (${elapsed}ms):`, error.message || error);
+              reject(error);
+            });
+
+          // Call the actual server function
           fn(...args, (result) => {
             showLoading(false);
+            if (CLIENT_DEBUG) {
+              const elapsed = Date.now() - startTime;
+              const summary = Array.isArray(result) ? `[${result.length} items]` : (typeof result === 'object' ? JSON.stringify(result).substring(0, 200) : result);
+              console.log(`[API] << ${fnName} (${elapsed}ms)`, summary);
+            }
             resolve(result);
           });
         } catch (error) {
           showLoading(false);
+          const elapsed = Date.now() - startTime;
+          console.error(`[API] !! ${fnName} EXCEPTION (${elapsed}ms):`, error.message || error);
           reject(error);
         }
       });
