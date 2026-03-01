@@ -411,6 +411,73 @@ function calculateRentalTotal(rentalId) {
 }
 
 /**
+ * Get available venues (active, not deleted)
+ * @return {Array} Active venues
+ */
+function getActiveVenues() {
+  return getSheetData('Venues').filter(v =>
+    !v.is_deleted && (v.active !== false && v.active !== 'false')
+  );
+}
+
+/**
+ * Search venues by name or type
+ * @param {string} query
+ * @return {Array}
+ */
+function searchVenues(query) {
+  const lowerQuery = query.toLowerCase();
+  return getActiveVenues().filter(v =>
+    (v.name && v.name.toLowerCase().includes(lowerQuery)) ||
+    (v.venue_type && v.venue_type.toLowerCase().includes(lowerQuery)) ||
+    (v.amenities && v.amenities.toLowerCase().includes(lowerQuery))
+  );
+}
+
+/**
+ * Get available venues for a given time range
+ * @param {string} startTime - ISO datetime
+ * @param {string} endTime - ISO datetime
+ * @return {Array} Venues with availability info
+ */
+function getAvailableVenues(startTime, endTime) {
+  const venues = getActiveVenues();
+  return venues.filter(v => checkVenueAvailability(v.venue_id, startTime, endTime));
+}
+
+/**
+ * Calculate venue booking revenue
+ * @param {string} startDate - Optional
+ * @param {string} endDate - Optional
+ * @return {number}
+ */
+function calculateVenueRevenue(startDate, endDate) {
+  let bookings = getSheetData('Venue_Bookings').filter(b =>
+    !b.is_deleted && b.status === 'completed'
+  );
+
+  if (startDate) {
+    bookings = bookings.filter(b => new Date(b.booking_end) >= new Date(startDate));
+  }
+  if (endDate) {
+    bookings = bookings.filter(b => new Date(b.booking_end) <= new Date(endDate));
+  }
+
+  return bookings.reduce((sum, b) => sum + (parseFloat(b.total_amount) || 0), 0);
+}
+
+/**
+ * Get customer venue booking history
+ * @param {string} customerId
+ * @return {Array}
+ */
+function getCustomerVenueBookings(customerId) {
+  return getSheetData('Venue_Bookings').filter(b =>
+    !b.is_deleted && b.customer_id === customerId
+  );
+}
+
+/**
  * Generate inventory discrepancy report
  * @return {Array} Items with differences between physical and system count
  */
