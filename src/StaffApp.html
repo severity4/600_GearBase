@@ -1246,7 +1246,9 @@
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
               <button class="btn btn-primary btn-sm" id="debug-health-check">Health Check</button>
               <button class="btn btn-primary btn-sm" id="debug-check-sheets">檢查工作表</button>
+              <button class="btn btn-primary btn-sm" id="debug-validate-schema">資料庫結構檢查</button>
               <button class="btn btn-sm" style="background: #dc2626; color: white;" id="debug-create-sheets">建立缺少的工作表</button>
+              <button class="btn btn-sm" style="background: #dc2626; color: white;" id="debug-repair-schema">自動修復結構</button>
             </div>
             <div id="debug-output" style="display: none; background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; max-height: 500px; overflow: auto;">
               <pre id="debug-output-content" style="margin: 0; font-size: 12px; line-height: 1.6; white-space: pre-wrap;"></pre>
@@ -1564,6 +1566,8 @@
       document.getElementById('debug-health-check').addEventListener('click', debugRunHealthCheck);
       document.getElementById('debug-check-sheets').addEventListener('click', debugRunCheckSheets);
       document.getElementById('debug-create-sheets').addEventListener('click', debugRunCreateSheets);
+      document.getElementById('debug-validate-schema').addEventListener('click', debugRunValidateSchema);
+      document.getElementById('debug-repair-schema').addEventListener('click', debugRunRepairSchema);
     }
 
     // ==================== DASHBOARD ====================
@@ -4961,6 +4965,121 @@
       } catch (error) {
         debugShowOutput(`CREATE SHEETS FAILED:\n${error.message}`);
         showError('建立失敗: ' + error.message);
+      }
+    }
+
+    async function debugRunValidateSchema() {
+      try {
+        debugShowOutput('正在檢查資料庫結構...');
+        const report = await runAsync('validateDatabaseSchema');
+
+        let output = '╔══════════════════════════════════════════════╗\n';
+        output +=    '║         資料庫結構檢查報告                   ║\n';
+        output +=    '╚══════════════════════════════════════════════╝\n\n';
+        output += `檢查時間：${report.timestamp}\n`;
+        output += `預期工作表：${report.total_expected} 個\n`;
+        output += `已存在：${report.total_existing} 個\n`;
+        output += `錯誤：${report.errors} 個　　警告：${report.warnings} 個\n`;
+        output += '─'.repeat(50) + '\n\n';
+
+        // Summary status
+        if (report.errors === 0 && report.warnings === 0) {
+          output += '✅ 資料庫結構完全正確，與程式定義一致！\n\n';
+        } else {
+          if (report.errors > 0) output += `❌ 發現 ${report.errors} 個錯誤需要修復\n`;
+          if (report.warnings > 0) output += `⚠️  發現 ${report.warnings} 個警告\n`;
+          output += '\n';
+        }
+
+        // Missing sheets
+        if (report.missing_sheets.length > 0) {
+          output += '【缺少的工作表】\n';
+          report.missing_sheets.forEach(name => {
+            output += `  ❌ ${name}\n`;
+          });
+          output += '\n';
+        }
+
+        // Detail for each sheet
+        output += '【各工作表檢查結果】\n';
+        report.sheets.forEach(entry => {
+          const icon = entry.status === 'ok' ? '✅' : entry.status === 'warning' ? '⚠️ ' : '❌';
+          output += `\n${icon} ${entry.name}`;
+          if (entry.status !== 'missing') {
+            output += ` （${entry.rows} 筆資料，${entry.actual_columns}/${entry.expected_columns} 欄位）`;
+          }
+          output += '\n';
+
+          if (entry.missing_columns.length > 0) {
+            output += `   缺少欄位：${entry.missing_columns.map(c => c.column).join(', ')}\n`;
+          }
+          if (entry.extra_columns.length > 0) {
+            output += `   多餘欄位：${entry.extra_columns.map(c => c.column).join(', ')}\n`;
+          }
+          if (entry.order_mismatch) {
+            entry.details.filter(d => d.includes('順序')).forEach(d => {
+              output += `   ${d}\n`;
+            });
+          }
+        });
+
+        // Extra sheets
+        if (report.extra_sheets.length > 0) {
+          output += '\n【未定義的工作表（不影響系統）】\n';
+          report.extra_sheets.forEach(name => {
+            output += `  ℹ️  ${name}\n`;
+          });
+        }
+
+        // Repair hint
+        if (report.errors > 0) {
+          output += '\n─'.repeat(50) + '\n';
+          output += '💡 可點擊「自動修復結構」按鈕來修復缺少的工作表和欄位\n';
+        }
+
+        debugShowOutput(output);
+
+        if (report.errors > 0) {
+          showError(`資料庫結構有 ${report.errors} 個錯誤，${report.warnings} 個警告`);
+        } else if (report.warnings > 0) {
+          showWarning(`資料庫結構有 ${report.warnings} 個警告，但不影響核心功能`);
+        } else {
+          showSuccess('資料庫結構檢查通過，與程式完全一致');
+        }
+      } catch (error) {
+        debugShowOutput(`結構檢查失敗：\n${error.message}`);
+        showError('結構檢查失敗: ' + error.message);
+      }
+    }
+
+    async function debugRunRepairSchema() {
+      if (!confirm('確定要自動修復資料庫結構？\n\n此操作會：\n• 建立缺少的工作表\n• 補上缺少的欄位\n• 不會刪除任何現有資料或欄位\n\n是否繼續？')) return;
+
+      try {
+        debugShowOutput('正在修復資料庫結構...');
+        const result = await runAsync('repairDatabaseSchema');
+
+        let output = '╔══════════════════════════════════════════════╗\n';
+        output +=    '║         資料庫結構修復報告                   ║\n';
+        output +=    '╚══════════════════════════════════════════════╝\n\n';
+        output += `${result.message}\n\n`;
+
+        if (result.actions.length > 0) {
+          output += '【執行的修復動作】\n';
+          result.actions.forEach(action => {
+            const icon = action.action === 'created' ? '📄' : '➕';
+            output += `  ${icon} ${action.sheet}：${action.detail}\n`;
+          });
+          output += '\n💡 建議重新執行「資料庫結構檢查」確認修復結果\n';
+        } else {
+          output += '✅ 無需修復，資料庫結構完全正確！\n';
+        }
+
+        debugShowOutput(output);
+        showSuccess(result.message);
+      } catch (error) {
+        debugShowOutput(`修復失敗：\n${error.message}`);
+        showError('修復失敗: ' + error.message);
       }
     }
   </script>
