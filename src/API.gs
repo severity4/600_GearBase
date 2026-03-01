@@ -650,21 +650,35 @@ function sendLookupVerificationCode(email) {
   }
 
   const cleanEmail = email.trim().toLowerCase();
+  const cache = CacheService.getScriptCache();
+
+  // Rate limiting: max 1 request per 60 seconds per email
+  const rateLimitKey = 'lookup_rate_' + cleanEmail;
+  if (cache.get(rateLimitKey)) {
+    return { success: false, message: '請稍後再試，每 60 秒僅能發送一次驗證碼' };
+  }
 
   // Check customer exists
   const customer = getSheetData('Customers').find(c =>
     !c.is_deleted && c.email && c.email.toLowerCase() === cleanEmail
   );
+
+  // Always return success message to prevent email enumeration
+  const successMessage = '若此 Email 已登記，驗證碼將寄送至您的信箱';
+
   if (!customer) {
-    return { success: false, message: '查無此 Email 的客戶紀錄' };
+    // Set rate limit even for non-existent emails to prevent enumeration timing attacks
+    cache.put(rateLimitKey, '1', 60);
+    return { success: true, message: successMessage };
   }
 
   // Generate 6-digit code
   const code = String(Math.floor(100000 + Math.random() * 900000));
 
   // Store in CacheService (10 min expiry)
-  const cache = CacheService.getScriptCache();
   cache.put('lookup_code_' + cleanEmail, code, 600);
+  // Set rate limit
+  cache.put(rateLimitKey, '1', 60);
 
   // Send email
   try {
@@ -673,10 +687,11 @@ function sendLookupVerificationCode(email) {
       subject: '【映奧創意】查詢驗證碼',
       body: `${customer.name} 您好，\n\n您的查詢驗證碼為：${code}\n\n此驗證碼將在 10 分鐘後失效。\n如非本人操作，請忽略此信。\n\n映奧創意工作室`
     });
-    return { success: true, message: '驗證碼已寄送至 ' + cleanEmail };
   } catch (e) {
-    return { success: false, message: '寄信失敗: ' + e.message };
+    Logger.log('sendLookupVerificationCode email error: ' + e.message);
   }
+
+  return { success: true, message: successMessage };
 }
 
 /**
@@ -693,15 +708,25 @@ function verifyAndLookup(email, code) {
   const cleanEmail = email.trim().toLowerCase();
   const cleanCode = code.trim();
 
-  // Check code from cache
   const cache = CacheService.getScriptCache();
+
+  // Rate limiting: max 5 attempts per email per 10 minutes
+  const attemptKey = 'lookup_attempts_' + cleanEmail;
+  const attempts = parseInt(cache.get(attemptKey) || '0');
+  if (attempts >= 5) {
+    return { verified: false, message: '嘗試次數過多，請 10 分鐘後再試' };
+  }
+
+  // Check code from cache
   const storedCode = cache.get('lookup_code_' + cleanEmail);
 
   if (!storedCode) {
+    cache.put(attemptKey, String(attempts + 1), 600);
     return { verified: false, message: '驗證碼已過期，請重新發送' };
   }
 
   if (storedCode !== cleanCode) {
+    cache.put(attemptKey, String(attempts + 1), 600);
     return { verified: false, message: '驗證碼不正確' };
   }
 

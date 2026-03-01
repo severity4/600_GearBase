@@ -8,7 +8,7 @@ const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 const SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
 
 // Debug mode flag
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 /**
  * ==================== DEBUG / DIAGNOSTICS ====================
@@ -19,6 +19,7 @@ const DEBUG_MODE = true;
  * @return {Object} Diagnostics result
  */
 function debugCheckSheets() {
+  requirePermission('*', '僅管理員可使用診斷功能');
   const requiredSheets = [
     { name: 'Equipment_Types', headers: ['type_id','type_name','category','sub_category','brand','model','daily_rate','replacement_value','deposit_required','is_consumable','is_batch_item','description','active','created_by','created_at','is_deleted'] },
     { name: 'Equipment_Units', headers: ['unit_id','type_id','internal_code','serial_number','category','status','current_condition','location_id','notes','created_by','created_at','is_deleted'] },
@@ -77,6 +78,7 @@ function debugCheckSheets() {
  * @return {Object} Creation result
  */
 function ensureRequiredSheets() {
+  requirePermission('*', '僅管理員可使用此功能');
   const diag = debugCheckSheets();
   const created = [];
 
@@ -138,6 +140,7 @@ function ensureRequiredSheets() {
  * @return {Object} Result or error details
  */
 function debugCall(fnName, ...args) {
+  requirePermission('*', '僅管理員可使用 debugCall');
   try {
     const fn = this[fnName];
     if (!fn) {
@@ -161,6 +164,7 @@ function debugCall(fnName, ...args) {
  * @return {Object} Health check results
  */
 function debugHealthCheck() {
+  requirePermission('*', '僅管理員可使用診斷功能');
   const checks = {};
 
   // Check spreadsheet access
@@ -325,7 +329,7 @@ function doGet(e) {
 
   return HtmlService.createTemplateFromFile(template)
     .evaluate()
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
@@ -432,7 +436,7 @@ function generateYearBasedId(sheetName, idField, prefix, padLength) {
  */
 
 function getEquipmentTypes() {
-  return getSheetData('Equipment_Types');
+  return getSheetData('Equipment_Types').filter(t => !t.is_deleted);
 }
 
 function createEquipmentType(typeData) {
@@ -459,6 +463,7 @@ function createEquipmentType(typeData) {
 }
 
 function updateEquipmentType(typeId, updates) {
+  requirePermission('update', '無權限編輯器材類型');
   return updateSheetRow('Equipment_Types', 'type_id', typeId, updates);
 }
 
@@ -492,7 +497,7 @@ function validateEquipmentType(data) {
  */
 
 function getEquipmentUnits(filters = {}) {
-  return getSheetDataFiltered('Equipment_Units', filters);
+  return getSheetDataFiltered('Equipment_Units', filters).filter(u => !u.is_deleted);
 }
 
 function createEquipmentUnit(unitData) {
@@ -517,6 +522,7 @@ function createEquipmentUnit(unitData) {
 }
 
 function updateEquipmentUnit(unitId, updates) {
+  requirePermission('update', '無權限編輯器材個體');
   return updateSheetRow('Equipment_Units', 'unit_id', unitId, updates);
 }
 
@@ -545,10 +551,11 @@ function validateEquipmentUnit(data) {
  */
 
 function getCustomers(filters = {}) {
-  return getSheetDataFiltered('Customers', filters);
+  return getSheetDataFiltered('Customers', filters).filter(c => !c.is_deleted);
 }
 
 function createCustomer(customerData) {
+  requirePermission('create', '無權限建立客戶');
   const validation = validateCustomer(customerData);
   if (!validation.valid) {
     throw new Error(validation.errors.join(', '));
@@ -566,6 +573,7 @@ function createCustomer(customerData) {
 }
 
 function updateCustomer(customerId, updates) {
+  requirePermission('update', '無權限編輯客戶資料');
   return updateSheetRow('Customers', 'customer_id', customerId, updates);
 }
 
@@ -604,7 +612,7 @@ function isValidEmail(email) {
  */
 
 function getRentals(filters = {}) {
-  return getSheetDataFiltered('Rentals', filters);
+  return getSheetDataFiltered('Rentals', filters).filter(r => !r.is_deleted);
 }
 
 function createRental(rentalData) {
@@ -644,6 +652,8 @@ function createRental(rentalData) {
 }
 
 function updateRental(rentalId, updates) {
+  requirePermission('update', '無權限編輯租借單');
+  updates.updated_at = new Date();
   return updateSheetRow('Rentals', 'rental_id', rentalId, updates);
 }
 
@@ -679,10 +689,11 @@ function validateRental(data) {
  */
 
 function getRentalItems(rentalId) {
-  return getSheetDataFiltered('Rental_Items', { rental_id: rentalId });
+  return getSheetDataFiltered('Rental_Items', { rental_id: rentalId }).filter(ri => !ri.is_deleted);
 }
 
 function createRentalItem(itemData) {
+  requirePermission('create', '無權限建立租借項目');
   itemData.item_id = generateNextId('Rental_Items', 'item_id', 'RI');
   itemData.created_at = new Date();
   itemData.is_deleted = false;
@@ -720,6 +731,7 @@ function createRentalItem(itemData) {
 }
 
 function updateRentalItem(itemId, updates) {
+  requirePermission('update', '無權限編輯租借項目');
   return updateSheetRow('Rental_Items', 'item_id', itemId, updates);
 }
 
@@ -728,7 +740,7 @@ function updateRentalItem(itemId, updates) {
  */
 
 function getPayments(filters = {}) {
-  return getSheetDataFiltered('Payments', filters);
+  return getSheetDataFiltered('Payments', filters).filter(p => !p.is_deleted);
 }
 
 function createPayment(paymentData) {
@@ -792,10 +804,11 @@ function validatePayment(data) {
  */
 
 function getMaintenanceLogs(filters = {}) {
-  return getSheetDataFiltered('Maintenance_Logs', filters);
+  return getSheetDataFiltered('Maintenance_Logs', filters).filter(l => !l.is_deleted);
 }
 
 function createMaintenanceLog(logData) {
+  requirePermission('create', '無權限建立維護紀錄');
   logData.log_id = generateNextId('Maintenance_Logs', 'log_id', 'ML');
   logData.logged_at = new Date();
   logData.is_deleted = false;
@@ -808,10 +821,11 @@ function createMaintenanceLog(logData) {
  */
 
 function getInventoryLogs(filters = {}) {
-  return getSheetDataFiltered('Inventory_Logs', filters);
+  return getSheetDataFiltered('Inventory_Logs', filters).filter(l => !l.is_deleted);
 }
 
 function createInventoryLog(logData) {
+  requirePermission('create', '無權限建立庫存紀錄');
   logData.log_id = generateNextId('Inventory_Logs', 'log_id', 'IL');
   logData.logged_at = new Date();
   logData.is_deleted = false;
@@ -824,10 +838,11 @@ function createInventoryLog(logData) {
  */
 
 function getStocktakePlans(filters = {}) {
-  return getSheetDataFiltered('Stocktake_Plans', filters);
+  return getSheetDataFiltered('Stocktake_Plans', filters).filter(p => !p.is_deleted);
 }
 
 function createStocktakePlan(planData) {
+  requirePermission('create', '無權限建立盤點計畫');
   planData.plan_id = generateYearBasedId('Stocktake_Plans', 'plan_id', 'SP');
   planData.created_at = new Date();
   planData.status = 'draft';
@@ -837,10 +852,11 @@ function createStocktakePlan(planData) {
 }
 
 function getStocktakeResults(planId) {
-  return getSheetDataFiltered('Stocktake_Results', { stocktake_plan_id: planId });
+  return getSheetDataFiltered('Stocktake_Results', { stocktake_plan_id: planId }).filter(r => !r.is_deleted);
 }
 
 function createStocktakeResult(resultData) {
+  requirePermission('create', '無權限建立盤點結果');
   resultData.result_id = generateNextId('Stocktake_Results', 'result_id', 'SR');
   resultData.recorded_at = new Date();
   resultData.is_deleted = false;
@@ -853,10 +869,11 @@ function createStocktakeResult(resultData) {
  */
 
 function getStaff(filters = {}) {
-  return getSheetDataFiltered('Staff', filters);
+  return getSheetDataFiltered('Staff', filters).filter(s => !s.is_deleted);
 }
 
 function createStaff(staffData) {
+  requirePermission('manage_staff', '無權限建立員工');
   staffData.staff_id = generateNextId('Staff', 'staff_id', 'S');
   staffData.created_at = new Date();
   staffData.is_deleted = false;
@@ -865,10 +882,12 @@ function createStaff(staffData) {
 }
 
 function updateStaff(staffId, updates) {
+  requirePermission('manage_staff', '無權限編輯員工');
   return updateSheetRow('Staff', 'staff_id', staffId, updates);
 }
 
 function deleteStaff(staffId) {
+  requirePermission('manage_staff', '無權限刪除員工');
   return updateSheetRow('Staff', 'staff_id', staffId, { is_deleted: true, active: false });
 }
 
@@ -876,6 +895,7 @@ function deleteStaff(staffId) {
  * Get role permission definitions for frontend display
  */
 function getRolePermissions() {
+  requirePermission('manage_staff', '無權限檢視角色權限');
   return {
     roles: ROLE_PERMISSIONS,
     labels: {
@@ -931,6 +951,7 @@ function logActivity(action, targetType, targetId, description) {
 }
 
 function getActivityLogs(filters = {}) {
+  requirePermission('manage_staff', '無權限檢視活動紀錄');
   const logs = getSheetDataFiltered('Activity_Logs', filters);
   // Sort by created_at descending
   logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -938,6 +959,7 @@ function getActivityLogs(filters = {}) {
 }
 
 function getRecentActivityLogs(limit) {
+  requirePermission('manage_staff', '無權限檢視活動紀錄');
   const count = limit || 50;
   const logs = getActivityLogs();
   return logs.slice(0, count);
@@ -993,10 +1015,11 @@ function getDashboardStats() {
  */
 
 function getStorageLocations(filters = {}) {
-  return getSheetDataFiltered('Storage_Locations', filters);
+  return getSheetDataFiltered('Storage_Locations', filters).filter(l => !l.is_deleted);
 }
 
 function createStorageLocation(locationData) {
+  requirePermission('create', '無權限建立儲存位置');
   locationData.location_id = generateNextId('Storage_Locations', 'location_id', 'LOC');
   locationData.created_at = new Date();
   locationData.is_deleted = false;
@@ -1009,10 +1032,11 @@ function createStorageLocation(locationData) {
  */
 
 function getDiscountRules(filters = {}) {
-  return getSheetDataFiltered('Discount_Rules', filters);
+  return getSheetDataFiltered('Discount_Rules', filters).filter(r => !r.is_deleted);
 }
 
 function createDiscountRule(ruleData) {
+  requirePermission('manage_rules', '無權限建立折扣規則');
   ruleData.rule_id = generateNextId('Discount_Rules', 'rule_id', 'DR');
   ruleData.created_at = new Date();
   ruleData.is_deleted = false;
@@ -1025,10 +1049,11 @@ function createDiscountRule(ruleData) {
  */
 
 function getAccessoryBindings(filters = {}) {
-  return getSheetDataFiltered('Accessory_Bindings', filters);
+  return getSheetDataFiltered('Accessory_Bindings', filters).filter(b => !b.is_deleted);
 }
 
 function createAccessoryBinding(bindingData) {
+  requirePermission('create', '無權限建立配件綁定');
   bindingData.binding_id = generateNextId('Accessory_Bindings', 'binding_id', 'AB');
   bindingData.created_at = new Date();
   bindingData.is_deleted = false;
@@ -1041,10 +1066,11 @@ function createAccessoryBinding(bindingData) {
  */
 
 function getDamageRecords(filters = {}) {
-  return getSheetDataFiltered('Damage_Records', filters);
+  return getSheetDataFiltered('Damage_Records', filters).filter(d => !d.is_deleted);
 }
 
 function createDamageRecord(recordData) {
+  requirePermission('create', '無權限建立損壞紀錄');
   recordData.damage_id = generateNextId('Damage_Records', 'damage_id', 'DM');
   recordData.created_at = new Date();
   recordData.is_deleted = false;
@@ -1057,10 +1083,11 @@ function createDamageRecord(recordData) {
  */
 
 function getCreditNotes(filters = {}) {
-  return getSheetDataFiltered('Credit_Notes', filters);
+  return getSheetDataFiltered('Credit_Notes', filters).filter(n => !n.is_deleted);
 }
 
 function createCreditNote(noteData) {
+  requirePermission('approve_credit_note', '無權限建立折讓單');
   noteData.credit_note_id = generateYearBasedId('Credit_Notes', 'credit_note_id', 'CN');
   noteData.created_at = new Date();
   noteData.is_deleted = false;
@@ -1073,7 +1100,7 @@ function createCreditNote(noteData) {
  */
 
 function getVenues(filters = {}) {
-  return getSheetDataFiltered('Venues', filters);
+  return getSheetDataFiltered('Venues', filters).filter(v => !v.is_deleted);
 }
 
 function createVenue(venueData) {
@@ -1095,6 +1122,7 @@ function createVenue(venueData) {
 }
 
 function updateVenue(venueId, updates) {
+  requirePermission('update', '無權限編輯場地');
   return updateSheetRow('Venues', 'venue_id', venueId, updates);
 }
 
@@ -1125,7 +1153,7 @@ function validateVenue(data) {
  */
 
 function getVenueBookings(filters = {}) {
-  return getSheetDataFiltered('Venue_Bookings', filters);
+  return getSheetDataFiltered('Venue_Bookings', filters).filter(b => !b.is_deleted);
 }
 
 function createVenueBooking(bookingData) {
@@ -1190,11 +1218,13 @@ function createVenueBooking(bookingData) {
 }
 
 function updateVenueBooking(bookingId, updates) {
+  requirePermission('update', '無權限編輯場地預約');
   updates.updated_at = new Date();
   return updateSheetRow('Venue_Bookings', 'booking_id', bookingId, updates);
 }
 
 function deleteVenueBooking(bookingId) {
+  requirePermission('delete', '無權限刪除場地預約');
   return updateSheetRow('Venue_Bookings', 'booking_id', bookingId, { is_deleted: true, updated_at: new Date() });
 }
 
@@ -1544,6 +1574,7 @@ function getEquipmentQRBatch(unitIds) {
  * @param {string} rentalId
  */
 function sendRentalConfirmationEmail(rentalId) {
+  requirePermission('create', '無權限寄送郵件');
   const receipt = generateRentalReceipt(rentalId);
   if (!receipt.customer.email) {
     return { success: false, message: '客戶沒有設定電子郵件' };
@@ -1594,6 +1625,7 @@ ${itemLines}
  * @param {string} bookingId
  */
 function sendVenueBookingConfirmationEmail(bookingId) {
+  requirePermission('create', '無權限寄送郵件');
   const receipt = generateVenueBookingReceipt(bookingId);
   if (!receipt.customer.email) {
     return { success: false, message: '客戶沒有設定電子郵件' };
@@ -1641,6 +1673,7 @@ ${receipt.special_requirements ? '特殊需求：' + receipt.special_requirement
  * @param {string} rentalId
  */
 function sendReturnReminderEmail(rentalId) {
+  requirePermission('create', '無權限寄送郵件');
   const receipt = generateRentalReceipt(rentalId);
   if (!receipt.customer.email) {
     return { success: false, message: '客戶沒有設定電子郵件' };
@@ -1676,6 +1709,7 @@ function sendReturnReminderEmail(rentalId) {
  * @param {string} rentalId
  */
 function sendOverdueNoticeEmail(rentalId) {
+  requirePermission('create', '無權限寄送郵件');
   const receipt = generateRentalReceipt(rentalId);
   if (!receipt.customer.email) {
     return { success: false, message: '客戶沒有設定電子郵件' };

@@ -789,17 +789,17 @@
           </div>
           <div class="product-info">
             <div class="product-category">${getCategoryLabel(item.category)}</div>
-            <div class="product-name">${item.type_name}</div>
+            <div class="product-name">${escapeHtml(item.type_name)}</div>
             <div class="product-desc">
-              ${item.brand ? item.brand : ''}${item.model ? ' ' + item.model : ''}
+              ${item.brand ? escapeHtml(item.brand) : ''}${item.model ? ' ' + escapeHtml(item.model) : ''}
               <br><span class="avail-badge ${availClass}">${availText}</span>
             </div>
             <div class="product-price">${formatCurrency(item.daily_rate)}<span style="font-size: 12px; color: var(--text-secondary);">/日</span></div>
             <div class="product-actions">
-              <button class="btn btn-primary btn-sm ${inCart ? 'btn-danger' : ''}" ${avail === 0 && !inCart ? 'disabled style="opacity:0.5;"' : ''} onclick="toggleCart('${item.type_id}', '${item.type_name}', ${item.daily_rate})">
+              <button class="btn btn-primary btn-sm ${inCart ? 'btn-danger' : ''}" ${avail === 0 && !inCart ? 'disabled style="opacity:0.5;"' : ''} onclick="toggleCart('${escapeHtml(item.type_id)}', '${escapeHtml(item.type_name)}', ${item.daily_rate})">
                 ${inCart ? '移除' : avail === 0 ? '已租完' : '加入'}
               </button>
-              <button class="btn btn-outline btn-sm" onclick="showItemDetails(event, '${item.type_id}')">詳情</button>
+              <button class="btn btn-outline btn-sm" onclick="showItemDetails(event, '${escapeHtml(item.type_id)}')">詳情</button>
             </div>
           </div>
         `;
@@ -906,14 +906,14 @@
             <strong style="font-size:13px;">搭配配件：</strong>
             ${item.accessories.map(a => `
               <div class="detail-accessory">
-                <span>${a.type_name}</span>
+                <span>${escapeHtml(a.type_name)}</span>
                 <span class="badge ${a.binding_type === 'mandatory' ? 'badge-danger' : 'badge-info'}">${a.binding_type === 'mandatory' ? '必配' : '選配'}</span>
               </div>
             `).join('')}
           </div>`;
       }
 
-      const modal = new Modal(`${item.type_name}`, `
+      const modal = new Modal(`${escapeHtml(item.type_name)}`, `
         <div style="text-align:center; margin-bottom:16px;">
           <div style="font-size:64px; margin-bottom:8px;">${getCategoryEmoji(item.category)}</div>
           <span class="avail-badge ${availClass}">${availText}</span>
@@ -928,13 +928,13 @@
             <div class="detail-spec-label">日租價格</div>
             <div class="detail-spec-value" style="color:var(--primary-color);">${formatCurrency(item.daily_rate)}</div>
           </div>
-          ${item.brand ? `<div class="detail-spec"><div class="detail-spec-label">品牌</div><div class="detail-spec-value">${item.brand}</div></div>` : ''}
-          ${item.model ? `<div class="detail-spec"><div class="detail-spec-label">型號</div><div class="detail-spec-value">${item.model}</div></div>` : ''}
+          ${item.brand ? `<div class="detail-spec"><div class="detail-spec-label">品牌</div><div class="detail-spec-value">${escapeHtml(item.brand)}</div></div>` : ''}
+          ${item.model ? `<div class="detail-spec"><div class="detail-spec-label">型號</div><div class="detail-spec-value">${escapeHtml(item.model)}</div></div>` : ''}
           ${item.deposit_required ? `<div class="detail-spec"><div class="detail-spec-label">押金</div><div class="detail-spec-value">${formatCurrency(item.deposit_required)}</div></div>` : ''}
           ${item.replacement_value ? `<div class="detail-spec"><div class="detail-spec-label">設備價值</div><div class="detail-spec-value">${formatCurrency(item.replacement_value)}</div></div>` : ''}
         </div>
 
-        ${item.description ? `<div style="margin-top:16px; padding:12px; background:var(--bg-secondary, #f8f9fa); border-radius:8px; font-size:13px; line-height:1.6;">${item.description}</div>` : ''}
+        ${item.description ? `<div style="margin-top:16px; padding:12px; background:var(--bg-secondary, #f8f9fa); border-radius:8px; font-size:13px; line-height:1.6;">${escapeHtml(item.description)}</div>` : ''}
 
         ${accessoriesHtml}
 
@@ -947,7 +947,7 @@
         </div>
       `, `
         <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
-        <button class="btn btn-primary" ${item.available_units === 0 && !inCart ? 'disabled' : ''} onclick="toggleCart('${item.type_id}', '${item.type_name}', ${item.daily_rate}); document.querySelector('.modal-overlay').remove();">
+        <button class="btn btn-primary" ${item.available_units === 0 && !inCart ? 'disabled' : ''} onclick="toggleCart('${escapeHtml(item.type_id)}', '${escapeHtml(item.type_name)}', ${item.daily_rate}); document.querySelector('.modal-overlay').remove();">
           ${inCart ? '從購物車移除' : item.available_units === 0 ? '已租完' : '加入購物車'}
         </button>
       `);
@@ -965,7 +965,7 @@
 
       const cartItems = cart.map(item => `
         <tr>
-          <td>${item.type_name}</td>
+          <td>${escapeHtml(item.type_name)}</td>
           <td>${formatCurrency(item.daily_rate)}</td>
         </tr>
       `).join('');
@@ -1221,12 +1221,12 @@
           <div class="product-image">${vt.emoji}</div>
           <div class="product-info">
             <div class="product-category">${vt.label}</div>
-            <div class="product-name">${venue.name}</div>
+            <div class="product-name">${escapeHtml(venue.name)}</div>
             <div class="product-desc">
               ${venue.max_capacity ? `容納 ${venue.max_capacity} 人` : ''}
               ${venue.floor_area_sqm ? ` / ${venue.floor_area_sqm} 坪` : ''}
               ${features.length ? `<br>${features.join(' / ')}` : ''}
-              ${venue.amenities ? `<br>設備：${venue.amenities}` : ''}
+              ${venue.amenities ? `<br>設備：${escapeHtml(venue.amenities)}` : ''}
             </div>
             <div class="product-price">
               ${formatCurrency(venue.hourly_rate)}<span style="font-size: 12px; color: var(--text-secondary);">/時</span>
@@ -1248,7 +1248,7 @@
       if (!venue) return;
       const vt = VENUE_TYPE_MAP[venue.venue_type] || VENUE_TYPE_MAP.other;
 
-      const modal = new Modal(`${venue.name} - 詳情`, `
+      const modal = new Modal(`${escapeHtml(venue.name)} - 詳情`, `
         <div style="line-height: 1.8; color: var(--text-primary);">
           <div class="detail-specs">
             <div class="detail-spec"><div class="detail-spec-label">類型</div><div class="detail-spec-value">${vt.label}</div></div>
@@ -1267,12 +1267,12 @@
           </div>
 
           <p><strong>可預約時段:</strong> ${venue.available_start_time || '09:00'} ~ ${venue.available_end_time || '22:00'}</p>
-          ${venue.address ? `<p><strong>地址:</strong> ${venue.address}${venue.floor ? ' ' + venue.floor : ''}</p>` : ''}
-          ${venue.amenities ? `<p><strong>設備:</strong> ${venue.amenities}</p>` : ''}
-          ${venue.power_specs ? `<p><strong>電力規格:</strong> ${venue.power_specs}</p>` : ''}
-          ${venue.parking_info ? `<p><strong>停車:</strong> ${venue.parking_info}</p>` : ''}
-          ${venue.rules ? `<div style="margin-top:8px; padding:12px; background:#fff7ed; border-radius:8px; font-size:12px; color:#9a3412;"><strong>場地規範：</strong><br>${venue.rules}</div>` : ''}
-          ${venue.description ? `<p style="margin-top:8px;">${venue.description}</p>` : ''}
+          ${venue.address ? `<p><strong>地址:</strong> ${escapeHtml(venue.address)}${venue.floor ? ' ' + escapeHtml(venue.floor) : ''}</p>` : ''}
+          ${venue.amenities ? `<p><strong>設備:</strong> ${escapeHtml(venue.amenities)}</p>` : ''}
+          ${venue.power_specs ? `<p><strong>電力規格:</strong> ${escapeHtml(venue.power_specs)}</p>` : ''}
+          ${venue.parking_info ? `<p><strong>停車:</strong> ${escapeHtml(venue.parking_info)}</p>` : ''}
+          ${venue.rules ? `<div style="margin-top:8px; padding:12px; background:#fff7ed; border-radius:8px; font-size:12px; color:#9a3412;"><strong>場地規範：</strong><br>${escapeHtml(venue.rules)}</div>` : ''}
+          ${venue.description ? `<p style="margin-top:8px;">${escapeHtml(venue.description)}</p>` : ''}
 
           <!-- Availability Calendar -->
           <div style="margin-top:16px; padding:16px; background:var(--bg-secondary, #f8f9fa); border-radius:12px;">
@@ -1367,7 +1367,7 @@
       if (venue.half_day_rate) rateOptions.push(`<option value="half_day">半日租 (${formatCurrency(venue.half_day_rate)}/4hr)</option>`);
       if (venue.daily_rate) rateOptions.push(`<option value="daily">日租 (${formatCurrency(venue.daily_rate)}/天)</option>`);
 
-      const modal = new Modal(`預約 ${venue.name}`, `
+      const modal = new Modal(`預約 ${escapeHtml(venue.name)}`, `
         <form id="venue-booking-form">
           <input type="hidden" name="venue_id" value="${venueId}">
 
@@ -1549,10 +1549,10 @@
           document.getElementById('lookup-results').innerHTML = '';
           showSuccess(result.message);
         } else {
-          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${result.message}</span>`;
+          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${escapeHtml(result.message)}</span>`;
         }
       } catch (error) {
-        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">發送失敗：${error.message}</span>`;
+        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">發送失敗：${escapeHtml(error.message)}</span>`;
       } finally {
         btn.disabled = false;
         btn.textContent = '發送驗證碼';
@@ -1605,14 +1605,14 @@
         const data = await API.verifyAndLookup(lookupEmail, code);
 
         if (!data.verified) {
-          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${data.message}</span>`;
+          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${escapeHtml(data.message)}</span>`;
           btn.disabled = false;
           btn.textContent = '驗證並查詢';
           return;
         }
 
         if (!data.found) {
-          resultsEl.innerHTML = `<div class="lookup-empty">${data.message || '查無紀錄'}</div>`;
+          resultsEl.innerHTML = `<div class="lookup-empty">${escapeHtml(data.message || '查無紀錄')}</div>`;
           btn.disabled = false;
           btn.textContent = '驗證並查詢';
           return;
@@ -1622,7 +1622,7 @@
         let html = '';
 
         if (data.customer_name) {
-          html += `<div style="text-align:center; color:white; margin-bottom:16px; font-size:18px; font-weight:600;">${data.customer_name} 的紀錄</div>`;
+          html += `<div style="text-align:center; color:white; margin-bottom:16px; font-size:18px; font-weight:600;">${escapeHtml(data.customer_name)} 的紀錄</div>`;
         }
 
         // Rental records
@@ -1638,7 +1638,7 @@
                 <div style="font-size:13px; color:var(--text-secondary);">
                   ${r.rental_start ? formatDateDisplay(r.rental_start) : '-'} ~ ${r.rental_end ? formatDateDisplay(r.rental_end) : '-'}
                 </div>
-                ${r.items && r.items.length ? `<div style="font-size:12px; margin-top:4px; color:var(--text-secondary);">器材：${r.items.map(i => i.type_name).join('、')}</div>` : ''}
+                ${r.items && r.items.length ? `<div style="font-size:12px; margin-top:4px; color:var(--text-secondary);">器材：${r.items.map(i => escapeHtml(i.type_name)).join('、')}</div>` : ''}
                 <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:13px;">
                   <span>金額：${formatCurrency(r.total_amount)}</span>
                   <span>已付：${formatCurrency(r.paid_amount)}</span>
@@ -1659,7 +1659,7 @@
                   <strong>${b.booking_id}</strong>
                   <span class="lookup-status ${b.status}">${b.status_label}</span>
                 </div>
-                <div style="font-size:13px;">場地：${b.venue_name || '-'}</div>
+                <div style="font-size:13px;">場地：${escapeHtml(b.venue_name || '-')}</div>
                 <div style="font-size:13px; color:var(--text-secondary);">${b.booking_start || '-'} ~ ${b.booking_end || '-'}</div>
                 <div style="font-size:13px; margin-top:4px;">金額：${formatCurrency(b.total_amount)}</div>
               </div>`;
@@ -1677,7 +1677,7 @@
         document.getElementById('lookup-step-code').style.display = 'none';
 
       } catch (error) {
-        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">查詢失敗：${error.message}</span>`;
+        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">查詢失敗：${escapeHtml(error.message)}</span>`;
       } finally {
         btn.disabled = false;
         btn.textContent = '驗證並查詢';

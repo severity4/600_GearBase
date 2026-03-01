@@ -1630,10 +1630,10 @@
       equipmentTypes.filter(t => !t.is_deleted).forEach(type => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${type.type_name || '-'}</td>
-          <td>${type.category || '-'}</td>
+          <td>${escapeHtml(type.type_name || '-')}</td>
+          <td>${escapeHtml(type.category || '-')}</td>
           <td>${formatCurrency(type.daily_rate || 0)}</td>
-          <td>${type.description || '-'}</td>
+          <td>${escapeHtml(type.description || '-')}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" data-id="${type.type_id}" onclick="openEditTypeModal(this)">編輯</button>
             <button class="btn btn-sm btn-danger" data-id="${type.type_id}" onclick="deleteEquipmentType(this)">刪除</button>
@@ -1651,9 +1651,9 @@
         const type = equipmentTypes.find(t => t.type_id === unit.type_id);
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${unit.internal_code || '-'}</td>
-          <td>${type ? type.type_name : '-'}</td>
-          <td>${unit.serial_number || '-'}</td>
+          <td>${escapeHtml(unit.internal_code || '-')}</td>
+          <td>${type ? escapeHtml(type.type_name) : '-'}</td>
+          <td>${escapeHtml(unit.serial_number || '-')}</td>
           <td><span class="badge badge-info">${unit.status || 'unknown'}</span></td>
           <td>${unit.location_id || '-'}</td>
           <td class="table-actions">
@@ -1777,7 +1777,7 @@
         <form id="edit-type-form">
           <div class="form-group">
             <label class="form-label required">類型名稱</label>
-            <input type="text" name="type_name" class="form-input" value="${type.type_name || type.name || ''}" required>
+            <input type="text" name="type_name" class="form-input" value="${escapeHtml(type.type_name || type.name || '')}" required>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1803,17 +1803,17 @@
             </div>
             <div class="form-group">
               <label class="form-label">子分類</label>
-              <input type="text" name="sub_category" class="form-input" value="${type.sub_category || ''}">
+              <input type="text" name="sub_category" class="form-input" value="${escapeHtml(type.sub_category || '')}">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">品牌</label>
-              <input type="text" name="brand" class="form-input" value="${type.brand || ''}">
+              <input type="text" name="brand" class="form-input" value="${escapeHtml(type.brand || '')}">
             </div>
             <div class="form-group">
               <label class="form-label">型號</label>
-              <input type="text" name="model" class="form-input" value="${type.model || ''}">
+              <input type="text" name="model" class="form-input" value="${escapeHtml(type.model || '')}">
             </div>
           </div>
           <div class="form-row">
@@ -1841,7 +1841,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">描述</label>
-            <textarea name="description" class="form-textarea">${type.description || ''}</textarea>
+            <textarea name="description" class="form-textarea">${escapeHtml(type.description || '')}</textarea>
           </div>
         </form>
       `, `
@@ -1892,7 +1892,7 @@
               <label class="form-label required">器材類型</label>
               <select name="type_id" class="form-select" required>
                 <option value="">選擇類型...</option>
-                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}">${t.type_name}</option>`).join('')}
+                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}">${escapeHtml(t.type_name)}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
@@ -1981,7 +1981,7 @@
             <div class="form-group">
               <label class="form-label required">器材類型</label>
               <select name="type_id" class="form-select" required>
-                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}" ${unit.type_id === t.type_id ? 'selected' : ''}>${t.type_name}</option>`).join('')}
+                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}" ${unit.type_id === t.type_id ? 'selected' : ''}>${escapeHtml(t.type_name)}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
@@ -2001,7 +2001,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${unit.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(unit.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -2058,7 +2058,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${rental.rental_id || '-'}</td>
-          <td>${customer ? (customer.name || customer.company_name) : '-'}</td>
+          <td>${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</td>
           <td>${formatDate(rental.rental_start || rental.start_date)}</td>
           <td>${formatDate(rental.rental_end || rental.end_date)}</td>
           <td>${formatCurrency(rental.total_amount || 0)}</td>
@@ -2082,7 +2082,7 @@
             <div style="display:flex; gap:8px; align-items:center;">
               <select name="customer_id" id="rental-customer-select" class="form-select" required style="flex:1;">
                 <option value="">選擇客戶...</option>
-                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`).join('')}
               </select>
               <button type="button" class="btn btn-sm btn-outline" onclick="toggleInlineCustomerForm()" title="新增客戶">+ 新增</button>
             </div>
@@ -2199,7 +2199,7 @@
         const select = document.getElementById('rental-customer-select');
         select.innerHTML = '<option value="">選擇客戶...</option>' +
           customers.filter(c => !c.is_deleted).map(c =>
-            `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`
+            `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`
           ).join('');
         // Select the newly created customer (last CU-xxx ID)
         const newId = newCustomer.customer_id || customers[customers.length - 1]?.customer_id;
@@ -2246,12 +2246,12 @@
       const modal = new Modal('租借單詳情', `
         <div style="line-height: 1.8;">
           <p><strong>租借ID:</strong> ${rental.rental_id}</p>
-          <p><strong>客戶:</strong> ${customer ? (customer.name || customer.company_name) : '-'}</p>
+          <p><strong>客戶:</strong> ${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</p>
           <p><strong>期間:</strong> ${formatDate(startDate)} 至 ${formatDate(endDate)} (${days}天)</p>
           <p><strong>總金額:</strong> ${formatCurrency(rental.total_amount || 0)}</p>
           <p><strong>已付款:</strong> ${formatCurrency(rental.paid_amount || 0)}</p>
           <p><strong>狀態:</strong> ${rental.status}</p>
-          <p><strong>備註:</strong> ${rental.notes || '-'}</p>
+          <p><strong>備註:</strong> ${escapeHtml(rental.notes || '-')}</p>
         </div>
       `, `
         <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
@@ -2272,7 +2272,7 @@
           <div class="form-group">
             <label class="form-label required">客戶</label>
             <select name="customer_id" class="form-select" required>
-              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}" ${rental.customer_id === c.customer_id ? 'selected' : ''}>${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}" ${rental.customer_id === c.customer_id ? 'selected' : ''}>${escapeHtml(c.name || c.company_name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`).join('')}
             </select>
           </div>
           <div class="form-row">
@@ -2308,7 +2308,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${rental.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(rental.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -2394,7 +2394,7 @@
         const isActive = venue.active !== false && venue.active !== 'false';
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${venue.name || '-'}</td>
+          <td>${escapeHtml(venue.name || '-')}</td>
           <td>${VENUE_TYPE_LABELS[venue.venue_type] || venue.venue_type || '-'}</td>
           <td>${venue.max_capacity || '-'} 人</td>
           <td>${formatCurrency(venue.hourly_rate || 0)}</td>
@@ -2433,8 +2433,8 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${booking.booking_id || '-'}</td>
-          <td>${venue ? venue.name : '-'}</td>
-          <td>${customer ? (customer.name || customer.company_name) : '-'}</td>
+          <td>${venue ? escapeHtml(venue.name) : '-'}</td>
+          <td>${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</td>
           <td>${startStr} ~ ${endStr}</td>
           <td>${rateLabels[booking.rate_type] || booking.rate_type || '-'}</td>
           <td>${formatCurrency(booking.total_amount || 0)}</td>
@@ -2594,7 +2594,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">場地名稱</label>
-              <input type="text" name="name" class="form-input" value="${venue.name || ''}" required>
+              <input type="text" name="name" class="form-input" value="${escapeHtml(venue.name || '')}" required>
             </div>
             <div class="form-group">
               <label class="form-label required">場地類型</label>
@@ -2611,11 +2611,11 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">地址</label>
-              <input type="text" name="address" class="form-input" value="${venue.address || ''}" required>
+              <input type="text" name="address" class="form-input" value="${escapeHtml(venue.address || '')}" required>
             </div>
             <div class="form-group">
               <label class="form-label">樓層</label>
-              <input type="text" name="floor" class="form-input" value="${venue.floor || ''}">
+              <input type="text" name="floor" class="form-input" value="${escapeHtml(venue.floor || '')}">
             </div>
           </div>
           <div class="form-row">
@@ -2664,7 +2664,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">設備（逗號分隔）</label>
-            <input type="text" name="amenities" class="form-input" value="${venue.amenities || ''}">
+            <input type="text" name="amenities" class="form-input" value="${escapeHtml(venue.amenities || '')}">
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -2689,11 +2689,11 @@
           </div>
           <div class="form-group">
             <label class="form-label">使用規範</label>
-            <textarea name="rules" class="form-textarea">${venue.rules || ''}</textarea>
+            <textarea name="rules" class="form-textarea">${escapeHtml(venue.rules || '')}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">場地描述</label>
-            <textarea name="description" class="form-textarea">${venue.description || ''}</textarea>
+            <textarea name="description" class="form-textarea">${escapeHtml(venue.description || '')}</textarea>
           </div>
         </form>
       `, `
@@ -2739,14 +2739,14 @@
               <label class="form-label required">場地</label>
               <select name="venue_id" class="form-select" required id="booking-venue-select">
                 <option value="">選擇場地...</option>
-                ${activeVenues.map(v => `<option value="${v.venue_id}" data-hourly="${v.hourly_rate || 0}" data-halfday="${v.half_day_rate || ''}" data-daily="${v.daily_rate || ''}">${v.name} (${VENUE_TYPE_LABELS[v.venue_type] || v.venue_type})</option>`).join('')}
+                ${activeVenues.map(v => `<option value="${v.venue_id}" data-hourly="${v.hourly_rate || 0}" data-halfday="${v.half_day_rate || ''}" data-daily="${v.daily_rate || ''}">${escapeHtml(v.name)} (${VENUE_TYPE_LABELS[v.venue_type] || v.venue_type})</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
               <label class="form-label required">客戶</label>
               <select name="customer_id" class="form-select" required>
                 <option value="">選擇客戶...</option>
-                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${escapeHtml(c.name || c.company_name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -2868,8 +2868,8 @@
       const modal = new Modal('場地預約詳情', `
         <div style="line-height: 1.8;">
           <p><strong>預約ID:</strong> ${booking.booking_id}</p>
-          <p><strong>場地:</strong> ${venue ? venue.name : '-'}</p>
-          <p><strong>客戶:</strong> ${customer ? (customer.name || customer.company_name) : '-'}</p>
+          <p><strong>場地:</strong> ${venue ? escapeHtml(venue.name) : '-'}</p>
+          <p><strong>客戶:</strong> ${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</p>
           <p><strong>時段:</strong> ${startStr} ~ ${endStr}</p>
           <p><strong>計費:</strong> ${rateLabels[booking.rate_type] || '-'} ${formatCurrency(booking.unit_rate || 0)} x ${booking.rate_quantity || 1}</p>
           <p><strong>小計:</strong> ${formatCurrency(booking.subtotal || 0)}</p>
@@ -2879,10 +2879,10 @@
           <p><strong>總金額:</strong> ${formatCurrency(booking.total_amount || 0)}</p>
           <p><strong>押金:</strong> ${formatCurrency(booking.deposit_amount || 0)} (${booking.deposit_status || '-'})</p>
           <p><strong>狀態:</strong> <span class="badge badge-info">${BOOKING_STATUS_LABELS[booking.status] || booking.status}</span></p>
-          ${booking.use_purpose ? `<p><strong>用途:</strong> ${booking.use_purpose}</p>` : ''}
+          ${booking.use_purpose ? `<p><strong>用途:</strong> ${escapeHtml(booking.use_purpose)}</p>` : ''}
           ${booking.rental_id ? `<p><strong>關聯租借單:</strong> ${booking.rental_id}</p>` : ''}
-          ${booking.special_requirements ? `<p><strong>特殊需求:</strong> ${booking.special_requirements}</p>` : ''}
-          ${booking.notes ? `<p><strong>備註:</strong> ${booking.notes}</p>` : ''}
+          ${booking.special_requirements ? `<p><strong>特殊需求:</strong> ${escapeHtml(booking.special_requirements)}</p>` : ''}
+          ${booking.notes ? `<p><strong>備註:</strong> ${escapeHtml(booking.notes)}</p>` : ''}
         </div>
       `, `
         <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
@@ -2944,11 +2944,11 @@
           </div>
           <div class="form-group">
             <label class="form-label">特殊需求</label>
-            <textarea name="special_requirements" class="form-textarea">${booking.special_requirements || ''}</textarea>
+            <textarea name="special_requirements" class="form-textarea">${escapeHtml(booking.special_requirements || '')}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${booking.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(booking.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -3004,10 +3004,10 @@
         const isBlacklisted = customer.blacklisted === true || customer.blacklisted === 'true';
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${customer.name || customer.company_name || '-'}</td>
-          <td>${customer.company_name || '-'}</td>
-          <td>${customer.phone || '-'}</td>
-          <td>${customer.email || '-'}</td>
+          <td>${escapeHtml(customer.name || customer.company_name || '-')}</td>
+          <td>${escapeHtml(customer.company_name || '-')}</td>
+          <td>${escapeHtml(customer.phone || '-')}</td>
+          <td>${escapeHtml(customer.email || '-')}</td>
           <td>${isBlacklisted ? '<span class="badge badge-danger">黑名單</span>' : '<span class="badge badge-success">正常</span>'}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" data-id="${customer.customer_id}" onclick="openEditCustomerModal(this)">編輯</button>
@@ -3134,27 +3134,27 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">租借人姓名</label>
-              <input type="text" name="name" class="form-input" value="${customer.name || ''}" required placeholder="例如：王小明">
+              <input type="text" name="name" class="form-input" value="${escapeHtml(customer.name || '')}" required placeholder="例如：王小明">
             </div>
             <div class="form-group">
               <label class="form-label">公司名稱</label>
-              <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}" placeholder="選填">
+              <input type="text" name="company_name" class="form-input" value="${escapeHtml(customer.company_name || '')}" placeholder="選填">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
-              <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required placeholder="例如：0912-345-678">
+              <input type="tel" name="phone" class="form-input" value="${escapeHtml(customer.phone || '')}" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
               <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input" value="${customer.email || ''}" placeholder="例如：name@example.com">
+              <input type="email" name="email" class="form-input" value="${escapeHtml(customer.email || '')}" placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">身分證/統編</label>
-              <input type="text" name="id_number" class="form-input" value="${customer.id_number || ''}" placeholder="例如：A123456789 或 12345678">
+              <input type="text" name="id_number" class="form-input" value="${escapeHtml(customer.id_number || '')}" placeholder="例如：A123456789 或 12345678">
             </div>
             <div class="form-group">
               <label class="form-label">證件驗證</label>
@@ -3184,11 +3184,11 @@
           </div>
           <div class="form-group" id="blacklist-reason-group" style="${isBlacklisted ? '' : 'display:none'}">
             <label class="form-label">黑名單原因</label>
-            <input type="text" name="blacklist_reason" class="form-input" value="${customer.blacklist_reason || ''}">
+            <input type="text" name="blacklist_reason" class="form-input" value="${escapeHtml(customer.blacklist_reason || '')}">
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${customer.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(customer.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -3256,7 +3256,7 @@
       locations.filter(l => !l.is_deleted).forEach(location => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${location.location_name || '-'}</td>
+          <td>${escapeHtml(location.location_name || '-')}</td>
           <td>${location.capacity || '-'}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-danger" data-id="${location.location_id}" onclick="deleteLocation(this)">刪除</button>
@@ -3276,7 +3276,7 @@
           <td>${formatDate(log.logged_at)}</td>
           <td>${log.unit_id || '-'}</td>
           <td>${log.change_type || '-'}</td>
-          <td>${log.notes || '-'}</td>
+          <td>${escapeHtml(log.notes || '-')}</td>
         `;
         tbody.appendChild(row);
       });
@@ -3431,8 +3431,8 @@
           <td>${payment.rental_id || '-'}</td>
           <td>${formatCurrency(payment.amount || 0)}</td>
           <td>${formatDate(payment.payment_date)}</td>
-          <td>${payment.payment_method || '-'}</td>
-          <td>${payment.notes || '-'}</td>
+          <td>${escapeHtml(payment.payment_method || '-')}</td>
+          <td>${escapeHtml(payment.notes || '-')}</td>
         `;
         tbody.appendChild(row);
       });
@@ -3622,11 +3622,11 @@
       el.innerHTML = `
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="width:48px; height:48px; border-radius:50%; background:var(--primary-color); color:white; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700;">
-            ${(userInfo.name || '?')[0]}
+            ${escapeHtml((userInfo.name || '?')[0])}
           </div>
           <div>
-            <div style="font-weight:700; font-size:16px;">${userInfo.name || '-'}</div>
-            <div style="font-size:13px; color:var(--text-secondary);">${userInfo.email || '-'}</div>
+            <div style="font-weight:700; font-size:16px;">${escapeHtml(userInfo.name || '-')}</div>
+            <div style="font-size:13px; color:var(--text-secondary);">${escapeHtml(userInfo.email || '-')}</div>
           </div>
         </div>
         <div>
@@ -3668,15 +3668,15 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${staff.staff_id || '-'}</td>
-          <td><strong>${staff.name || '-'}</strong></td>
-          <td>${staff.email || '-'}</td>
-          <td>${staff.phone || '-'}</td>
+          <td><strong>${escapeHtml(staff.name || '-')}</strong></td>
+          <td>${escapeHtml(staff.email || '-')}</td>
+          <td>${escapeHtml(staff.phone || '-')}</td>
           <td><span class="badge ${roleBadges[staff.role] || 'badge-info'}">${roleLabels[staff.role] || staff.role || '-'}</span></td>
           <td>${staff.can_approve_discount === true || staff.can_approve_discount === 'true' ? '<span class="badge badge-success">是</span>' : '<span class="badge badge-secondary">否</span>'}</td>
           <td>${staff.active === false || staff.active === 'false' ? '<span class="badge badge-danger">停用</span>' : '<span class="badge badge-success">啟用</span>'}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" onclick="openEditStaffModal('${staff.staff_id}')">編輯</button>
-            <button class="btn btn-sm btn-danger" onclick="confirmDeleteStaff('${staff.staff_id}', '${staff.name}')">停用</button>
+            <button class="btn btn-sm btn-danger" onclick="confirmDeleteStaff('${staff.staff_id}', '${escapeHtml(staff.name)}')">停用</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -3762,7 +3762,7 @@
       const staff = staffList.find(s => s.staff_id === staffId);
       if (!staff) return showError('找不到員工');
 
-      const modal = new Modal('編輯員工 - ' + staff.name, `
+      const modal = new Modal('編輯員工 - ' + escapeHtml(staff.name), `
         <form id="edit-staff-form">
           <div class="form-row">
             <div class="form-group">
@@ -3771,17 +3771,17 @@
             </div>
             <div class="form-group">
               <label class="form-label required">姓名</label>
-              <input type="text" name="name" class="form-input" required value="${staff.name || ''}">
+              <input type="text" name="name" class="form-input" required value="${escapeHtml(staff.name || '')}">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">Email</label>
-              <input type="email" name="email" class="form-input" required value="${staff.email || ''}">
+              <input type="email" name="email" class="form-input" required value="${escapeHtml(staff.email || '')}">
             </div>
             <div class="form-group">
               <label class="form-label">電話</label>
-              <input type="tel" name="phone" class="form-input" value="${staff.phone || ''}">
+              <input type="tel" name="phone" class="form-input" value="${escapeHtml(staff.phone || '')}">
             </div>
           </div>
           <div class="form-row">
@@ -3941,11 +3941,11 @@
         const timeStr = log.created_at ? new Date(log.created_at).toLocaleString('zh-TW') : '-';
         row.innerHTML = `
           <td style="font-size:12px; white-space:nowrap;">${timeStr}</td>
-          <td><strong>${log.staff_name || log.staff_id || '-'}</strong></td>
+          <td><strong>${escapeHtml(log.staff_name || log.staff_id || '-')}</strong></td>
           <td><span class="badge ${actionBadges[log.action] || 'badge-info'}">${actionLabels[log.action] || log.action}</span></td>
           <td>${log.target_type || '-'}</td>
           <td style="font-size:12px;">${log.target_id || '-'}</td>
-          <td style="font-size:12px;">${log.description || '-'}</td>
+          <td style="font-size:12px;">${escapeHtml(log.description || '-')}</td>
         `;
         tbody.appendChild(row);
       });
@@ -4020,8 +4020,8 @@
             ? `cal-event rental ${ev.status === 'active' ? 'active' : ev.status === 'overdue' ? 'overdue' : ''}`
             : 'cal-event booking';
           const label = ev.type === 'rental'
-            ? `${ev.customer_name} (${ev.item_count}件)`
-            : `${ev.venue_name} - ${ev.customer_name}`;
+            ? `${escapeHtml(ev.customer_name)} (${ev.item_count}件)`
+            : `${escapeHtml(ev.venue_name)} - ${escapeHtml(ev.customer_name)}`;
           return `<div class="${cls}" title="${label}">${label}</div>`;
         }).join('');
 
@@ -4103,7 +4103,7 @@
         const catSelect = document.getElementById('qr-filter-category');
         const cats = [...new Set(equipmentTypes.filter(t => !t.is_deleted).map(t => t.category || '其他'))];
         catSelect.innerHTML = '<option value="all">全部分類</option>' +
-          cats.map(c => `<option value="${c}">${c}</option>`).join('');
+          cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
       } catch (e) {
         showError('載入分類失敗');
       }
@@ -4135,10 +4135,10 @@
 
         grid.innerHTML = filtered.map(label => `
           <div class="qr-label">
-            <img src="${label.qr_url}" alt="QR ${label.internal_code}">
-            <div class="qr-label-code">${label.internal_code}</div>
-            <div class="qr-label-name">${label.type_name}</div>
-            <div class="qr-label-detail">${label.category || ''} | ${label.serial_number || '無序號'}</div>
+            <img src="${label.qr_url}" alt="QR ${escapeHtml(label.internal_code)}">
+            <div class="qr-label-code">${escapeHtml(label.internal_code)}</div>
+            <div class="qr-label-name">${escapeHtml(label.type_name)}</div>
+            <div class="qr-label-detail">${escapeHtml(label.category || '')} | ${escapeHtml(label.serial_number || '無序號')}</div>
             <div class="qr-label-detail">日租 ${formatCurrency(label.daily_rate)}</div>
           </div>
         `).join('');
@@ -4185,8 +4185,8 @@
         html += `
           <div><span class="label">單號：</span>${data.rental_id}</div>
           <div><span class="label">狀態：</span>${statusLabels[data.status] || data.status}</div>
-          <div><span class="label">客戶：</span>${data.customer.name}${data.customer.company ? ' (' + data.customer.company + ')' : ''}</div>
-          <div><span class="label">電話：</span>${data.customer.phone || '-'}</div>
+          <div><span class="label">客戶：</span>${escapeHtml(data.customer.name)}${data.customer.company ? ' (' + escapeHtml(data.customer.company) + ')' : ''}</div>
+          <div><span class="label">電話：</span>${escapeHtml(data.customer.phone || '-')}</div>
           <div><span class="label">租借期間：</span>${formatDateDisplay(data.rental_start)} ~ ${formatDateDisplay(data.rental_end)}</div>
           <div><span class="label">天數：</span>${data.days} 天</div>
         `;
@@ -4194,8 +4194,8 @@
         html += `
           <div><span class="label">單號：</span>${data.booking_id}</div>
           <div><span class="label">狀態：</span>${statusLabels[data.status] || data.status}</div>
-          <div><span class="label">場地：</span>${data.venue.name}</div>
-          <div><span class="label">客戶：</span>${data.customer.name}</div>
+          <div><span class="label">場地：</span>${escapeHtml(data.venue.name)}</div>
+          <div><span class="label">客戶：</span>${escapeHtml(data.customer.name)}</div>
           <div><span class="label">預約時段：</span>${data.booking_start} ~ ${data.booking_end}</div>
           <div><span class="label">計費：</span>${rateLabels[data.rate_type] || data.rate_type}</div>
         `;
@@ -4209,8 +4209,8 @@
           <tbody>`;
         data.items.forEach(item => {
           html += `<tr>
-            <td>${item.type_name}</td>
-            <td>${item.internal_code}</td>
+            <td>${escapeHtml(item.type_name)}</td>
+            <td>${escapeHtml(item.internal_code)}</td>
             <td>${formatCurrency(item.daily_rate)}</td>
             <td>${item.days}</td>
             <td class="text-right">${formatCurrency(item.line_total)}</td>
@@ -4226,7 +4226,7 @@
           <tbody>`;
         data.services.forEach(s => {
           html += `<tr>
-            <td>${s.description}</td>
+            <td>${escapeHtml(s.description)}</td>
             <td>${formatCurrency(s.unit_price)}</td>
             <td>${s.quantity}</td>
             <td class="text-right">${formatCurrency(s.line_total)}</td>
@@ -4250,13 +4250,13 @@
       if (data.payments && data.payments.length > 0) {
         html += '<div style="margin-top:16px; font-size:12px;"><strong>付款紀錄：</strong><br>';
         data.payments.forEach(p => {
-          html += `${p.date ? formatDateDisplay(p.date) : '-'} | ${p.method || '-'} | ${formatCurrency(p.amount)}<br>`;
+          html += `${p.date ? formatDateDisplay(p.date) : '-'} | ${escapeHtml(p.method || '-')} | ${formatCurrency(p.amount)}<br>`;
         });
         html += '</div>';
       }
 
       if (data.notes) {
-        html += `<div style="margin-top:12px; font-size:12px;"><strong>備註：</strong>${data.notes}</div>`;
+        html += `<div style="margin-top:12px; font-size:12px;"><strong>備註：</strong>${escapeHtml(data.notes)}</div>`;
       }
 
       html += `<div class="receipt-footer">
@@ -4352,7 +4352,7 @@
       const select = document.getElementById('pos-rental-customer-select');
       select.innerHTML = '<option value="">選擇客戶...</option>' +
         customers.filter(c => !c.is_deleted).map(c =>
-          `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''} - ${c.phone || ''}</option>`
+          `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''} - ${escapeHtml(c.phone || '')}</option>`
         ).join('');
     }
 
@@ -4361,7 +4361,7 @@
       const filterBar = document.getElementById('pos-category-filters');
       const categories = [...new Set(equipmentTypes.filter(t => !t.is_deleted).map(t => t.category || '其他'))];
       filterBar.innerHTML = '<div class="pos-filter-chip active" data-cat="all">全部</div>' +
-        categories.map(c => `<div class="pos-filter-chip" data-cat="${c}">${c}</div>`).join('');
+        categories.map(c => `<div class="pos-filter-chip" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</div>`).join('');
 
       filterBar.querySelectorAll('.pos-filter-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -4410,8 +4410,8 @@
         card.innerHTML = `
           <div class="pos-item-badge ${availableCount > 0 ? 'available' : 'rented'}">${availableCount}/${totalCount} 可用</div>
           <div class="pos-item-icon">📷</div>
-          <div class="pos-item-name">${type.type_name || type.type_id}</div>
-          <div class="pos-item-detail">${type.category || '一般'}</div>
+          <div class="pos-item-name">${escapeHtml(type.type_name || type.type_id)}</div>
+          <div class="pos-item-detail">${escapeHtml(type.category || '一般')}</div>
           <div class="pos-item-price">${formatCurrency(type.daily_rate || 0)}/天</div>
         `;
 
@@ -4467,8 +4467,8 @@
       container.innerHTML = posRentalSelectedItems.map((item, idx) => `
         <div class="pos-order-item">
           <div class="pos-order-item-info">
-            <div class="pos-order-item-name">${item.type_name}</div>
-            <div class="pos-order-item-sub">${item.internal_code}</div>
+            <div class="pos-order-item-name">${escapeHtml(item.type_name)}</div>
+            <div class="pos-order-item-sub">${escapeHtml(item.internal_code)}</div>
           </div>
           <div class="pos-order-item-price">${formatCurrency(item.daily_rate)}/天</div>
           <button class="pos-order-item-remove" onclick="posRentalRemoveItem(${idx})">x</button>
@@ -4608,7 +4608,7 @@
       const select = document.getElementById('pos-venue-customer-select');
       select.innerHTML = '<option value="">選擇客戶...</option>' +
         customers.filter(c => !c.is_deleted).map(c =>
-          `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''} - ${c.phone || ''}</option>`
+          `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''} - ${escapeHtml(c.phone || '')}</option>`
         ).join('');
     }
 
@@ -4625,7 +4625,7 @@
       const filterBar = document.getElementById('pos-venue-type-filters');
       const types = [...new Set(venues.filter(v => !v.is_deleted).map(v => v.venue_type || 'other'))];
       filterBar.innerHTML = '<div class="pos-filter-chip active" data-type="all">全部</div>' +
-        types.map(t => `<div class="pos-filter-chip" data-type="${t}">${POS_VENUE_TYPE_LABELS[t] || t}</div>`).join('');
+        types.map(t => `<div class="pos-filter-chip" data-type="${escapeHtml(t)}">${POS_VENUE_TYPE_LABELS[t] || escapeHtml(t)}</div>`).join('');
 
       filterBar.querySelectorAll('.pos-filter-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -4666,7 +4666,7 @@
         card.className = 'pos-item-card' + (isSelected ? ' selected' : '');
         card.innerHTML = `
           <div class="pos-item-icon">${venue.venue_type === 'studio' ? '🎬' : venue.venue_type === 'meeting_room' ? '🏛️' : venue.venue_type === 'event_hall' ? '🎪' : '🏢'}</div>
-          <div class="pos-item-name">${venue.venue_name}</div>
+          <div class="pos-item-name">${escapeHtml(venue.venue_name)}</div>
           <div class="pos-item-detail">${POS_VENUE_TYPE_LABELS[venue.venue_type] || venue.venue_type} / ${venue.capacity || '?'}人</div>
           <div class="pos-item-price">${formatCurrency(venue.hourly_rate || 0)}/hr</div>
           <div class="pos-item-detail" style="margin-top:2px;">半日 ${formatCurrency(venue.half_day_rate || 0)} | 全日 ${formatCurrency(venue.daily_rate || 0)}</div>
@@ -4683,7 +4683,7 @@
       container.innerHTML = `
         <div class="pos-customer-display">
           <div>
-            <div class="name">${venue.venue_name}</div>
+            <div class="name">${escapeHtml(venue.venue_name)}</div>
             <div class="phone">${POS_VENUE_TYPE_LABELS[venue.venue_type] || ''} / 容納 ${venue.capacity || '?'} 人</div>
           </div>
           <button class="pos-order-item-remove" onclick="posVenueClearSelection()">x</button>
