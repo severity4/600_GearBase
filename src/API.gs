@@ -534,3 +534,230 @@ function getCustomerCreditInfo(customerId) {
     notes: notes
   };
 }
+
+/**
+ * ==================== CUSTOMER-FACING API ====================
+ */
+
+/**
+ * Get equipment catalog with availability count per type
+ * Groups by equipment type and counts available units
+ * @return {Array} Equipment types with availability info
+ */
+function getEquipmentCatalog() {
+  const types = getSheetData('Equipment_Types').filter(t => !t.is_deleted && t.active !== false);
+  const units = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
+  const bindings = getSheetData('Accessory_Bindings').filter(b => !b.is_deleted);
+
+  return types.map(type => {
+    const typeUnits = units.filter(u => u.type_id === type.type_id);
+    const available = typeUnits.filter(u => u.status === 'available').length;
+    const total = typeUnits.length;
+
+    // Get accessories for this type
+    const accessories = bindings
+      .filter(b => b.parent_type_id === type.type_id)
+      .map(b => {
+        const accType = types.find(t => t.type_id === b.accessory_type_id);
+        return {
+          type_id: b.accessory_type_id,
+          type_name: accType ? accType.type_name : b.accessory_type_id,
+          binding_type: b.binding_type,
+          notes: b.notes || ''
+        };
+      });
+
+    return {
+      type_id: type.type_id,
+      type_name: type.type_name,
+      category: type.category || '',
+      sub_category: type.sub_category || '',
+      brand: type.brand || '',
+      model: type.model || '',
+      daily_rate: parseFloat(type.daily_rate || 0),
+      replacement_value: parseFloat(type.replacement_value || 0),
+      deposit_required: parseFloat(type.deposit_required || 0),
+      is_consumable: type.is_consumable === true || type.is_consumable === 'true',
+      description: type.description || '',
+      total_units: total,
+      available_units: available,
+      accessories: accessories
+    };
+  });
+}
+
+/**
+ * Get venue schedule for customer-facing calendar
+ * @param {string} venueId
+ * @param {string} yearMonth - YYYY-MM format
+ * @return {Object} {venue, bookings: [{date, slots}]}
+ */
+function getVenueMonthlySchedule(venueId, yearMonth) {
+  const venue = getSheetData('Venues').find(v => v.venue_id === venueId && !v.is_deleted);
+  if (!venue) return { venue: null, booked_dates: [] };
+
+  const [year, month] = yearMonth.split('-').map(Number);
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+
+  const bookings = getSheetData('Venue_Bookings').filter(b =>
+    !b.is_deleted &&
+    b.venue_id === venueId &&
+    b.status !== 'cancelled'
+  );
+
+  const bookedDates = [];
+  bookings.forEach(b => {
+    const bStart = new Date(b.booking_start);
+    const bEnd = new Date(b.booking_end);
+
+    // Iterate through each day of this booking
+    const cursor = new Date(Math.max(bStart.getTime(), firstDay.getTime()));
+    cursor.setHours(0, 0, 0, 0);
+    const endLimit = new Date(Math.min(bEnd.getTime(), lastDay.getTime()));
+    endLimit.setHours(23, 59, 59);
+
+    while (cursor <= endLimit) {
+      const dateStr = Utilities.formatDate(cursor, 'Asia/Taipei', 'yyyy-MM-dd');
+      // Check if fully booked for the day (simplified: mark as booked if any booking exists)
+      if (!bookedDates.includes(dateStr)) {
+        bookedDates.push(dateStr);
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  });
+
+  return {
+    venue: {
+      venue_id: venue.venue_id,
+      name: venue.name,
+      available_start_time: venue.available_start_time || '09:00',
+      available_end_time: venue.available_end_time || '22:00'
+    },
+    booked_dates: bookedDates.sort()
+  };
+}
+
+/**
+ * Lookup rental status by phone number or rental ID
+ * @param {string} query - Phone number or rental ID
+ * @return {Object} Lookup results
+ */
+function lookupRentalStatus(query) {
+  if (!query || query.trim() === '') {
+    return { found: false, message: '請輸入電話號碼或租借單號' };
+  }
+
+  const q = query.trim();
+  const allCustomers = getSheetData('Customers').filter(c => !c.is_deleted);
+  const allRentals = getSheetData('Rentals').filter(r => !r.is_deleted);
+  const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
+  const types = getSheetData('Equipment_Types');
+  const bookings = getSheetData('Venue_Bookings').filter(b => !b.is_deleted);
+  const venues = getSheetData('Venues');
+
+  const typeMap = {};
+  types.forEach(t => { typeMap[t.type_id] = t; });
+  const venueMap = {};
+  venues.forEach(v => { venueMap[v.venue_id] = v; });
+
+  const statusLabels = {
+    draft: '草稿', reserved: '已預約', active: '進行中',
+    overdue: '逾期', returned: '已歸還', completed: '已完成', cancelled: '已取消'
+  };
+
+  // Try direct rental ID lookup first
+  const directRental = allRentals.find(r => r.rental_id === q);
+  if (directRental) {
+    const cust = allCustomers.find(c => c.customer_id === directRental.customer_id);
+    const items = rentalItems.filter(ri => ri.rental_id === directRental.rental_id);
+    return {
+      found: true,
+      rentals: [{
+        rental_id: directRental.rental_id,
+        status: directRental.status,
+        status_label: statusLabels[directRental.status] || directRental.status,
+        rental_start: directRental.rental_start || directRental.start_date,
+        rental_end: directRental.rental_end || directRental.end_date,
+        total_amount: parseFloat(directRental.total_amount || 0),
+        paid_amount: parseFloat(directRental.paid_amount || 0),
+        items: items.map(i => ({
+          type_name: (typeMap[i.type_id] || {}).type_name || i.type_id,
+          line_total: parseFloat(i.line_total || 0)
+        }))
+      }],
+      bookings: [],
+      customer_name: cust ? cust.name : ''
+    };
+  }
+
+  // Try booking ID lookup
+  const directBooking = bookings.find(b => b.booking_id === q);
+  if (directBooking) {
+    const cust = allCustomers.find(c => c.customer_id === directBooking.customer_id);
+    const venue = venueMap[directBooking.venue_id] || {};
+    return {
+      found: true,
+      rentals: [],
+      bookings: [{
+        booking_id: directBooking.booking_id,
+        venue_name: venue.name || '',
+        status: directBooking.status,
+        status_label: statusLabels[directBooking.status] || directBooking.status,
+        booking_start: directBooking.booking_start,
+        booking_end: directBooking.booking_end,
+        total_amount: parseFloat(directBooking.total_amount || 0)
+      }],
+      customer_name: cust ? cust.name : ''
+    };
+  }
+
+  // Lookup by phone number
+  const customer = allCustomers.find(c => c.phone === q || c.phone === q.replace(/-/g, ''));
+  if (!customer) {
+    return { found: false, message: '查無此電話號碼或單號的紀錄' };
+  }
+
+  const custRentals = allRentals
+    .filter(r => r.customer_id === customer.customer_id && r.status !== 'cancelled')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10);
+
+  const custBookings = bookings
+    .filter(b => b.customer_id === customer.customer_id && b.status !== 'cancelled')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10);
+
+  return {
+    found: true,
+    customer_name: customer.name,
+    rentals: custRentals.map(r => {
+      const items = rentalItems.filter(ri => ri.rental_id === r.rental_id);
+      return {
+        rental_id: r.rental_id,
+        status: r.status,
+        status_label: statusLabels[r.status] || r.status,
+        rental_start: r.rental_start || r.start_date,
+        rental_end: r.rental_end || r.end_date,
+        total_amount: parseFloat(r.total_amount || 0),
+        paid_amount: parseFloat(r.paid_amount || 0),
+        items: items.map(i => ({
+          type_name: (typeMap[i.type_id] || {}).type_name || i.type_id,
+          line_total: parseFloat(i.line_total || 0)
+        }))
+      };
+    }),
+    bookings: custBookings.map(b => {
+      const venue = venueMap[b.venue_id] || {};
+      return {
+        booking_id: b.booking_id,
+        venue_name: venue.name || '',
+        status: b.status,
+        status_label: statusLabels[b.status] || b.status,
+        booking_start: b.booking_start,
+        booking_end: b.booking_end,
+        total_amount: parseFloat(b.total_amount || 0)
+      };
+    })
+  };
+}

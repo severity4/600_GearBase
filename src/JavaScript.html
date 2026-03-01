@@ -74,8 +74,13 @@
       // Search and utilities
       searchEquipment: (query) => runAsync('searchEquipment', query),
       getAvailableEquipment: (startDate, endDate) => runAsync('getAvailableEquipment', startDate, endDate),
+      getEquipmentCatalog: () => runAsync('getEquipmentCatalog'),
       calculateRentalTotal: (rentalId) => runAsync('calculateRentalTotal', rentalId),
       getOverdueRentals: () => runAsync('getOverdueRentals'),
+
+      // Customer-facing
+      getVenueMonthlySchedule: (venueId, yearMonth) => runAsync('getVenueMonthlySchedule', venueId, yearMonth),
+      lookupRentalStatus: (query) => runAsync('lookupRentalStatus', query),
 
       // Rental workflow
       advanceRentalStatus: (rentalId, newStatus, metadata) => runAsync('advanceRentalStatus', rentalId, newStatus, metadata),
