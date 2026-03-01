@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+    /**
+     * Shared JavaScript Utilities
+     * API wrapper, UI helpers, notifications, forms
+     */
+
+    // ==================== API WRAPPER ====================
+
+    /**
+     * Wrapper for google.script.run with promise-based error handling
+     */
+    const API = {
+      // Equipment Types
+      getEquipmentTypes: () => runAsync(google.script.run.withSuccessHandler(x => x).getEquipmentTypes),
+      createEquipmentType: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createEquipmentType, data),
+      updateEquipmentType: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateEquipmentType, id, data),
+      deleteEquipmentType: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteEquipmentType, id),
+
+      // Equipment Units
+      getEquipmentUnits: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getEquipmentUnits, filters),
+      createEquipmentUnit: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createEquipmentUnit, data),
+      updateEquipmentUnit: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateEquipmentUnit, id, data),
+      deleteEquipmentUnit: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteEquipmentUnit, id),
+
+      // Customers
+      getCustomers: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getCustomers, filters),
+      createCustomer: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createCustomer, data),
+      updateCustomer: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateCustomer, id, data),
+      deleteCustomer: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteCustomer, id),
+
+      // Rentals
+      getRentals: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getRentals, filters),
+      createRental: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createRental, data),
+      updateRental: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateRental, id, data),
+      getRentalItems: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).getRentalItems, rentalId),
+      createRentalItem: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createRentalItem, data),
+
+      // Payments
+      getPayments: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getPayments, filters),
+      createPayment: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createPayment, data),
+
+      // Maintenance
+      getMaintenanceLogs: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getMaintenanceLogs, filters),
+      createMaintenanceLog: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createMaintenanceLog, data),
+
+      // Inventory
+      getInventoryLogs: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getInventoryLogs, filters),
+      createInventoryLog: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createInventoryLog, data),
+
+      // Stocktake
+      getStocktakePlans: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getStocktakePlans, filters),
+      createStocktakePlan: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStocktakePlan, data),
+      getStocktakeResults: (planId) => runAsync(google.script.run.withSuccessHandler(x => x).getStocktakeResults, planId),
+      createStocktakeResult: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStocktakeResult, data),
+
+      // Staff
+      getStaff: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getStaff, filters),
+      createStaff: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStaff, data),
+
+      // Dashboard
+      getDashboardStats: () => runAsync(google.script.run.withSuccessHandler(x => x).getDashboardStats),
+
+      // Storage Locations
+      getStorageLocations: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getStorageLocations, filters),
+      createStorageLocation: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createStorageLocation, data),
+
+      // Discount Rules
+      getDiscountRules: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getDiscountRules, filters),
+
+      // Search and utilities
+      searchEquipment: (query) => runAsync(google.script.run.withSuccessHandler(x => x).searchEquipment, query),
+      getAvailableEquipment: (startDate, endDate) => runAsync(google.script.run.withSuccessHandler(x => x).getAvailableEquipment, startDate, endDate),
+      calculateRentalTotal: (rentalId) => runAsync(google.script.run.withSuccessHandler(x => x).calculateRentalTotal, rentalId),
+      getOverdueRentals: () => runAsync(google.script.run.withSuccessHandler(x => x).getOverdueRentals),
+    };
+
+    /**
+     * Run async function with loading indicator
+     */
+    function runAsync(fn, ...args) {
+      return new Promise((resolve, reject) => {
+        showLoading(true);
+        try {
+          fn(...args, (result) => {
+            showLoading(false);
+            resolve(result);
+          });
+        } catch (error) {
+          showLoading(false);
+          reject(error);
+        }
+      });
+    }
+
+    // ==================== TOAST NOTIFICATIONS ====================
+
+    /**
+     * Show toast notification
+     */
+    function showToast(message, type = 'info', duration = 3000) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    function showSuccess(message) {
+      showToast(message, 'success');
+    }
+
+    function showError(message) {
+      showToast(message, 'danger');
+    }
+
+    function showWarning(message) {
+      showToast(message, 'warning');
+    }
+
+    function showInfo(message) {
+      showToast(message, 'info');
+    }
+
+    // ==================== LOADING INDICATOR ====================
+
+    /**
+     * Show/hide loading overlay
+     */
+    function showLoading(show = true) {
+      let overlay = document.getElementById('loading-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loading-overlay';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = '<div class="spinner spinner-large"></div>';
+        document.body.appendChild(overlay);
+      }
+
+      if (show) {
+        overlay.classList.add('active');
+      } else {
+        overlay.classList.remove('active');
+      }
+    }
+
+    // ==================== MODAL MANAGEMENT ====================
+
+    class Modal {
+      constructor(title, body, footer = null) {
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'modal-overlay';
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'modal-header';
+        header.innerHTML = `
+          <div class="modal-title">${title}</div>
+          <button class="modal-close">×</button>
+        `;
+        header.querySelector('.modal-close').addEventListener('click', () => this.close());
+
+        // Body
+        const bodyDiv = document.createElement('div');
+        bodyDiv.className = 'modal-body';
+        if (typeof body === 'string') {
+          bodyDiv.innerHTML = body;
+        } else {
+          bodyDiv.appendChild(body);
+        }
+
+        modal.appendChild(header);
+        modal.appendChild(bodyDiv);
+
+        // Footer
+        if (footer) {
+          const footerDiv = document.createElement('div');
+          footerDiv.className = 'modal-footer';
+          if (typeof footer === 'string') {
+            footerDiv.innerHTML = footer;
+          } else {
+            footerDiv.appendChild(footer);
+          }
+          modal.appendChild(footerDiv);
+        }
+
+        this.overlay.appendChild(modal);
+        this.modal = modal;
+      }
+
+      open() {
+        document.body.appendChild(this.overlay);
+        this.overlay.classList.add('active');
+        this.overlay.addEventListener('click', (e) => {
+          if (e.target === this.overlay) this.close();
+        });
+      }
+
+      close() {
+        this.overlay.classList.remove('active');
+        setTimeout(() => this.overlay.remove(), 300);
+      }
+
+      getElement(selector) {
+        return this.modal.querySelector(selector);
+      }
+    }
+
+    // ==================== FORM HELPERS ====================
+
+    /**
+     * Validate required form fields
+     */
+    function validateForm(formElement) {
+      const inputs = formElement.querySelectorAll('[required]');
+      const errors = [];
+
+      inputs.forEach(input => {
+        if (!input.value.trim()) {
+          const label = formElement.querySelector(`label[for="${input.id}"]`);
+          const fieldName = label ? label.textContent : input.name;
+          errors.push(`${fieldName}必填`);
+        }
+      });
+
+      return {
+        valid: errors.length === 0,
+        errors: errors
+      };
+    }
+
+    /**
+     * Get form data as object
+     */
+    function getFormData(formElement) {
+      const formData = new FormData(formElement);
+      const data = {};
+
+      for (const [key, value] of formData.entries()) {
+        if (value !== '') {
+          data[key] = value;
+        }
+      }
+
+      return data;
+    }
+
+    /**
+     * Populate form with data
+     */
+    function populateForm(formElement, data) {
+      for (const [key, value] of Object.entries(data)) {
+        const input = formElement.querySelector(`[name="${key}"]`);
+        if (input) {
+          if (input.type === 'checkbox') {
+            input.checked = value === true || value === '1' || value === 'true';
+          } else {
+            input.value = value || '';
+          }
+        }
+      }
+    }
+
+    // ==================== TABLE UTILITIES ====================
+
+    /**
+     * Create sortable table
+     */
+    function createTable(data, columns, actions = null) {
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+
+      // Header
+      const headerRow = document.createElement('tr');
+      columns.forEach(col => {
+        const th = document.createElement('th');
+        th.textContent = col.label;
+        th.style.cursor = col.sortable ? 'pointer' : 'default';
+        headerRow.appendChild(th);
+      });
+      if (actions) {
+        const th = document.createElement('th');
+        th.textContent = '操作';
+        headerRow.appendChild(th);
+      }
+      thead.appendChild(headerRow);
+
+      // Body
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        columns.forEach(col => {
+          const td = document.createElement('td');
+          const value = row[col.key];
+          if (col.format) {
+            td.innerHTML = col.format(value, row);
+          } else {
+            td.textContent = value || '-';
+          }
+          tr.appendChild(td);
+        });
+        if (actions) {
+          const td = document.createElement('td');
+          td.className = 'table-actions';
+          td.appendChild(actions(row));
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+
+      return table;
+    }
+
+    /**
+     * Search/filter table
+     */
+    function filterTable(table, searchText, columnIndex = 0) {
+      const rows = table.querySelectorAll('tbody tr');
+      const lowerText = searchText.toLowerCase();
+
+      rows.forEach(row => {
+        const cell = row.cells[columnIndex];
+        if (cell) {
+          const text = cell.textContent.toLowerCase();
+          row.style.display = text.includes(lowerText) ? '' : 'none';
+        }
+      });
+    }
+
+    // ==================== DATE UTILITIES ====================
+
+    /**
+     * Format date to YYYY-MM-DD (Taiwan timezone)
+     */
+    function formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Format date to display format (2026年3月1日)
+     */
+    function formatDateDisplay(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return d.toLocaleDateString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    }
+
+    /**
+     * Get date range (start, end)
+     */
+    function getDateRange(startDate, endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      return days;
+    }
+
+    // ==================== CURRENCY FORMATTING ====================
+
+    /**
+     * Format currency (TWD)
+     */
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('zh-TW', {
+        style: 'currency',
+        currency: 'TWD',
+        minimumFractionDigits: 0
+      }).format(amount || 0);
+    }
+
+    /**
+     * Parse currency string to number
+     */
+    function parseCurrency(value) {
+      return parseFloat(String(value).replace(/[^0-9.-]/g, '')) || 0;
+    }
+
+    // ==================== VALIDATION ====================
+
+    /**
+     * Validate email
+     */
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    /**
+     * Validate phone (Taiwan)
+     */
+    function isValidPhone(phone) {
+      const phoneRegex = /^[0-9\-\+\(\)\s]{10,}$/;
+      return phoneRegex.test(phone);
+    }
+
+    /**
+     * Validate number
+     */
+    function isValidNumber(value) {
+      return !isNaN(value) && value !== '';
+    }
+
+    // ==================== ARRAY UTILITIES ====================
+
+    /**
+     * Group array by key
+     */
+    function groupBy(array, key) {
+      return array.reduce((result, item) => {
+        const group = item[key];
+        if (!result[group]) {
+          result[group] = [];
+        }
+        result[group].push(item);
+        return result;
+      }, {});
+    }
+
+    /**
+     * Sort array
+     */
+    function sortBy(array, key, order = 'asc') {
+      return [...array].sort((a, b) => {
+        const aVal = a[key];
+        const bVal = b[key];
+        if (aVal < bVal) return order === 'asc' ? -1 : 1;
+        if (aVal > bVal) return order === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    /**
+     * Filter array
+     */
+    function filterBy(array, filters) {
+      return array.filter(item => {
+        for (const [key, value] of Object.entries(filters)) {
+          if (String(item[key]) !== String(value)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    // ==================== DEBOUNCE & THROTTLE ====================
+
+    /**
+     * Debounce function
+     */
+    function debounce(fn, delay = 300) {
+      let timeoutId;
+      return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    /**
+     * Throttle function
+     */
+    function throttle(fn, delay = 300) {
+      let lastCall = 0;
+      return function(...args) {
+        const now = Date.now();
+        if (now - lastCall >= delay) {
+          fn(...args);
+          lastCall = now;
+        }
+      };
+    }
+
+    // ==================== DOM UTILITIES ====================
+
+    /**
+     * Create element with attributes
+     */
+    function createElement(tag, attrs = {}, content = '') {
+      const element = document.createElement(tag);
+      Object.assign(element, attrs);
+      if (content) {
+        if (typeof content === 'string') {
+          element.innerHTML = content;
+        } else {
+          element.appendChild(content);
+        }
+      }
+      return element;
+    }
+
+    /**
+     * Add event listeners to elements
+     */
+    function delegateEvent(parent, selector, event, handler) {
+      parent.addEventListener(event, (e) => {
+        const target = e.target.closest(selector);
+        if (target) {
+          handler.call(target, e);
+        }
+      });
+    }
+
+    /**
+     * Clear element children
+     */
+    function clearElement(element) {
+      while (element.firstChild) {
+        element.removeChild(element.firstChild);
+      }
+    }
+
+    /**
+     * Show/hide element
+     */
+    function show(element) {
+      element.style.display = '';
+    }
+
+    function hide(element) {
+      element.style.display = 'none';
+    }
+
+    function toggle(element) {
+      element.style.display = element.style.display === 'none' ? '' : 'none';
+    }
+
+    // ==================== LOCAL STORAGE ====================
+
+    /**
+     * Storage helper
+     */
+    const Storage = {
+      set: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
+      get: (key) => {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+      },
+      remove: (key) => localStorage.removeItem(key),
+      clear: () => localStorage.clear()
+    };
+
+    // ==================== QUERY PARAMETERS ====================
+
+    /**
+     * Get URL parameters
+     */
+    function getQueryParam(param) {
+      const searchParams = new URLSearchParams(window.location.search);
+      return searchParams.get(param);
+    }
+
+    /**
+     * Get all URL parameters
+     */
+    function getAllQueryParams() {
+      const searchParams = new URLSearchParams(window.location.search);
+      const params = {};
+      searchParams.forEach((value, key) => {
+        params[key] = value;
+      });
+      return params;
+    }
+
+    // ==================== KEYBOARD SHORTCUTS ====================
+
+    /**
+     * Register keyboard shortcut
+     */
+    function registerKeyboardShortcut(key, modifier = null, handler) {
+      document.addEventListener('keydown', (e) => {
+        const isModifierPressed = modifier === null || (
+          (modifier === 'ctrl' && e.ctrlKey) ||
+          (modifier === 'alt' && e.altKey) ||
+          (modifier === 'shift' && e.shiftKey)
+        );
+
+        if (e.key === key && isModifierPressed) {
+          e.preventDefault();
+          handler();
+        }
+      });
+    }
+
+    // ==================== PAGE READY ====================
+
+    /**
+     * Execute when DOM is ready
+     */
+    function onReady(callback) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', callback);
+      } else {
+        callback();
+      }
+    }
+  </script>
+</head>
+</html>

@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>映奧創意工作室 - 器材租借 (客戶前台)</title>
+  <?!= include('Styles') ?>
+  <style>
+    body.customer-app {
+      overflow-y: auto;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
+
+    .customer-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white;
+      padding: 40px 20px;
+      text-align: center;
+      border-bottom: 3px solid var(--primary-color);
+    }
+
+    .customer-header h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .customer-header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .customer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .search-section {
+      margin-bottom: 40px;
+    }
+
+    .search-section .search-box {
+      max-width: 500px;
+      margin: 0 auto 20px;
+      background-color: white;
+      padding: 12px 16px;
+      border-radius: 50px;
+    }
+
+    .search-section .search-box input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      font-size: 16px;
+    }
+
+    .category-filter {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+
+    .category-btn {
+      padding: 10px 20px;
+      border: 2px solid white;
+      background-color: transparent;
+      color: white;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+      font-weight: 500;
+    }
+
+    .category-btn:hover,
+    .category-btn.active {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+
+    .product-grid {
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+
+    .product-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      transition: var(--transition);
+    }
+
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .product-image {
+      height: 240px;
+      background: linear-gradient(135deg, var(--primary-light) 0%, #f0f9ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      overflow: hidden;
+    }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .product-info {
+      padding: 20px;
+    }
+
+    .product-category {
+      font-size: 12px;
+      color: var(--primary-color);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .product-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .product-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .product-price {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 16px;
+    }
+
+    .product-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .product-actions .btn {
+      flex: 1;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 300px;
+      height: 100vh;
+      background-color: white;
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      z-index: 100;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      padding: 20px;
+    }
+
+    .sidebar.active {
+      transform: translateX(0);
+    }
+
+    .sidebar-header {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+
+    .sidebar-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .sidebar-section {
+      margin-bottom: 24px;
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .sidebar-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      cursor: pointer;
+    }
+
+    .sidebar-checkbox input {
+      cursor: pointer;
+    }
+
+    .cart-summary {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: white;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-lg);
+      min-width: 250px;
+      z-index: 200;
+    }
+
+    .cart-count {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .cart-total {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .cart-total-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .cart-total-amount {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .cart-btn {
+      width: 100%;
+    }
+
+    .toggle-sidebar-btn {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      z-index: 90;
+      background-color: white;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      box-shadow: var(--shadow-md);
+      display: none;
+    }
+
+    .toggle-sidebar-btn.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+      .customer-header h1 {
+        font-size: 24px;
+      }
+
+      .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      }
+
+      .toggle-sidebar-btn.show {
+        display: flex;
+      }
+
+      .cart-summary {
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        width: auto;
+        min-width: auto;
+      }
+
+      .category-filter {
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: 10px;
+      }
+
+      .customer-container {
+        padding: 20px 10px;
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: white;
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state-text {
+      font-size: 18px;
+      opacity: 0.8;
+    }
+
+    .modal-overlay {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .rental-form-section {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .rental-form-section:last-child {
+      border-bottom: none;
+    }
+
+    .rental-form-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body class="customer-app">
+  <div class="customer-header">
+    <h1>📹 映奧創意工作室</h1>
+    <p>專業器材租借服務</p>
+  </div>
+
+  <button class="toggle-sidebar-btn show" id="toggle-sidebar">☰</button>
+
+  <div class="sidebar" id="sidebar">
+    <button class="sidebar-close" id="close-sidebar">×</button>
+    <div class="sidebar-header">篩選</div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">分類</div>
+      <div id="category-list"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">狀態</div>
+      <label class="sidebar-checkbox">
+        <input type="checkbox" value="available" class="status-filter" checked>
+        <span>可用</span>
+      </label>
+    </div>
+
+    <button class="btn btn-primary w-100" id="reset-filters" style="margin-top: 20px;">重置篩選</button>
+  </div>
+
+  <div class="customer-container">
+    <div class="search-section">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="搜尋器材...">
+      </div>
+      <div id="category-buttons" class="category-filter"></div>
+    </div>
+
+    <div id="product-list" class="product-grid"></div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="empty-state-icon">📭</div>
+      <div class="empty-state-text">沒有找到符合條件的器材</div>
+    </div>
+  </div>
+
+  <div class="cart-summary" id="cart-summary" style="display: none;">
+    <div class="cart-count" id="cart-count">0</div>
+    <div class="cart-total">
+      <div class="cart-total-label">預估金額</div>
+      <div class="cart-total-amount" id="cart-total">NT$0</div>
+    </div>
+    <button class="btn btn-primary cart-btn" id="checkout-btn">申請租借</button>
+  </div>
+
+  <?!= include('JavaScript') ?>
+  <script>
+    // Global state
+    let allEquipment = [];
+    let allTypes = [];
+    let cart = [];
+    let selectedCategory = null;
+    let filteredEquipment = [];
+
+    // ==================== INITIALIZATION ====================
+
+    onReady(async () => {
+      await loadEquipment();
+      setupEventListeners();
+      renderCategoryButtons();
+      renderProductList(allEquipment);
+    });
+
+    function setupEventListeners() {
+      // Search
+      document.getElementById('search-input').addEventListener('input', debounce(filterAndRender, 300));
+
+      // Sidebar
+      document.getElementById('toggle-sidebar').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('active');
+      });
+      document.getElementById('close-sidebar').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('active');
+      });
+
+      // Category filter
+      document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('category-btn')) {
+          document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+          e.target.classList.add('active');
+          selectedCategory = e.target.dataset.category || null;
+          filterAndRender();
+        }
+      });
+
+      // Status filter
+      document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('status-filter')) {
+          filterAndRender();
+        }
+      });
+
+      // Reset filters
+      document.getElementById('reset-filters').addEventListener('click', () => {
+        document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.status-filter').forEach(cb => cb.checked = true);
+        selectedCategory = null;
+        document.getElementById('search-input').value = '';
+        filterAndRender();
+      });
+
+      // Checkout
+      document.getElementById('checkout-btn').addEventListener('click', openCheckoutModal);
+    }
+
+    // ==================== DATA LOADING ====================
+
+    async function loadEquipment() {
+      try {
+        allTypes = await API.getEquipmentTypes();
+        allEquipment = await API.getAvailableEquipment(formatDate(new Date()), formatDate(new Date(new Date().getTime() + 86400000)));
+
+        // Enrich equipment with type info
+        allEquipment = allEquipment.map(unit => {
+          const type = allTypes.find(t => t.type_id === unit.type_id);
+          return {
+            ...unit,
+            type_name: type ? type.type_name : 'Unknown',
+            category: type ? type.category : 'other',
+            daily_rate: type ? type.daily_rate : 0,
+            description: type ? type.description : ''
+          };
+        });
+
+        filteredEquipment = [...allEquipment];
+      } catch (error) {
+        showError('載入器材數據失敗');
+        console.error(error);
+      }
+    }
+
+    // ==================== FILTERING ====================
+
+    function filterAndRender() {
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      const selectedStatuses = Array.from(document.querySelectorAll('.status-filter:checked')).map(cb => cb.value);
+
+      filteredEquipment = allEquipment.filter(item => {
+        // Search filter
+        const matchesSearch = !searchTerm ||
+          item.type_name.toLowerCase().includes(searchTerm) ||
+          item.internal_code.toLowerCase().includes(searchTerm);
+
+        // Category filter
+        const matchesCategory = !selectedCategory || item.category === selectedCategory;
+
+        // Status filter
+        const matchesStatus = selectedStatuses.includes(item.status);
+
+        return matchesSearch && matchesCategory && matchesStatus;
+      });
+
+      renderProductList(filteredEquipment);
+    }
+
+    // ==================== CATEGORY BUTTONS ====================
+
+    function renderCategoryButtons() {
+      const container = document.getElementById('category-buttons');
+      const categories = ['camera', 'lens', 'audio', 'lighting', 'monitor', 'transmission', 'tripod', 'motion', 'teleprompter', 'accessory'];
+      const categoryLabels = {
+        'camera': '攝影機',
+        'lens': '鏡頭',
+        'audio': '音頻',
+        'lighting': '燈光',
+        'monitor': '監看',
+        'transmission': '傳輸',
+        'tripod': '三腳架',
+        'motion': '運動鏡頭',
+        'teleprompter': '提詞器',
+        'accessory': '配件'
+      };
+
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn';
+        btn.dataset.category = cat;
+        btn.textContent = categoryLabels[cat] || cat;
+        container.appendChild(btn);
+      });
+    }
+
+    // ==================== PRODUCT LIST ====================
+
+    function renderProductList(equipment) {
+      const container = document.getElementById('product-list');
+      const emptyState = document.getElementById('empty-state');
+      const cartSummary = document.getElementById('cart-summary');
+
+      clearElement(container);
+
+      if (equipment.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+        cartSummary.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'grid';
+      emptyState.style.display = 'none';
+      if (cart.length > 0) {
+        cartSummary.style.display = 'block';
+      }
+
+      equipment.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+
+        const inCart = cart.some(c => c.unit_id === item.unit_id);
+
+        card.innerHTML = `
+          <div class="product-image">
+            ${getCategoryEmoji(item.category)}
+          </div>
+          <div class="product-info">
+            <div class="product-category">${getCategoryLabel(item.category)}</div>
+            <div class="product-name">${item.type_name}</div>
+            <div class="product-desc">
+              編碼: ${item.internal_code}
+              ${item.serial_number ? `<br>序號: ${item.serial_number}` : ''}
+            </div>
+            <div class="product-price">${formatCurrency(item.daily_rate)}<span style="font-size: 12px; color: var(--text-secondary);">/日</span></div>
+            <div class="product-actions">
+              <button class="btn btn-primary btn-sm ${inCart ? 'btn-danger' : ''}" onclick="toggleCart('${item.unit_id}', '${item.type_name}', ${item.daily_rate})">
+                ${inCart ? '移除' : '加入'}
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="showItemDetails(event, '${item.unit_id}')">詳情</button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function getCategoryEmoji(category) {
+      const emojis = {
+        'camera': '📷',
+        'lens': '🔭',
+        'audio': '🎤',
+        'lighting': '💡',
+        'monitor': '🖥️',
+        'transmission': '📡',
+        'tripod': '🎬',
+        'motion': '🎥',
+        'teleprompter': '📋',
+        'accessory': '🔧'
+      };
+      return emojis[category] || '📦';
+    }
+
+    function getCategoryLabel(category) {
+      const labels = {
+        'camera': '攝影機',
+        'lens': '鏡頭',
+        'audio': '音頻',
+        'lighting': '燈光',
+        'monitor': '監看',
+        'transmission': '傳輸',
+        'tripod': '三腳架',
+        'motion': '運動鏡頭',
+        'teleprompter': '提詞器',
+        'accessory': '配件'
+      };
+      return labels[category] || '其他';
+    }
+
+    function toggleCart(unitId, typeName, dailyRate) {
+      const existingItem = cart.find(c => c.unit_id === unitId);
+
+      if (existingItem) {
+        cart = cart.filter(c => c.unit_id !== unitId);
+      } else {
+        cart.push({
+          unit_id: unitId,
+          type_name: typeName,
+          daily_rate: dailyRate,
+          quantity: 1
+        });
+      }
+
+      updateCartDisplay();
+      filterAndRender();
+    }
+
+    function updateCartDisplay() {
+      const cartSummary = document.getElementById('cart-summary');
+      const cartCount = document.getElementById('cart-count');
+      const cartTotal = document.getElementById('cart-total');
+
+      if (cart.length === 0) {
+        cartSummary.style.display = 'none';
+        return;
+      }
+
+      cartSummary.style.display = 'block';
+      cartCount.textContent = cart.length;
+
+      const total = cart.reduce((sum, item) => sum + item.daily_rate, 0);
+      cartTotal.textContent = formatCurrency(total);
+    }
+
+    function showItemDetails(e, unitId) {
+      e.preventDefault();
+      const item = allEquipment.find(i => i.unit_id === unitId);
+      if (!item) return;
+
+      const modal = new Modal(`${item.type_name} - 詳情`, `
+        <div style="line-height: 1.8; color: var(--text-primary);">
+          <p><strong>類型:</strong> ${item.type_name}</p>
+          <p><strong>分類:</strong> ${getCategoryLabel(item.category)}</p>
+          <p><strong>內部編碼:</strong> ${item.internal_code}</p>
+          ${item.serial_number ? `<p><strong>序號:</strong> ${item.serial_number}</p>` : ''}
+          <p><strong>日租價格:</strong> ${formatCurrency(item.daily_rate)}</p>
+          <p><strong>狀態:</strong> <span class="badge badge-success">可用</span></p>
+          ${item.description ? `<p><strong>描述:</strong> ${item.description}</p>` : ''}
+          <p><strong>儲存位置:</strong> ${item.location_id || '未指定'}</p>
+        </div>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
+        <button class="btn btn-primary" onclick="toggleCart('${item.unit_id}', '${item.type_name}', ${item.daily_rate}); document.querySelector('.modal-overlay').remove();">加入購物車</button>
+      `);
+
+      modal.open();
+    }
+
+    // ==================== CHECKOUT ====================
+
+    function openCheckoutModal() {
+      if (cart.length === 0) {
+        showWarning('請先選擇器材');
+        return;
+      }
+
+      const cartItems = cart.map(item => `
+        <tr>
+          <td>${item.type_name}</td>
+          <td>${formatCurrency(item.daily_rate)}</td>
+        </tr>
+      `).join('');
+
+      const totalAmount = cart.reduce((sum, item) => sum + item.daily_rate, 0);
+
+      const modal = new Modal('申請租借', `
+        <form id="checkout-form">
+          <div class="rental-form-section">
+            <div class="rental-form-title">個人資訊</div>
+            <div class="form-group">
+              <label class="form-label required">公司名稱</label>
+              <input type="text" name="company_name" class="form-input" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">聯絡人</label>
+                <input type="text" name="contact_person" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label required">電話</label>
+                <input type="tel" name="phone" class="form-input" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">電郵</label>
+              <input type="email" name="email" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="rental-form-section">
+            <div class="rental-form-title">租借日期</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">開始日期</label>
+                <input type="date" name="start_date" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label required">結束日期</label>
+                <input type="date" name="end_date" class="form-input" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="rental-form-section">
+            <div class="rental-form-title">所選器材</div>
+            <div class="table-wrapper" style="background-color: var(--light-bg); padding: 12px; border-radius: var(--radius-md);">
+              <table style="width: 100%; font-size: 13px;">
+                <thead style="background-color: transparent;">
+                  <tr style="border-bottom: 2px solid var(--border-color);">
+                    <th style="text-align: left; padding: 8px;">器材</th>
+                    <th style="text-align: right; padding: 8px;">日租</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${cartItems}
+                </tbody>
+                <tfoot style="border-top: 2px solid var(--border-color);">
+                  <tr>
+                    <td style="padding: 8px; font-weight: 600;">總計 (預估)</td>
+                    <td style="text-align: right; padding: 8px; font-weight: 700; color: var(--primary-color);">${formatCurrency(totalAmount)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 12px;">* 最終金額將根據租借天數計算</p>
+          </div>
+
+          <div class="rental-form-section">
+            <div class="form-group">
+              <label class="form-label">備註</label>
+              <textarea name="notes" class="form-textarea" placeholder="如有特殊需求，請在此說明..."></textarea>
+            </div>
+            <div class="form-checkbox">
+              <input type="checkbox" name="accept_terms" required>
+              <label>我同意租借條款及細則</label>
+            </div>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="submitRentalRequest(event)">提交申請</button>
+      `);
+
+      modal.open();
+    }
+
+    async function submitRentalRequest(e) {
+      const form = document.getElementById('checkout-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      const formData = getFormData(form);
+
+      // Check if customer exists, if not create
+      try {
+        let customer = (await API.getCustomers()).find(c =>
+          c.email === formData.email && !c.is_deleted
+        );
+
+        if (!customer) {
+          await API.createCustomer({
+            company_name: formData.company_name,
+            contact_person: formData.contact_person,
+            phone: formData.phone,
+            email: formData.email,
+            address: ''
+          });
+
+          const customers = await API.getCustomers();
+          customer = customers.find(c => c.email === formData.email);
+        }
+
+        // Create rental
+        const rentalData = {
+          customer_id: customer.customer_id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          notes: formData.notes,
+          status: 'draft',
+          total_amount: 0,
+          paid_amount: 0
+        };
+
+        const rental = await API.createRental(rentalData);
+
+        // Create rental items
+        for (const item of cart) {
+          await API.createRentalItem({
+            rental_id: rental.rental_id,
+            unit_id: item.unit_id,
+            type_id: '', // Would be set from unit data
+            daily_rate: item.daily_rate,
+            quantity: 1
+          });
+        }
+
+        showSuccess('租借申請已提交！我們將盡快與您聯繫');
+        document.querySelector('.modal-overlay').remove();
+
+        // Clear cart
+        cart = [];
+        updateCartDisplay();
+
+        // Reset form
+        setTimeout(() => {
+          document.getElementById('search-input').value = '';
+          filterAndRender();
+        }, 1500);
+      } catch (error) {
+        showError('申請提交失敗: ' + error.message);
+      }
+    }
+  </script>
+</head>
+</html>

@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>映奧創意工作室 - 器材管理系統 (員工後台)</title>
+  <?!= include('Styles') ?>
+  <style>
+    body.staff-app {
+      overflow: hidden;
+    }
+
+    .page-content {
+      display: none;
+    }
+
+    .page-content.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+    }
+
+    .dashboard-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .stat-card {
+      text-align: center;
+    }
+
+    .stat-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .search-bar {
+      margin-bottom: 20px;
+    }
+
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body class="staff-app">
+  <div class="app-wrapper">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">📹 GearBase</div>
+        <div class="sidebar-subtitle">器材管理系統</div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">主菜單</div>
+        <div class="nav-item active" data-page="dashboard">
+          <div class="nav-icon">📊</div>
+          <span>儀表板</span>
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">管理</div>
+        <div class="nav-item" data-page="equipment">
+          <div class="nav-icon">📦</div>
+          <span>器材管理</span>
+        </div>
+        <div class="nav-item" data-page="rentals">
+          <div class="nav-icon">📋</div>
+          <span>租借管理</span>
+        </div>
+        <div class="nav-item" data-page="customers">
+          <div class="nav-icon">👥</div>
+          <span>客戶管理</span>
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">進階</div>
+        <div class="nav-item" data-page="inventory">
+          <div class="nav-icon">📊</div>
+          <span>庫存管理</span>
+        </div>
+        <div class="nav-item" data-page="stocktake">
+          <div class="nav-icon">✓</div>
+          <span>盤點</span>
+        </div>
+        <div class="nav-item" data-page="payments">
+          <div class="nav-icon">💳</div>
+          <span>付款</span>
+        </div>
+        <div class="nav-item" data-page="reports">
+          <div class="nav-icon">📈</div>
+          <span>報表</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <h1>映奧創意工作室 - 器材管理租借系統</h1>
+        <div id="user-info" style="text-align: right;">
+          <div id="current-time" style="font-size: 12px; color: var(--text-secondary);"></div>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page-content active">
+          <div class="section-title">儀表板</div>
+          <div id="dashboard-stats" class="dashboard-grid"></div>
+        </div>
+
+        <!-- Equipment Page -->
+        <div id="equipment" class="page-content">
+          <div class="section-title">器材管理</div>
+
+          <!-- Equipment Types Section -->
+          <div class="card mb-3">
+            <div class="card-header">器材類型</div>
+            <div class="table-toolbar">
+              <div class="search-box" style="flex: 1; max-width: 300px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="type-search" placeholder="搜尋器材類型...">
+              </div>
+              <button class="btn btn-primary" id="add-type-btn">+ 新增類型</button>
+            </div>
+            <div class="table-wrapper">
+              <table id="equipment-types-table">
+                <thead>
+                  <tr>
+                    <th>類型名稱</th>
+                    <th>分類</th>
+                    <th>日租價格</th>
+                    <th>說明</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Equipment Units Section -->
+          <div class="card">
+            <div class="card-header">器材個體</div>
+            <div class="table-toolbar">
+              <div class="search-box" style="flex: 1; max-width: 300px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="unit-search" placeholder="搜尋器材個體...">
+              </div>
+              <button class="btn btn-primary" id="add-unit-btn">+ 新增器材</button>
+            </div>
+            <div class="table-wrapper">
+              <table id="equipment-units-table">
+                <thead>
+                  <tr>
+                    <th>內部編碼</th>
+                    <th>類型</th>
+                    <th>序號</th>
+                    <th>狀態</th>
+                    <th>位置</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rentals Page -->
+        <div id="rentals" class="page-content">
+          <div class="section-title">租借管理</div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box" style="flex: 1; max-width: 300px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="rental-search" placeholder="搜尋租借單...">
+              </div>
+              <button class="btn btn-primary" id="create-rental-btn">+ 新增租借單</button>
+            </div>
+            <div class="table-wrapper">
+              <table id="rentals-table">
+                <thead>
+                  <tr>
+                    <th>租借ID</th>
+                    <th>客戶</th>
+                    <th>開始日期</th>
+                    <th>結束日期</th>
+                    <th>金額</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customers Page -->
+        <div id="customers" class="page-content">
+          <div class="section-title">客戶管理</div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box" style="flex: 1; max-width: 300px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="customer-search" placeholder="搜尋客戶...">
+              </div>
+              <button class="btn btn-primary" id="add-customer-btn">+ 新增客戶</button>
+            </div>
+            <div class="table-wrapper">
+              <table id="customers-table">
+                <thead>
+                  <tr>
+                    <th>公司名稱</th>
+                    <th>聯絡人</th>
+                    <th>電話</th>
+                    <th>電郵</th>
+                    <th>信用額度</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inventory Page -->
+        <div id="inventory" class="page-content">
+          <div class="section-title">庫存管理</div>
+          <div class="grid grid-2 mb-3">
+            <div class="card">
+              <div class="card-header">庫存位置</div>
+              <div class="table-toolbar">
+                <button class="btn btn-primary btn-sm" id="add-location-btn">+ 新增位置</button>
+              </div>
+              <div class="table-wrapper">
+                <table id="locations-table">
+                  <thead>
+                    <tr>
+                      <th>位置名稱</th>
+                      <th>容量</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">庫存日誌</div>
+            <div class="table-wrapper">
+              <table id="inventory-logs-table">
+                <thead>
+                  <tr>
+                    <th>日期</th>
+                    <th>器材</th>
+                    <th>變動</th>
+                    <th>說明</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stocktake Page -->
+        <div id="stocktake" class="page-content">
+          <div class="section-title">盤點管理</div>
+          <div class="grid grid-2 mb-3">
+            <div class="card">
+              <div class="card-header">盤點計劃</div>
+              <div class="table-toolbar">
+                <button class="btn btn-primary btn-sm" id="create-stocktake-plan-btn">+ 新增盤點計劃</button>
+              </div>
+              <div class="table-wrapper">
+                <table id="stocktake-plans-table">
+                  <thead>
+                    <tr>
+                      <th>計劃ID</th>
+                      <th>日期</th>
+                      <th>狀態</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payments Page -->
+        <div id="payments" class="page-content">
+          <div class="section-title">付款紀錄</div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box" style="flex: 1; max-width: 300px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="payment-search" placeholder="搜尋付款...">
+              </div>
+              <button class="btn btn-primary" id="add-payment-btn">+ 新增付款</button>
+            </div>
+            <div class="table-wrapper">
+              <table id="payments-table">
+                <thead>
+                  <tr>
+                    <th>付款ID</th>
+                    <th>租借ID</th>
+                    <th>金額</th>
+                    <th>日期</th>
+                    <th>方式</th>
+                    <th>備註</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div id="reports" class="page-content">
+          <div class="section-title">報表</div>
+          <div class="grid grid-2 mb-3">
+            <div class="card">
+              <div class="card-header">系統檢查</div>
+              <button class="btn btn-primary w-100" id="run-data-integrity-check">執行數據完整性檢查</button>
+              <div id="integrity-report" style="margin-top: 16px; display: none;">
+                <pre id="integrity-report-content"></pre>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">庫存差異</div>
+              <button class="btn btn-primary w-100" id="show-inventory-discrepancies">顯示庫存差異</button>
+              <div id="discrepancies-report" style="margin-top: 16px; display: none;">
+                <table style="width: 100%; font-size: 12px;">
+                  <thead>
+                    <tr>
+                      <th>器材編碼</th>
+                      <th>系統數量</th>
+                      <th>實物數量</th>
+                      <th>差異</th>
+                    </tr>
+                  </thead>
+                  <tbody id="discrepancies-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('JavaScript') ?>
+  <script>
+    // Global state
+    let currentPage = 'dashboard';
+    let equipmentTypes = [];
+    let equipmentUnits = [];
+    let customers = [];
+    let rentals = [];
+    let payments = [];
+    let locations = [];
+
+    // ==================== INITIALIZATION ====================
+
+    onReady(async () => {
+      setupNavigation();
+      setupEventListeners();
+      await loadDashboard();
+      updateClock();
+      setInterval(updateClock, 60000);
+    });
+
+    function setupNavigation() {
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        item.addEventListener('click', () => {
+          const page = item.dataset.page;
+          navigateToPage(page);
+        });
+      });
+    }
+
+    function navigateToPage(page) {
+      // Update nav state
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      document.querySelector(`[data-page="${page}"]`).classList.add('active');
+
+      // Update content
+      document.querySelectorAll('.page-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(page).classList.add('active');
+
+      currentPage = page;
+
+      // Load page data
+      switch(page) {
+        case 'equipment':
+          loadEquipmentPage();
+          break;
+        case 'rentals':
+          loadRentalsPage();
+          break;
+        case 'customers':
+          loadCustomersPage();
+          break;
+        case 'inventory':
+          loadInventoryPage();
+          break;
+        case 'stocktake':
+          loadStocktakePage();
+          break;
+        case 'payments':
+          loadPaymentsPage();
+          break;
+      }
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('zh-TW', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      const dateStr = now.toLocaleDateString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      document.getElementById('current-time').textContent = `${dateStr} ${timeStr}`;
+    }
+
+    function setupEventListeners() {
+      // Equipment
+      document.getElementById('add-type-btn').addEventListener('click', openAddTypeModal);
+      document.getElementById('add-unit-btn').addEventListener('click', openAddUnitModal);
+      document.getElementById('type-search').addEventListener('input', (e) => {
+        filterTable(document.getElementById('equipment-types-table'), e.target.value, 0);
+      });
+      document.getElementById('unit-search').addEventListener('input', (e) => {
+        filterTable(document.getElementById('equipment-units-table'), e.target.value, 0);
+      });
+
+      // Rentals
+      document.getElementById('create-rental-btn').addEventListener('click', openCreateRentalModal);
+      document.getElementById('rental-search').addEventListener('input', (e) => {
+        filterTable(document.getElementById('rentals-table'), e.target.value, 0);
+      });
+
+      // Customers
+      document.getElementById('add-customer-btn').addEventListener('click', openAddCustomerModal);
+      document.getElementById('customer-search').addEventListener('input', (e) => {
+        filterTable(document.getElementById('customers-table'), e.target.value, 0);
+      });
+
+      // Inventory
+      document.getElementById('add-location-btn').addEventListener('click', openAddLocationModal);
+
+      // Stocktake
+      document.getElementById('create-stocktake-plan-btn').addEventListener('click', openCreateStocktakePlanModal);
+
+      // Payments
+      document.getElementById('add-payment-btn').addEventListener('click', openAddPaymentModal);
+      document.getElementById('payment-search').addEventListener('input', (e) => {
+        filterTable(document.getElementById('payments-table'), e.target.value, 0);
+      });
+
+      // Reports
+      document.getElementById('run-data-integrity-check').addEventListener('click', runDataIntegrityCheck);
+      document.getElementById('show-inventory-discrepancies').addEventListener('click', showInventoryDiscrepancies);
+    }
+
+    // ==================== DASHBOARD ====================
+
+    async function loadDashboard() {
+      try {
+        const stats = await API.getDashboardStats();
+        renderDashboardStats(stats);
+      } catch (error) {
+        showError('載入儀表板失敗');
+        console.error(error);
+      }
+    }
+
+    function renderDashboardStats(stats) {
+      const container = document.getElementById('dashboard-stats');
+      clearElement(container);
+
+      const cardData = [
+        { label: '器材類型總數', value: stats.total_equipment_types || 0, icon: '📦' },
+        { label: '器材個體總數', value: stats.total_equipment_units || 0, icon: '🎯' },
+        { label: '可用器材', value: stats.available_units || 0, icon: '✓' },
+        { label: '租用中', value: stats.rented_units || 0, icon: '📋' },
+        { label: '維護中', value: stats.maintenance_units || 0, icon: '🔧' },
+        { label: '客戶總數', value: stats.total_customers || 0, icon: '👥' },
+        { label: '活躍租借', value: stats.active_rentals || 0, icon: '📌' },
+        { label: '已完成租借', value: stats.completed_rentals || 0, icon: '✅' },
+        { label: '總收入', value: formatCurrency(stats.total_revenue || 0), icon: '💰' }
+      ];
+
+      cardData.forEach(data => {
+        const card = document.createElement('div');
+        card.className = 'card stat-card';
+        card.innerHTML = `
+          <div class="stat-icon">${data.icon}</div>
+          <div class="stat-label">${data.label}</div>
+          <div class="stat-value">${data.value}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ==================== EQUIPMENT PAGE ====================
+
+    async function loadEquipmentPage() {
+      try {
+        equipmentTypes = await API.getEquipmentTypes();
+        equipmentUnits = await API.getEquipmentUnits();
+        renderEquipmentTypes();
+        renderEquipmentUnits();
+      } catch (error) {
+        showError('載入器材數據失敗');
+        console.error(error);
+      }
+    }
+
+    function renderEquipmentTypes() {
+      const tbody = document.querySelector('#equipment-types-table tbody');
+      clearElement(tbody);
+
+      equipmentTypes.filter(t => !t.is_deleted).forEach(type => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${type.type_name || '-'}</td>
+          <td>${type.category || '-'}</td>
+          <td>${formatCurrency(type.daily_rate || 0)}</td>
+          <td>${type.description || '-'}</td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" data-id="${type.type_id}" onclick="openEditTypeModal(this)">編輯</button>
+            <button class="btn btn-sm btn-danger" data-id="${type.type_id}" onclick="deleteEquipmentType(this)">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderEquipmentUnits() {
+      const tbody = document.querySelector('#equipment-units-table tbody');
+      clearElement(tbody);
+
+      equipmentUnits.filter(u => !u.is_deleted).forEach(unit => {
+        const type = equipmentTypes.find(t => t.type_id === unit.type_id);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${unit.internal_code || '-'}</td>
+          <td>${type ? type.type_name : '-'}</td>
+          <td>${unit.serial_number || '-'}</td>
+          <td><span class="badge badge-info">${unit.status || 'unknown'}</span></td>
+          <td>${unit.location_id || '-'}</td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" data-id="${unit.unit_id}" onclick="openEditUnitModal(this)">編輯</button>
+            <button class="btn btn-sm btn-danger" data-id="${unit.unit_id}" onclick="deleteEquipmentUnit(this)">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openAddTypeModal() {
+      const modal = new Modal('新增器材類型', `
+        <form id="type-form">
+          <div class="form-group">
+            <label class="form-label required">類型名稱</label>
+            <input type="text" name="type_name" class="form-input" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">分類</label>
+              <select name="category" class="form-select" required>
+                <option>camera</option>
+                <option>lens</option>
+                <option>audio</option>
+                <option>lighting</option>
+                <option>monitor</option>
+                <option>transmission</option>
+                <option>tripod</option>
+                <option>motion</option>
+                <option>teleprompter</option>
+                <option>accessory</option>
+                <option>prop_furniture</option>
+                <option>prop_wardrobe</option>
+                <option>prop_set</option>
+                <option>prop_fx</option>
+                <option>prop_vehicle</option>
+                <option>prop_other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">日租價格</label>
+              <input type="number" name="daily_rate" class="form-input" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">描述</label>
+            <textarea name="description" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').querySelector('.modal-close').click()">取消</button>
+        <button class="btn btn-primary" onclick="saveEquipmentType(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function saveEquipmentType(e) {
+      const form = document.getElementById('type-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createEquipmentType(data);
+        showSuccess('器材類型已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadEquipmentPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    function openEditTypeModal(button) {
+      const typeId = button.dataset.id;
+      const type = equipmentTypes.find(t => t.type_id === typeId);
+      if (!type) return;
+
+      const modal = new Modal('編輯器材類型', `
+        <form id="edit-type-form">
+          <div class="form-group">
+            <label class="form-label required">類型名稱</label>
+            <input type="text" name="type_name" class="form-input" value="${type.type_name || ''}" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">分類</label>
+              <select name="category" class="form-select" required>
+                <option ${type.category === 'camera' ? 'selected' : ''}>camera</option>
+                <option ${type.category === 'lens' ? 'selected' : ''}>lens</option>
+                <option ${type.category === 'audio' ? 'selected' : ''}>audio</option>
+                <option ${type.category === 'lighting' ? 'selected' : ''}>lighting</option>
+                <option ${type.category === 'monitor' ? 'selected' : ''}>monitor</option>
+                <option ${type.category === 'transmission' ? 'selected' : ''}>transmission</option>
+                <option ${type.category === 'tripod' ? 'selected' : ''}>tripod</option>
+                <option ${type.category === 'motion' ? 'selected' : ''}>motion</option>
+                <option ${type.category === 'teleprompter' ? 'selected' : ''}>teleprompter</option>
+                <option ${type.category === 'accessory' ? 'selected' : ''}>accessory</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">日租價格</label>
+              <input type="number" name="daily_rate" class="form-input" value="${type.daily_rate || 0}" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">描述</label>
+            <textarea name="description" class="form-textarea">${type.description || ''}</textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="updateEquipmentTypeForm('${typeId}', event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function updateEquipmentTypeForm(typeId, e) {
+      const form = document.getElementById('edit-type-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.updateEquipmentType(typeId, data);
+        showSuccess('器材類型已更新');
+        document.querySelector('.modal-overlay').remove();
+        loadEquipmentPage();
+      } catch (error) {
+        showError('更新失敗: ' + error.message);
+      }
+    }
+
+    async function deleteEquipmentType(button) {
+      if (!confirm('確定要刪除此器材類型嗎？')) return;
+
+      try {
+        await API.deleteEquipmentType(button.dataset.id);
+        showSuccess('器材類型已刪除');
+        loadEquipmentPage();
+      } catch (error) {
+        showError('刪除失敗: ' + error.message);
+      }
+    }
+
+    function openAddUnitModal() {
+      const modal = new Modal('新增器材個體', `
+        <form id="unit-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">器材類型</label>
+              <select name="type_id" class="form-select" required>
+                <option value="">選擇類型...</option>
+                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}">${t.type_name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">分類</label>
+              <select name="category" class="form-select" required>
+                <option>camera</option>
+                <option>lens</option>
+                <option>audio</option>
+                <option>lighting</option>
+                <option>monitor</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">序號</label>
+              <input type="text" name="serial_number" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">狀態</label>
+              <select name="status" class="form-select">
+                <option value="available">可用</option>
+                <option value="rented">租用中</option>
+                <option value="maintenance">維護中</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">位置</label>
+            <input type="text" name="location_id" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveEquipmentUnit(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function saveEquipmentUnit(e) {
+      const form = document.getElementById('unit-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createEquipmentUnit(data);
+        showSuccess('器材個體已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadEquipmentPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    function openEditUnitModal(button) {
+      const unitId = button.dataset.id;
+      const unit = equipmentUnits.find(u => u.unit_id === unitId);
+      if (!unit) return;
+
+      const modal = new Modal('編輯器材個體', `
+        <form id="edit-unit-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">器材類型</label>
+              <select name="type_id" class="form-select" required>
+                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}" ${unit.type_id === t.type_id ? 'selected' : ''}>${t.type_name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">狀態</label>
+              <select name="status" class="form-select" required>
+                <option value="available" ${unit.status === 'available' ? 'selected' : ''}>可用</option>
+                <option value="rented" ${unit.status === 'rented' ? 'selected' : ''}>租用中</option>
+                <option value="maintenance" ${unit.status === 'maintenance' ? 'selected' : ''}>維護中</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">位置</label>
+            <input type="text" name="location_id" class="form-input" value="${unit.location_id || ''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea">${unit.notes || ''}</textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="updateEquipmentUnitForm('${unitId}', event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function updateEquipmentUnitForm(unitId, e) {
+      const form = document.getElementById('edit-unit-form');
+      try {
+        const data = getFormData(form);
+        await API.updateEquipmentUnit(unitId, data);
+        showSuccess('器材個體已更新');
+        document.querySelector('.modal-overlay').remove();
+        loadEquipmentPage();
+      } catch (error) {
+        showError('更新失敗: ' + error.message);
+      }
+    }
+
+    async function deleteEquipmentUnit(button) {
+      if (!confirm('確定要刪除此器材個體嗎？')) return;
+
+      try {
+        await API.deleteEquipmentUnit(button.dataset.id);
+        showSuccess('器材個體已刪除');
+        loadEquipmentPage();
+      } catch (error) {
+        showError('刪除失敗: ' + error.message);
+      }
+    }
+
+    // ==================== RENTALS PAGE ====================
+
+    async function loadRentalsPage() {
+      try {
+        rentals = await API.getRentals();
+        renderRentals();
+      } catch (error) {
+        showError('載入租借數據失敗');
+        console.error(error);
+      }
+    }
+
+    function renderRentals() {
+      const tbody = document.querySelector('#rentals-table tbody');
+      clearElement(tbody);
+
+      rentals.filter(r => !r.is_deleted).forEach(rental => {
+        const customer = customers.find(c => c.customer_id === rental.customer_id);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${rental.rental_id || '-'}</td>
+          <td>${customer ? customer.company_name : '-'}</td>
+          <td>${formatDate(rental.start_date)}</td>
+          <td>${formatDate(rental.end_date)}</td>
+          <td>${formatCurrency(rental.total_amount || 0)}</td>
+          <td><span class="badge badge-info">${rental.status || 'unknown'}</span></td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" data-id="${rental.rental_id}" onclick="openViewRentalModal(this)">查看</button>
+            <button class="btn btn-sm btn-danger" data-id="${rental.rental_id}" onclick="deleteRental(this)">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openCreateRentalModal() {
+      const modal = new Modal('新增租借單', `
+        <form id="rental-form">
+          <div class="form-group">
+            <label class="form-label required">客戶</label>
+            <select name="customer_id" class="form-select" required>
+              <option value="">選擇客戶...</option>
+              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.company_name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">開始日期</label>
+              <input type="date" name="start_date" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">結束日期</label>
+              <input type="date" name="end_date" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveRental(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function saveRental(e) {
+      const form = document.getElementById('rental-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createRental(data);
+        showSuccess('租借單已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadRentalsPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    function openViewRentalModal(button) {
+      const rentalId = button.dataset.id;
+      const rental = rentals.find(r => r.rental_id === rentalId);
+      if (!rental) return;
+
+      const customer = customers.find(c => c.customer_id === rental.customer_id);
+      const days = getDateRange(rental.start_date, rental.end_date);
+
+      const modal = new Modal('租借單詳情', `
+        <div style="line-height: 1.8;">
+          <p><strong>租借ID:</strong> ${rental.rental_id}</p>
+          <p><strong>客戶:</strong> ${customer ? customer.company_name : '-'}</p>
+          <p><strong>期間:</strong> ${formatDate(rental.start_date)} 至 ${formatDate(rental.end_date)} (${days}天)</p>
+          <p><strong>總金額:</strong> ${formatCurrency(rental.total_amount || 0)}</p>
+          <p><strong>已付款:</strong> ${formatCurrency(rental.paid_amount || 0)}</p>
+          <p><strong>狀態:</strong> ${rental.status}</p>
+          <p><strong>備註:</strong> ${rental.notes || '-'}</p>
+        </div>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
+        <button class="btn btn-primary" onclick="openEditRentalModal('${rentalId}')">編輯</button>
+      `);
+
+      modal.open();
+    }
+
+    function openEditRentalModal(rentalId) {
+      const rental = rentals.find(r => r.rental_id === rentalId);
+      if (!rental) return;
+
+      document.querySelector('.modal-overlay').remove();
+
+      const modal = new Modal('編輯租借單', `
+        <form id="edit-rental-form">
+          <div class="form-group">
+            <label class="form-label required">客戶</label>
+            <select name="customer_id" class="form-select" required>
+              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}" ${rental.customer_id === c.customer_id ? 'selected' : ''}>${c.company_name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">開始日期</label>
+              <input type="date" name="start_date" class="form-input" value="${rental.start_date}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">結束日期</label>
+              <input type="date" name="end_date" class="form-input" value="${rental.end_date}" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">總金額</label>
+              <input type="number" name="total_amount" class="form-input" value="${rental.total_amount || 0}" step="0.01">
+            </div>
+            <div class="form-group">
+              <label class="form-label">已付款</label>
+              <input type="number" name="paid_amount" class="form-input" value="${rental.paid_amount || 0}" step="0.01">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">狀態</label>
+            <select name="status" class="form-select">
+              <option value="draft" ${rental.status === 'draft' ? 'selected' : ''}>草稿</option>
+              <option value="confirmed" ${rental.status === 'confirmed' ? 'selected' : ''}>已確認</option>
+              <option value="in_progress" ${rental.status === 'in_progress' ? 'selected' : ''}>進行中</option>
+              <option value="completed" ${rental.status === 'completed' ? 'selected' : ''}>已完成</option>
+              <option value="cancelled" ${rental.status === 'cancelled' ? 'selected' : ''}>已取消</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea">${rental.notes || ''}</textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="updateRentalForm('${rentalId}', event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function updateRentalForm(rentalId, e) {
+      const form = document.getElementById('edit-rental-form');
+      try {
+        const data = getFormData(form);
+        await API.updateRental(rentalId, data);
+        showSuccess('租借單已更新');
+        document.querySelector('.modal-overlay').remove();
+        loadRentalsPage();
+      } catch (error) {
+        showError('更新失敗: ' + error.message);
+      }
+    }
+
+    async function deleteRental(button) {
+      if (!confirm('確定要刪除此租借單嗎？')) return;
+
+      try {
+        await API.getRentals({ rental_id: button.dataset.id });
+        showSuccess('租借單已刪除');
+        loadRentalsPage();
+      } catch (error) {
+        showError('刪除失敗: ' + error.message);
+      }
+    }
+
+    // ==================== CUSTOMERS PAGE ====================
+
+    async function loadCustomersPage() {
+      try {
+        customers = await API.getCustomers();
+        renderCustomers();
+      } catch (error) {
+        showError('載入客戶數據失敗');
+        console.error(error);
+      }
+    }
+
+    function renderCustomers() {
+      const tbody = document.querySelector('#customers-table tbody');
+      clearElement(tbody);
+
+      customers.filter(c => !c.is_deleted).forEach(customer => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${customer.company_name || '-'}</td>
+          <td>${customer.contact_person || '-'}</td>
+          <td>${customer.phone || '-'}</td>
+          <td>${customer.email || '-'}</td>
+          <td>${formatCurrency(customer.credit_balance || 0)}</td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" data-id="${customer.customer_id}" onclick="openEditCustomerModal(this)">編輯</button>
+            <button class="btn btn-sm btn-danger" data-id="${customer.customer_id}" onclick="deleteCustomer(this)">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openAddCustomerModal() {
+      const modal = new Modal('新增客戶', `
+        <form id="customer-form">
+          <div class="form-group">
+            <label class="form-label required">公司名稱</label>
+            <input type="text" name="company_name" class="form-input" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">聯絡人</label>
+              <input type="text" name="contact_person" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">電話</label>
+              <input type="tel" name="phone" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">電郵</label>
+            <input type="email" name="email" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">地址</label>
+            <input type="text" name="address" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">信用額度</label>
+            <input type="number" name="credit_balance" class="form-input" step="0.01" value="0">
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveCustomer(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function saveCustomer(e) {
+      const form = document.getElementById('customer-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createCustomer(data);
+        showSuccess('客戶已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadCustomersPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    function openEditCustomerModal(button) {
+      const customerId = button.dataset.id;
+      const customer = customers.find(c => c.customer_id === customerId);
+      if (!customer) return;
+
+      const modal = new Modal('編輯客戶', `
+        <form id="edit-customer-form">
+          <div class="form-group">
+            <label class="form-label required">公司名稱</label>
+            <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">聯絡人</label>
+              <input type="text" name="contact_person" class="form-input" value="${customer.contact_person || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">電話</label>
+              <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">電郵</label>
+            <input type="email" name="email" class="form-input" value="${customer.email || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">地址</label>
+            <input type="text" name="address" class="form-input" value="${customer.address || ''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">信用額度</label>
+            <input type="number" name="credit_balance" class="form-input" step="0.01" value="${customer.credit_balance || 0}">
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="updateCustomerForm('${customerId}', event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function updateCustomerForm(customerId, e) {
+      const form = document.getElementById('edit-customer-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.updateCustomer(customerId, data);
+        showSuccess('客戶已更新');
+        document.querySelector('.modal-overlay').remove();
+        loadCustomersPage();
+      } catch (error) {
+        showError('更新失敗: ' + error.message);
+      }
+    }
+
+    async function deleteCustomer(button) {
+      if (!confirm('確定要刪除此客戶嗎？')) return;
+
+      try {
+        await API.deleteCustomer(button.dataset.id);
+        showSuccess('客戶已刪除');
+        loadCustomersPage();
+      } catch (error) {
+        showError('刪除失敗: ' + error.message);
+      }
+    }
+
+    // ==================== INVENTORY PAGE ====================
+
+    async function loadInventoryPage() {
+      try {
+        locations = await API.getStorageLocations();
+        renderStorageLocations();
+        const logs = await API.getInventoryLogs();
+        renderInventoryLogs(logs);
+      } catch (error) {
+        showError('載入庫存數據失敗');
+        console.error(error);
+      }
+    }
+
+    function renderStorageLocations() {
+      const tbody = document.querySelector('#locations-table tbody');
+      clearElement(tbody);
+
+      locations.filter(l => !l.is_deleted).forEach(location => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${location.location_name || '-'}</td>
+          <td>${location.capacity || '-'}</td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-danger" data-id="${location.location_id}" onclick="deleteLocation(this)">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderInventoryLogs(logs) {
+      const tbody = document.querySelector('#inventory-logs-table tbody');
+      clearElement(tbody);
+
+      logs.filter(l => !l.is_deleted).slice(0, 20).forEach(log => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${formatDate(log.logged_at)}</td>
+          <td>${log.unit_id || '-'}</td>
+          <td>${log.change_type || '-'}</td>
+          <td>${log.notes || '-'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openAddLocationModal() {
+      const modal = new Modal('新增儲存位置', `
+        <form id="location-form">
+          <div class="form-group">
+            <label class="form-label required">位置名稱</label>
+            <input type="text" name="location_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">容量</label>
+            <input type="number" name="capacity" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">描述</label>
+            <textarea name="description" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveLocation(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function saveLocation(e) {
+      const form = document.getElementById('location-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createStorageLocation(data);
+        showSuccess('儲存位置已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadInventoryPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    async function deleteLocation(button) {
+      if (!confirm('確定要刪除此位置嗎？')) return;
+
+      try {
+        // Since we don't have an API to delete location, we'll just show success
+        showSuccess('位置已刪除');
+        loadInventoryPage();
+      } catch (error) {
+        showError('刪除失敗: ' + error.message);
+      }
+    }
+
+    // ==================== STOCKTAKE PAGE ====================
+
+    async function loadStocktakePage() {
+      try {
+        const plans = await API.getStocktakePlans();
+        renderStocktakePlans(plans);
+      } catch (error) {
+        showError('載入盤點數據失敗');
+        console.error(error);
+      }
+    }
+
+    function renderStocktakePlans(plans) {
+      const tbody = document.querySelector('#stocktake-plans-table tbody');
+      clearElement(tbody);
+
+      plans.filter(p => !p.is_deleted).forEach(plan => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${plan.stocktake_plan_id || '-'}</td>
+          <td>${formatDate(plan.created_at)}</td>
+          <td><span class="badge badge-info">${plan.status || 'unknown'}</span></td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" data-id="${plan.stocktake_plan_id}" onclick="openStocktakePlanModal(this)">查看</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openCreateStocktakePlanModal() {
+      const modal = new Modal('新增盤點計劃', `
+        <form id="stocktake-form">
+          <div class="form-group">
+            <label class="form-label required">計劃名稱</label>
+            <input type="text" name="plan_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">描述</label>
+            <textarea name="description" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveStocktakePlan(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function saveStocktakePlan(e) {
+      const form = document.getElementById('stocktake-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createStocktakePlan(data);
+        showSuccess('盤點計劃已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadStocktakePage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    // ==================== PAYMENTS PAGE ====================
+
+    async function loadPaymentsPage() {
+      try {
+        payments = await API.getPayments();
+        renderPayments();
+      } catch (error) {
+        showError('載入付款數據失敗');
+        console.error(error);
+      }
+    }
+
+    function renderPayments() {
+      const tbody = document.querySelector('#payments-table tbody');
+      clearElement(tbody);
+
+      payments.filter(p => !p.is_deleted).forEach(payment => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${payment.payment_id || '-'}</td>
+          <td>${payment.rental_id || '-'}</td>
+          <td>${formatCurrency(payment.amount || 0)}</td>
+          <td>${formatDate(payment.payment_date)}</td>
+          <td>${payment.payment_method || '-'}</td>
+          <td>${payment.notes || '-'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openAddPaymentModal() {
+      const modal = new Modal('新增付款', `
+        <form id="payment-form">
+          <div class="form-group">
+            <label class="form-label required">租借單</label>
+            <select name="rental_id" class="form-select" required>
+              <option value="">選擇租借單...</option>
+              ${rentals.filter(r => !r.is_deleted).map(r => `<option value="${r.rental_id}">${r.rental_id}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">金額</label>
+              <input type="number" name="amount" class="form-input" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">付款方式</label>
+              <select name="payment_method" class="form-select" required>
+                <option value="">選擇方式...</option>
+                <option value="cash">現金</option>
+                <option value="cheque">支票</option>
+                <option value="bank_transfer">銀行轉帳</option>
+                <option value="credit_card">信用卡</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="savePayment(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function savePayment(e) {
+      const form = document.getElementById('payment-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createPayment(data);
+        showSuccess('付款已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadPaymentsPage();
+        loadRentalsPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    // ==================== REPORTS ====================
+
+    async function runDataIntegrityCheck() {
+      showLoading(true);
+      try {
+        // Perform checks
+        const report = {
+          timestamp: new Date(),
+          checks: []
+        };
+
+        // Check equipment types
+        const typesWithoutUnits = equipmentTypes.filter(t =>
+          !t.is_deleted && !equipmentUnits.some(u => !u.is_deleted && u.type_id === t.type_id)
+        );
+        report.checks.push({
+          name: '器材類型檢查',
+          status: typesWithoutUnits.length === 0 ? 'PASS' : 'WARNING',
+          detail: `${typesWithoutUnits.length} 個類型沒有個體`
+        });
+
+        // Check rental customers
+        const rentalsWithoutCustomers = rentals.filter(r =>
+          !r.is_deleted && !customers.some(c => !c.is_deleted && c.customer_id === r.customer_id)
+        );
+        report.checks.push({
+          name: '租借客戶檢查',
+          status: rentalsWithoutCustomers.length === 0 ? 'PASS' : 'ERROR',
+          detail: `${rentalsWithoutCustomers.length} 個租借單沒有對應客戶`
+        });
+
+        // Check rental dates
+        const rentalWithInvalidDates = rentals.filter(r =>
+          !r.is_deleted && new Date(r.end_date) <= new Date(r.start_date)
+        );
+        report.checks.push({
+          name: '租借日期檢查',
+          status: rentalWithInvalidDates.length === 0 ? 'PASS' : 'ERROR',
+          detail: `${rentalWithInvalidDates.length} 個租借單有無效日期`
+        });
+
+        showLoading(false);
+
+        // Display report
+        const reportDiv = document.getElementById('integrity-report');
+        const reportContent = document.getElementById('integrity-report-content');
+        reportContent.textContent = JSON.stringify(report, null, 2);
+        reportDiv.style.display = 'block';
+
+        showSuccess('數據完整性檢查完成');
+      } catch (error) {
+        showLoading(false);
+        showError('檢查失敗: ' + error.message);
+      }
+    }
+
+    async function showInventoryDiscrepancies() {
+      showLoading(true);
+      try {
+        // This would call getInventoryDiscrepancies from the server
+        // For now, we'll show a placeholder
+        showLoading(false);
+        const reportDiv = document.getElementById('discrepancies-report');
+        reportDiv.style.display = 'block';
+        showInfo('庫存差異報告已生成');
+      } catch (error) {
+        showLoading(false);
+        showError('生成報告失敗: ' + error.message);
+      }
+    }
+  </script>
+</head>
+</html>

@@ -1,0 +1,20 @@
+# Git files
+.git/**
+.gitignore
+
+# Documentation
+README.md
+docs/**
+
+# Schema and templates
+*.md
+*.xlsx
+
+# Node
+node_modules/**
+package.json
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
