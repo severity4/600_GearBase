@@ -3618,23 +3618,32 @@
           return;
         }
 
-        // Load staff list and permissions in parallel
-        const [staffData, permData] = await Promise.all([
-          API.getStaff(),
-          API.getRolePermissions()
-        ]);
-
-        staffList = (staffData || []).filter(s => !s.is_deleted);
-        rolePermData = permData;
-
-        // Render current user card
+        // Render current user card first
         renderCurrentUser(userInfo);
+
+        // Load staff list and permissions in parallel
+        let staffData, permData;
+        try {
+          [staffData, permData] = await Promise.all([
+            API.getStaff(),
+            API.getRolePermissions()
+          ]);
+        } catch (loadErr) {
+          // If permissions fail, still try to load staff list alone
+          try {
+            staffData = await API.getStaff();
+          } catch (e2) { /* ignore */ }
+          showWarning('部分資料載入失敗: ' + loadErr.message);
+        }
+
+        staffList = (staffData || []).filter(s => !s.is_deleted && s.is_deleted !== 'true');
+        rolePermData = permData || null;
 
         // Render staff table
         renderStaffTable();
 
         // Render permission matrix
-        renderPermissionMatrix();
+        if (rolePermData) renderPermissionMatrix();
 
         // Setup search
         const searchInput = document.getElementById('staff-search');

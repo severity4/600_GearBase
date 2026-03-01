@@ -28,6 +28,7 @@ function getSheetData(sheetName) {
       const row = {};
       for (let j = 0; j < headers.length; j++) {
         const header = String(headers[j]).toLowerCase().trim();
+        if (!header) continue;
         const value = values[i][j];
         row[header] = formatCellValue(value);
       }
@@ -84,8 +85,12 @@ function appendSheetRow(sheetName, rowData) {
     const newRow = [];
     for (let i = 0; i < headers.length; i++) {
       const header = String(headers[i]).toLowerCase().trim();
-      const value = rowData[header] || '';
-      newRow.push(value);
+      if (!header) {
+        newRow.push('');
+        continue;
+      }
+      const value = rowData.hasOwnProperty(header) ? rowData[header] : '';
+      newRow.push(value !== null && value !== undefined ? value : '');
     }
 
     sheet.appendRow(newRow);
