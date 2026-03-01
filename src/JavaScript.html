@@ -80,7 +80,8 @@
 
       // Customer-facing
       getVenueMonthlySchedule: (venueId, yearMonth) => runAsync('getVenueMonthlySchedule', venueId, yearMonth),
-      lookupRentalStatus: (query) => runAsync('lookupRentalStatus', query),
+      sendLookupVerificationCode: (email) => runAsync('sendLookupVerificationCode', email),
+      verifyAndLookup: (email, code) => runAsync('verifyAndLookup', email, code),
 
       // Rental workflow
       advanceRentalStatus: (rentalId, newStatus, metadata) => runAsync('advanceRentalStatus', rentalId, newStatus, metadata),

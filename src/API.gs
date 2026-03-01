@@ -639,17 +639,83 @@ function getVenueMonthlySchedule(venueId, yearMonth) {
 }
 
 /**
- * Lookup rental status by phone number or rental ID
- * @param {string} query - Phone number or rental ID
- * @return {Object} Lookup results
+ * Send a verification code to the customer's email for lookup
+ * Uses CacheService to store code with 10-minute expiry
+ * @param {string} email
+ * @return {Object} {success, message}
  */
-function lookupRentalStatus(query) {
-  if (!query || query.trim() === '') {
-    return { found: false, message: '請輸入電話號碼或租借單號' };
+function sendLookupVerificationCode(email) {
+  if (!email || email.trim() === '') {
+    return { success: false, message: '請輸入 Email' };
   }
 
-  const q = query.trim();
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Check customer exists
+  const customer = getSheetData('Customers').find(c =>
+    !c.is_deleted && c.email && c.email.toLowerCase() === cleanEmail
+  );
+  if (!customer) {
+    return { success: false, message: '查無此 Email 的客戶紀錄' };
+  }
+
+  // Generate 6-digit code
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+
+  // Store in CacheService (10 min expiry)
+  const cache = CacheService.getScriptCache();
+  cache.put('lookup_code_' + cleanEmail, code, 600);
+
+  // Send email
+  try {
+    MailApp.sendEmail({
+      to: cleanEmail,
+      subject: '【映奧創意】查詢驗證碼',
+      body: `${customer.name} 您好，\n\n您的查詢驗證碼為：${code}\n\n此驗證碼將在 10 分鐘後失效。\n如非本人操作，請忽略此信。\n\n映奧創意工作室`
+    });
+    return { success: true, message: '驗證碼已寄送至 ' + cleanEmail };
+  } catch (e) {
+    return { success: false, message: '寄信失敗: ' + e.message };
+  }
+}
+
+/**
+ * Verify the lookup code and return rental/booking data
+ * @param {string} email
+ * @param {string} code
+ * @return {Object} Lookup results or error
+ */
+function verifyAndLookup(email, code) {
+  if (!email || !code) {
+    return { verified: false, message: '請輸入 Email 和驗證碼' };
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = code.trim();
+
+  // Check code from cache
+  const cache = CacheService.getScriptCache();
+  const storedCode = cache.get('lookup_code_' + cleanEmail);
+
+  if (!storedCode) {
+    return { verified: false, message: '驗證碼已過期，請重新發送' };
+  }
+
+  if (storedCode !== cleanCode) {
+    return { verified: false, message: '驗證碼不正確' };
+  }
+
+  // Code is valid — remove it (one-time use)
+  cache.remove('lookup_code_' + cleanEmail);
+
+  // Find customer
   const allCustomers = getSheetData('Customers').filter(c => !c.is_deleted);
+  const customer = allCustomers.find(c => c.email && c.email.toLowerCase() === cleanEmail);
+  if (!customer) {
+    return { verified: true, found: false, message: '查無客戶紀錄' };
+  }
+
+  // Gather data
   const allRentals = getSheetData('Rentals').filter(r => !r.is_deleted);
   const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
   const types = getSheetData('Equipment_Types');
@@ -666,69 +732,18 @@ function lookupRentalStatus(query) {
     overdue: '逾期', returned: '已歸還', completed: '已完成', cancelled: '已取消'
   };
 
-  // Try direct rental ID lookup first
-  const directRental = allRentals.find(r => r.rental_id === q);
-  if (directRental) {
-    const cust = allCustomers.find(c => c.customer_id === directRental.customer_id);
-    const items = rentalItems.filter(ri => ri.rental_id === directRental.rental_id);
-    return {
-      found: true,
-      rentals: [{
-        rental_id: directRental.rental_id,
-        status: directRental.status,
-        status_label: statusLabels[directRental.status] || directRental.status,
-        rental_start: directRental.rental_start || directRental.start_date,
-        rental_end: directRental.rental_end || directRental.end_date,
-        total_amount: parseFloat(directRental.total_amount || 0),
-        paid_amount: parseFloat(directRental.paid_amount || 0),
-        items: items.map(i => ({
-          type_name: (typeMap[i.type_id] || {}).type_name || i.type_id,
-          line_total: parseFloat(i.line_total || 0)
-        }))
-      }],
-      bookings: [],
-      customer_name: cust ? cust.name : ''
-    };
-  }
-
-  // Try booking ID lookup
-  const directBooking = bookings.find(b => b.booking_id === q);
-  if (directBooking) {
-    const cust = allCustomers.find(c => c.customer_id === directBooking.customer_id);
-    const venue = venueMap[directBooking.venue_id] || {};
-    return {
-      found: true,
-      rentals: [],
-      bookings: [{
-        booking_id: directBooking.booking_id,
-        venue_name: venue.name || '',
-        status: directBooking.status,
-        status_label: statusLabels[directBooking.status] || directBooking.status,
-        booking_start: directBooking.booking_start,
-        booking_end: directBooking.booking_end,
-        total_amount: parseFloat(directBooking.total_amount || 0)
-      }],
-      customer_name: cust ? cust.name : ''
-    };
-  }
-
-  // Lookup by phone number
-  const customer = allCustomers.find(c => c.phone === q || c.phone === q.replace(/-/g, ''));
-  if (!customer) {
-    return { found: false, message: '查無此電話號碼或單號的紀錄' };
-  }
-
   const custRentals = allRentals
     .filter(r => r.customer_id === customer.customer_id && r.status !== 'cancelled')
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10);
+    .slice(0, 20);
 
   const custBookings = bookings
     .filter(b => b.customer_id === customer.customer_id && b.status !== 'cancelled')
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10);
+    .slice(0, 20);
 
   return {
+    verified: true,
     found: true,
     customer_name: customer.name,
     rentals: custRentals.map(r => {

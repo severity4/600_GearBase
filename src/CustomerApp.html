@@ -559,20 +559,43 @@
 
   <!-- Rental Lookup Section -->
   <div class="customer-container" id="lookup-section" style="display: none;">
-    <div style="max-width: 600px; margin: 0 auto;">
+    <div style="max-width: 500px; margin: 0 auto;">
       <div style="text-align:center; margin-bottom: 32px; color: white;">
         <div style="font-size: 48px; margin-bottom: 12px;">🔍</div>
         <h2 style="font-size: 24px; margin-bottom: 8px;">租借進度查詢</h2>
-        <p style="opacity: 0.8;">輸入您的電話號碼或租借/預約單號</p>
+        <p style="opacity: 0.8;">輸入您的 Email，我們將寄送驗證碼</p>
       </div>
-      <div class="search-box" style="max-width:100%; margin-bottom:16px;">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="lookup-input" placeholder="電話號碼或單號 (例：0912345678 或 RENT-2026-001)" style="font-size:16px;">
+
+      <!-- Step 1: Enter email -->
+      <div id="lookup-step-email" style="background:white; border-radius:16px; padding:28px; box-shadow:var(--shadow-lg);">
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px; font-weight:600; display:block; margin-bottom:6px; color:var(--text-primary);">Email</label>
+          <input type="email" id="lookup-email" class="form-input" placeholder="請輸入您的 Email" style="font-size:16px; padding:12px;">
+        </div>
+        <button class="btn btn-primary w-100" onclick="sendVerificationCode()" style="padding:12px; font-size:16px;" id="send-code-btn">發送驗證碼</button>
+        <div id="lookup-email-msg" style="margin-top:12px; font-size:13px; text-align:center;"></div>
       </div>
-      <div style="text-align:center; margin-bottom:24px;">
-        <button class="btn btn-primary" onclick="doLookup()" style="padding:12px 40px; font-size:16px;">查詢</button>
+
+      <!-- Step 2: Enter code (hidden initially) -->
+      <div id="lookup-step-code" style="display:none; background:white; border-radius:16px; padding:28px; box-shadow:var(--shadow-lg);">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:13px; color:var(--text-secondary);">驗證碼已寄送至</div>
+          <div style="font-size:15px; font-weight:600; color:var(--primary-color);" id="lookup-email-display"></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px; font-weight:600; display:block; margin-bottom:6px; color:var(--text-primary);">驗證碼 (6 位數)</label>
+          <input type="text" id="lookup-code" class="form-input" placeholder="000000" maxlength="6" style="font-size:24px; text-align:center; letter-spacing:8px; padding:12px;" autocomplete="one-time-code" inputmode="numeric">
+        </div>
+        <button class="btn btn-primary w-100" onclick="verifyCode()" style="padding:12px; font-size:16px;" id="verify-btn">驗證並查詢</button>
+        <div style="text-align:center; margin-top:12px;">
+          <button class="btn btn-sm btn-outline" onclick="resetLookup()">重新輸入 Email</button>
+          <button class="btn btn-sm btn-outline" onclick="resendCode()" style="margin-left:8px;">重新發送</button>
+        </div>
+        <div id="lookup-code-msg" style="margin-top:12px; font-size:13px; text-align:center;"></div>
       </div>
-      <div id="lookup-results"></div>
+
+      <!-- Results -->
+      <div id="lookup-results" style="margin-top:24px;"></div>
     </div>
   </div>
 
@@ -1129,9 +1152,9 @@
       if (tab === 'equipment') updateCartDisplay();
       else document.getElementById('cart-summary').style.display = 'none';
 
-      // Focus lookup input
+      // Focus lookup email input
       if (tab === 'lookup') {
-        setTimeout(() => document.getElementById('lookup-input').focus(), 100);
+        setTimeout(() => document.getElementById('lookup-email').focus(), 100);
       }
     }
 
@@ -1486,32 +1509,116 @@
       }
     }
 
-    // ==================== RENTAL LOOKUP ====================
+    // ==================== RENTAL LOOKUP (Email + Verification Code) ====================
 
-    // Allow enter key to trigger lookup
-    document.getElementById('lookup-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') doLookup();
+    let lookupEmail = '';
+
+    // Enter key support
+    document.getElementById('lookup-email').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendVerificationCode();
+    });
+    document.getElementById('lookup-code').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verifyCode();
     });
 
-    async function doLookup() {
-      const query = document.getElementById('lookup-input').value.trim();
-      const resultsEl = document.getElementById('lookup-results');
+    async function sendVerificationCode() {
+      const emailInput = document.getElementById('lookup-email');
+      const email = emailInput.value.trim();
+      const msgEl = document.getElementById('lookup-email-msg');
+      const btn = document.getElementById('send-code-btn');
 
-      if (!query) {
-        showWarning('請輸入電話號碼或單號');
+      if (!email) {
+        msgEl.innerHTML = '<span style="color:var(--danger-color, #dc2626);">請輸入 Email</span>';
         return;
       }
 
-      resultsEl.innerHTML = '<div style="text-align:center; color:white; padding:20px;">查詢中...</div>';
+      btn.disabled = true;
+      btn.textContent = '發送中...';
+      msgEl.innerHTML = '';
 
       try {
-        const data = await API.lookupRentalStatus(query);
+        const result = await API.sendLookupVerificationCode(email);
+        if (result.success) {
+          lookupEmail = email;
+          // Switch to step 2
+          document.getElementById('lookup-step-email').style.display = 'none';
+          document.getElementById('lookup-step-code').style.display = 'block';
+          document.getElementById('lookup-email-display').textContent = email;
+          document.getElementById('lookup-code').value = '';
+          document.getElementById('lookup-code').focus();
+          document.getElementById('lookup-results').innerHTML = '';
+          showSuccess(result.message);
+        } else {
+          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${result.message}</span>`;
+        }
+      } catch (error) {
+        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">發送失敗：${error.message}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '發送驗證碼';
+      }
+    }
 
-        if (!data.found) {
-          resultsEl.innerHTML = `<div class="lookup-empty">${data.message || '查無紀錄'}</div>`;
+    async function resendCode() {
+      if (!lookupEmail) return;
+      document.getElementById('lookup-code').value = '';
+      document.getElementById('lookup-code-msg').innerHTML = '';
+
+      try {
+        const result = await API.sendLookupVerificationCode(lookupEmail);
+        if (result.success) {
+          showSuccess('驗證碼已重新發送');
+        } else {
+          showWarning(result.message);
+        }
+      } catch (error) {
+        showError('發送失敗：' + error.message);
+      }
+    }
+
+    function resetLookup() {
+      lookupEmail = '';
+      document.getElementById('lookup-step-email').style.display = 'block';
+      document.getElementById('lookup-step-code').style.display = 'none';
+      document.getElementById('lookup-email').value = '';
+      document.getElementById('lookup-email-msg').innerHTML = '';
+      document.getElementById('lookup-results').innerHTML = '';
+      document.getElementById('lookup-email').focus();
+    }
+
+    async function verifyCode() {
+      const code = document.getElementById('lookup-code').value.trim();
+      const msgEl = document.getElementById('lookup-code-msg');
+      const resultsEl = document.getElementById('lookup-results');
+      const btn = document.getElementById('verify-btn');
+
+      if (!code || code.length !== 6) {
+        msgEl.innerHTML = '<span style="color:var(--danger-color, #dc2626);">請輸入 6 位驗證碼</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '驗證中...';
+      msgEl.innerHTML = '';
+
+      try {
+        const data = await API.verifyAndLookup(lookupEmail, code);
+
+        if (!data.verified) {
+          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${data.message}</span>`;
+          btn.disabled = false;
+          btn.textContent = '驗證並查詢';
           return;
         }
 
+        if (!data.found) {
+          resultsEl.innerHTML = `<div class="lookup-empty">${data.message || '查無紀錄'}</div>`;
+          btn.disabled = false;
+          btn.textContent = '驗證並查詢';
+          return;
+        }
+
+        // Render results
         let html = '';
 
         if (data.customer_name) {
@@ -1561,12 +1668,19 @@
         }
 
         if ((!data.rentals || data.rentals.length === 0) && (!data.bookings || data.bookings.length === 0)) {
-          html += '<div class="lookup-empty">此帳號目前沒有進行中的租借或預約</div>';
+          html += '<div class="lookup-empty">目前沒有租借或預約紀錄</div>';
         }
 
         resultsEl.innerHTML = html;
+
+        // Hide the code form after success
+        document.getElementById('lookup-step-code').style.display = 'none';
+
       } catch (error) {
-        resultsEl.innerHTML = `<div class="lookup-empty">查詢失敗：${error.message}</div>`;
+        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">查詢失敗：${error.message}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '驗證並查詢';
       }
     }
   </script>
