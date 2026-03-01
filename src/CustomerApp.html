@@ -516,7 +516,7 @@
 
     function renderCategoryButtons() {
       const container = document.getElementById('category-buttons');
-      const categories = ['camera', 'lens', 'audio', 'lighting', 'monitor', 'transmission', 'tripod', 'motion', 'teleprompter', 'accessory'];
+      const categories = ['camera', 'lens', 'audio', 'lighting', 'monitor', 'transmission', 'tripod', 'motion', 'teleprompter', 'accessory', 'prop_furniture', 'prop_wardrobe', 'prop_set', 'prop_fx', 'prop_vehicle', 'prop_other'];
       const categoryLabels = {
         'camera': '攝影機',
         'lens': '鏡頭',
@@ -527,7 +527,13 @@
         'tripod': '三腳架',
         'motion': '運動鏡頭',
         'teleprompter': '提詞器',
-        'accessory': '配件'
+        'accessory': '配件',
+        'prop_furniture': '道具-家具',
+        'prop_wardrobe': '道具-服裝',
+        'prop_set': '道具-場景',
+        'prop_fx': '道具-特效',
+        'prop_vehicle': '道具-車輛',
+        'prop_other': '道具-其他'
       };
 
       categories.forEach(cat => {
@@ -603,7 +609,13 @@
         'tripod': '🎬',
         'motion': '🎥',
         'teleprompter': '📋',
-        'accessory': '🔧'
+        'accessory': '🔧',
+        'prop_furniture': '🪑',
+        'prop_wardrobe': '👔',
+        'prop_set': '🎭',
+        'prop_fx': '💨',
+        'prop_vehicle': '🚗',
+        'prop_other': '📦'
       };
       return emojis[category] || '📦';
     }
@@ -619,7 +631,13 @@
         'tripod': '三腳架',
         'motion': '運動鏡頭',
         'teleprompter': '提詞器',
-        'accessory': '配件'
+        'accessory': '配件',
+        'prop_furniture': '道具-家具',
+        'prop_wardrobe': '道具-服裝',
+        'prop_set': '道具-場景',
+        'prop_fx': '道具-特效',
+        'prop_vehicle': '道具-車輛',
+        'prop_other': '道具-其他'
       };
       return labels[category] || '其他';
     }
@@ -704,23 +722,25 @@
         <form id="checkout-form">
           <div class="rental-form-section">
             <div class="rental-form-title">個人資訊</div>
-            <div class="form-group">
-              <label class="form-label required">公司名稱</label>
-              <input type="text" name="company_name" class="form-input" required>
-            </div>
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label required">聯絡人</label>
-                <input type="text" name="contact_person" class="form-input" required>
+                <label class="form-label required">租借人姓名</label>
+                <input type="text" name="name" class="form-input" required>
               </div>
+              <div class="form-group">
+                <label class="form-label">公司名稱</label>
+                <input type="text" name="company_name" class="form-input">
+              </div>
+            </div>
+            <div class="form-row">
               <div class="form-group">
                 <label class="form-label required">電話</label>
                 <input type="tel" name="phone" class="form-input" required>
               </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label required">電郵</label>
-              <input type="email" name="email" class="form-input" required>
+              <div class="form-group">
+                <label class="form-label">電郵</label>
+                <input type="email" name="email" class="form-input">
+              </div>
             </div>
           </div>
 
@@ -794,21 +814,27 @@
 
       // Check if customer exists, if not create
       try {
-        let customer = (await API.getCustomers()).find(c =>
-          c.email === formData.email && !c.is_deleted
+        // Find existing customer by phone or email
+        const allCustomers = await API.getCustomers();
+        let customer = allCustomers.find(c =>
+          !c.is_deleted && (
+            (formData.email && c.email === formData.email) ||
+            (formData.phone && c.phone === formData.phone)
+          )
         );
 
         if (!customer) {
           await API.createCustomer({
-            company_name: formData.company_name,
-            contact_person: formData.contact_person,
+            name: formData.name,
+            company_name: formData.company_name || '',
             phone: formData.phone,
-            email: formData.email,
-            address: ''
+            email: formData.email || ''
           });
 
-          const customers = await API.getCustomers();
-          customer = customers.find(c => c.email === formData.email);
+          const updatedCustomers = await API.getCustomers();
+          customer = updatedCustomers.find(c =>
+            !c.is_deleted && c.phone === formData.phone
+          );
         }
 
         // Create rental
@@ -824,13 +850,13 @@
 
         const rental = await API.createRental(rentalData);
 
-        // Create rental items
+        // Create rental items with type_id for proper rate snapshotting
         for (const item of cart) {
+          const unitInfo = allEquipment.find(e => e.unit_id === item.unit_id);
           await API.createRentalItem({
             rental_id: rental.rental_id,
             unit_id: item.unit_id,
-            type_id: '', // Would be set from unit data
-            daily_rate: item.daily_rate,
+            type_id: unitInfo ? unitInfo.type_id : '',
             quantity: 1
           });
         }

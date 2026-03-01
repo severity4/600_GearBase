@@ -237,11 +237,11 @@
               <table id="customers-table">
                 <thead>
                   <tr>
-                    <th>公司名稱</th>
-                    <th>聯絡人</th>
+                    <th>姓名</th>
+                    <th>公司</th>
                     <th>電話</th>
                     <th>電郵</th>
-                    <th>信用額度</th>
+                    <th>狀態</th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -612,27 +612,60 @@
             <div class="form-group">
               <label class="form-label required">分類</label>
               <select name="category" class="form-select" required>
-                <option>camera</option>
-                <option>lens</option>
-                <option>audio</option>
-                <option>lighting</option>
-                <option>monitor</option>
-                <option>transmission</option>
-                <option>tripod</option>
-                <option>motion</option>
-                <option>teleprompter</option>
-                <option>accessory</option>
-                <option>prop_furniture</option>
-                <option>prop_wardrobe</option>
-                <option>prop_set</option>
-                <option>prop_fx</option>
-                <option>prop_vehicle</option>
-                <option>prop_other</option>
+                <option value="camera">攝影機</option>
+                <option value="lens">鏡頭</option>
+                <option value="audio">音頻</option>
+                <option value="lighting">燈光</option>
+                <option value="monitor">監看</option>
+                <option value="transmission">傳輸</option>
+                <option value="tripod">三腳架</option>
+                <option value="motion">運動鏡頭</option>
+                <option value="teleprompter">提詞器</option>
+                <option value="accessory">配件</option>
+                <option value="prop_furniture">道具-家具</option>
+                <option value="prop_wardrobe">道具-服裝</option>
+                <option value="prop_set">道具-場景</option>
+                <option value="prop_fx">道具-特效</option>
+                <option value="prop_vehicle">道具-車輛</option>
+                <option value="prop_other">道具-其他</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label required">日租價格</label>
-              <input type="number" name="daily_rate" class="form-input" step="0.01" required>
+              <label class="form-label">子分類</label>
+              <input type="text" name="sub_category" class="form-input" placeholder="例：定焦鏡、變焦鏡">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">品牌</label>
+              <input type="text" name="brand" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">型號</label>
+              <input type="text" name="model" class="form-input">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">日租價格 (NT$)</label>
+              <input type="number" name="daily_rate" class="form-input" step="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">器材市值 (NT$)</label>
+              <input type="number" name="replacement_value" class="form-input" step="1" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">建議押金 (NT$)</label>
+              <input type="number" name="deposit_required" class="form-input" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">特殊屬性</label>
+              <div style="display: flex; gap: 16px; padding-top: 8px;">
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="is_consumable" value="true"> 消耗品</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="is_batch_item" value="true"> 批次品</label>
+              </div>
             </div>
           </div>
           <div class="form-group">
@@ -673,31 +706,73 @@
       const type = equipmentTypes.find(t => t.type_id === typeId);
       if (!type) return;
 
+      const isConsumable = type.is_consumable === true || type.is_consumable === 'true';
+      const isBatch = type.is_batch_item === true || type.is_batch_item === 'true';
+
       const modal = new Modal('編輯器材類型', `
         <form id="edit-type-form">
           <div class="form-group">
             <label class="form-label required">類型名稱</label>
-            <input type="text" name="type_name" class="form-input" value="${type.type_name || ''}" required>
+            <input type="text" name="type_name" class="form-input" value="${type.type_name || type.name || ''}" required>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">分類</label>
               <select name="category" class="form-select" required>
-                <option ${type.category === 'camera' ? 'selected' : ''}>camera</option>
-                <option ${type.category === 'lens' ? 'selected' : ''}>lens</option>
-                <option ${type.category === 'audio' ? 'selected' : ''}>audio</option>
-                <option ${type.category === 'lighting' ? 'selected' : ''}>lighting</option>
-                <option ${type.category === 'monitor' ? 'selected' : ''}>monitor</option>
-                <option ${type.category === 'transmission' ? 'selected' : ''}>transmission</option>
-                <option ${type.category === 'tripod' ? 'selected' : ''}>tripod</option>
-                <option ${type.category === 'motion' ? 'selected' : ''}>motion</option>
-                <option ${type.category === 'teleprompter' ? 'selected' : ''}>teleprompter</option>
-                <option ${type.category === 'accessory' ? 'selected' : ''}>accessory</option>
+                <option value="camera" ${type.category === 'camera' ? 'selected' : ''}>攝影機</option>
+                <option value="lens" ${type.category === 'lens' ? 'selected' : ''}>鏡頭</option>
+                <option value="audio" ${type.category === 'audio' ? 'selected' : ''}>音頻</option>
+                <option value="lighting" ${type.category === 'lighting' ? 'selected' : ''}>燈光</option>
+                <option value="monitor" ${type.category === 'monitor' ? 'selected' : ''}>監看</option>
+                <option value="transmission" ${type.category === 'transmission' ? 'selected' : ''}>傳輸</option>
+                <option value="tripod" ${type.category === 'tripod' ? 'selected' : ''}>三腳架</option>
+                <option value="motion" ${type.category === 'motion' ? 'selected' : ''}>運動鏡頭</option>
+                <option value="teleprompter" ${type.category === 'teleprompter' ? 'selected' : ''}>提詞器</option>
+                <option value="accessory" ${type.category === 'accessory' ? 'selected' : ''}>配件</option>
+                <option value="prop_furniture" ${type.category === 'prop_furniture' ? 'selected' : ''}>道具-家具</option>
+                <option value="prop_wardrobe" ${type.category === 'prop_wardrobe' ? 'selected' : ''}>道具-服裝</option>
+                <option value="prop_set" ${type.category === 'prop_set' ? 'selected' : ''}>道具-場景</option>
+                <option value="prop_fx" ${type.category === 'prop_fx' ? 'selected' : ''}>道具-特效</option>
+                <option value="prop_vehicle" ${type.category === 'prop_vehicle' ? 'selected' : ''}>道具-車輛</option>
+                <option value="prop_other" ${type.category === 'prop_other' ? 'selected' : ''}>道具-其他</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label required">日租價格</label>
-              <input type="number" name="daily_rate" class="form-input" value="${type.daily_rate || 0}" step="0.01" required>
+              <label class="form-label">子分類</label>
+              <input type="text" name="sub_category" class="form-input" value="${type.sub_category || ''}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">品牌</label>
+              <input type="text" name="brand" class="form-input" value="${type.brand || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">型號</label>
+              <input type="text" name="model" class="form-input" value="${type.model || ''}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">日租價格 (NT$)</label>
+              <input type="number" name="daily_rate" class="form-input" value="${type.daily_rate || 0}" step="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">器材市值 (NT$)</label>
+              <input type="number" name="replacement_value" class="form-input" value="${type.replacement_value || 0}" step="1" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">建議押金 (NT$)</label>
+              <input type="number" name="deposit_required" class="form-input" value="${type.deposit_required || 0}" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">特殊屬性</label>
+              <div style="display: flex; gap: 16px; padding-top: 8px;">
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="is_consumable" value="true" ${isConsumable ? 'checked' : ''}> 消耗品</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="is_batch_item" value="true" ${isBatch ? 'checked' : ''}> 批次品</label>
+              </div>
             </div>
           </div>
           <div class="form-group">
@@ -759,11 +834,22 @@
             <div class="form-group">
               <label class="form-label required">分類</label>
               <select name="category" class="form-select" required>
-                <option>camera</option>
-                <option>lens</option>
-                <option>audio</option>
-                <option>lighting</option>
-                <option>monitor</option>
+                <option value="camera">攝影機</option>
+                <option value="lens">鏡頭</option>
+                <option value="audio">音頻</option>
+                <option value="lighting">燈光</option>
+                <option value="monitor">監看</option>
+                <option value="transmission">傳輸</option>
+                <option value="tripod">三腳架</option>
+                <option value="motion">運動鏡頭</option>
+                <option value="teleprompter">提詞器</option>
+                <option value="accessory">配件</option>
+                <option value="prop_furniture">道具-家具</option>
+                <option value="prop_wardrobe">道具-服裝</option>
+                <option value="prop_set">道具-場景</option>
+                <option value="prop_fx">道具-特效</option>
+                <option value="prop_vehicle">道具-車輛</option>
+                <option value="prop_other">道具-其他</option>
               </select>
             </div>
           </div>
@@ -776,8 +862,10 @@
               <label class="form-label">狀態</label>
               <select name="status" class="form-select">
                 <option value="available">可用</option>
+                <option value="reserved">已預約</option>
                 <option value="rented">租用中</option>
                 <option value="maintenance">維護中</option>
+                <option value="retired">已報廢</option>
               </select>
             </div>
           </div>
@@ -836,8 +924,10 @@
               <label class="form-label required">狀態</label>
               <select name="status" class="form-select" required>
                 <option value="available" ${unit.status === 'available' ? 'selected' : ''}>可用</option>
+                <option value="reserved" ${unit.status === 'reserved' ? 'selected' : ''}>已預約</option>
                 <option value="rented" ${unit.status === 'rented' ? 'selected' : ''}>租用中</option>
                 <option value="maintenance" ${unit.status === 'maintenance' ? 'selected' : ''}>維護中</option>
+                <option value="retired" ${unit.status === 'retired' ? 'selected' : ''}>已報廢</option>
               </select>
             </div>
           </div>
@@ -904,9 +994,9 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${rental.rental_id || '-'}</td>
-          <td>${customer ? customer.company_name : '-'}</td>
-          <td>${formatDate(rental.start_date)}</td>
-          <td>${formatDate(rental.end_date)}</td>
+          <td>${customer ? (customer.name || customer.company_name) : '-'}</td>
+          <td>${formatDate(rental.rental_start || rental.start_date)}</td>
+          <td>${formatDate(rental.rental_end || rental.end_date)}</td>
           <td>${formatCurrency(rental.total_amount || 0)}</td>
           <td><span class="badge badge-info">${rental.status || 'unknown'}</span></td>
           <td class="table-actions">
@@ -925,17 +1015,17 @@
             <label class="form-label required">客戶</label>
             <select name="customer_id" class="form-select" required>
               <option value="">選擇客戶...</option>
-              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.company_name}</option>`).join('')}
+              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
             </select>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">開始日期</label>
-              <input type="date" name="start_date" class="form-input" required>
+              <input type="date" name="rental_start" class="form-input" required>
             </div>
             <div class="form-group">
               <label class="form-label required">結束日期</label>
-              <input type="date" name="end_date" class="form-input" required>
+              <input type="date" name="rental_end" class="form-input" required>
             </div>
           </div>
           <div class="form-group">
@@ -977,13 +1067,15 @@
       if (!rental) return;
 
       const customer = customers.find(c => c.customer_id === rental.customer_id);
-      const days = getDateRange(rental.start_date, rental.end_date);
+      const startDate = rental.rental_start || rental.start_date;
+      const endDate = rental.rental_end || rental.end_date;
+      const days = getDateRange(startDate, endDate);
 
       const modal = new Modal('租借單詳情', `
         <div style="line-height: 1.8;">
           <p><strong>租借ID:</strong> ${rental.rental_id}</p>
-          <p><strong>客戶:</strong> ${customer ? customer.company_name : '-'}</p>
-          <p><strong>期間:</strong> ${formatDate(rental.start_date)} 至 ${formatDate(rental.end_date)} (${days}天)</p>
+          <p><strong>客戶:</strong> ${customer ? (customer.name || customer.company_name) : '-'}</p>
+          <p><strong>期間:</strong> ${formatDate(startDate)} 至 ${formatDate(endDate)} (${days}天)</p>
           <p><strong>總金額:</strong> ${formatCurrency(rental.total_amount || 0)}</p>
           <p><strong>已付款:</strong> ${formatCurrency(rental.paid_amount || 0)}</p>
           <p><strong>狀態:</strong> ${rental.status}</p>
@@ -1008,17 +1100,17 @@
           <div class="form-group">
             <label class="form-label required">客戶</label>
             <select name="customer_id" class="form-select" required>
-              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}" ${rental.customer_id === c.customer_id ? 'selected' : ''}>${c.company_name}</option>`).join('')}
+              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}" ${rental.customer_id === c.customer_id ? 'selected' : ''}>${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
             </select>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">開始日期</label>
-              <input type="date" name="start_date" class="form-input" value="${rental.start_date}" required>
+              <input type="date" name="rental_start" class="form-input" value="${formatDate(rental.rental_start || rental.start_date)}" required>
             </div>
             <div class="form-group">
               <label class="form-label required">結束日期</label>
-              <input type="date" name="end_date" class="form-input" value="${rental.end_date}" required>
+              <input type="date" name="rental_end" class="form-input" value="${formatDate(rental.rental_end || rental.end_date)}" required>
             </div>
           </div>
           <div class="form-row">
@@ -1035,9 +1127,10 @@
             <label class="form-label">狀態</label>
             <select name="status" class="form-select">
               <option value="draft" ${rental.status === 'draft' ? 'selected' : ''}>草稿</option>
-              <option value="confirmed" ${rental.status === 'confirmed' ? 'selected' : ''}>已確認</option>
-              <option value="in_progress" ${rental.status === 'in_progress' ? 'selected' : ''}>進行中</option>
-              <option value="completed" ${rental.status === 'completed' ? 'selected' : ''}>已完成</option>
+              <option value="reserved" ${rental.status === 'reserved' ? 'selected' : ''}>已預約</option>
+              <option value="active" ${rental.status === 'active' ? 'selected' : ''}>進行中</option>
+              <option value="returned" ${rental.status === 'returned' ? 'selected' : ''}>已歸還</option>
+              <option value="overdue" ${rental.status === 'overdue' ? 'selected' : ''}>逾期</option>
               <option value="cancelled" ${rental.status === 'cancelled' ? 'selected' : ''}>已取消</option>
             </select>
           </div>
@@ -1071,7 +1164,7 @@
       if (!confirm('確定要刪除此租借單嗎？')) return;
 
       try {
-        await API.getRentals({ rental_id: button.dataset.id });
+        await API.updateRental(button.dataset.id, { is_deleted: true });
         showSuccess('租借單已刪除');
         loadRentalsPage();
       } catch (error) {
@@ -1096,13 +1189,14 @@
       clearElement(tbody);
 
       customers.filter(c => !c.is_deleted).forEach(customer => {
+        const isBlacklisted = customer.blacklisted === true || customer.blacklisted === 'true';
         const row = document.createElement('tr');
         row.innerHTML = `
+          <td>${customer.name || customer.company_name || '-'}</td>
           <td>${customer.company_name || '-'}</td>
-          <td>${customer.contact_person || '-'}</td>
           <td>${customer.phone || '-'}</td>
           <td>${customer.email || '-'}</td>
-          <td>${formatCurrency(customer.credit_balance || 0)}</td>
+          <td>${isBlacklisted ? '<span class="badge badge-danger">黑名單</span>' : '<span class="badge badge-success">正常</span>'}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" data-id="${customer.customer_id}" onclick="openEditCustomerModal(this)">編輯</button>
             <button class="btn btn-sm btn-danger" data-id="${customer.customer_id}" onclick="deleteCustomer(this)">刪除</button>
@@ -1115,31 +1209,42 @@
     function openAddCustomerModal() {
       const modal = new Modal('新增客戶', `
         <form id="customer-form">
-          <div class="form-group">
-            <label class="form-label required">公司名稱</label>
-            <input type="text" name="company_name" class="form-input" required>
-          </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label required">聯絡人</label>
-              <input type="text" name="contact_person" class="form-input" required>
+              <label class="form-label required">租借人姓名</label>
+              <input type="text" name="name" class="form-input" required>
             </div>
+            <div class="form-group">
+              <label class="form-label">公司名稱</label>
+              <input type="text" name="company_name" class="form-input">
+            </div>
+          </div>
+          <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
               <input type="tel" name="phone" class="form-input" required>
             </div>
+            <div class="form-group">
+              <label class="form-label">電郵</label>
+              <input type="email" name="email" class="form-input">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">身分證/統編</label>
+              <input type="text" name="id_number" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">證件驗證</label>
+              <select name="id_doc_verified" class="form-select">
+                <option value="false">未驗證</option>
+                <option value="true">已驗證</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label required">電郵</label>
-            <input type="email" name="email" class="form-input" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">地址</label>
-            <input type="text" name="address" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label">信用額度</label>
-            <input type="number" name="credit_balance" class="form-input" step="0.01" value="0">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea"></textarea>
           </div>
         </form>
       `, `
@@ -1175,33 +1280,69 @@
       const customer = customers.find(c => c.customer_id === customerId);
       if (!customer) return;
 
+      const isBlacklisted = customer.blacklisted === true || customer.blacklisted === 'true';
+      const isVerified = customer.id_doc_verified === true || customer.id_doc_verified === 'true';
+
       const modal = new Modal('編輯客戶', `
         <form id="edit-customer-form">
-          <div class="form-group">
-            <label class="form-label required">公司名稱</label>
-            <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}" required>
-          </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label required">聯絡人</label>
-              <input type="text" name="contact_person" class="form-input" value="${customer.contact_person || ''}" required>
+              <label class="form-label required">租借人姓名</label>
+              <input type="text" name="name" class="form-input" value="${customer.name || ''}" required>
             </div>
+            <div class="form-group">
+              <label class="form-label">公司名稱</label>
+              <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}">
+            </div>
+          </div>
+          <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
               <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required>
             </div>
+            <div class="form-group">
+              <label class="form-label">電郵</label>
+              <input type="email" name="email" class="form-input" value="${customer.email || ''}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">身分證/統編</label>
+              <input type="text" name="id_number" class="form-input" value="${customer.id_number || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">證件驗證</label>
+              <select name="id_doc_verified" class="form-select">
+                <option value="false" ${!isVerified ? 'selected' : ''}>未驗證</option>
+                <option value="true" ${isVerified ? 'selected' : ''}>已驗證</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">證件歸還</label>
+              <select name="id_doc_return_status" class="form-select">
+                <option value="na" ${customer.id_doc_return_status === 'na' ? 'selected' : ''}>不適用</option>
+                <option value="not_collected" ${customer.id_doc_return_status === 'not_collected' ? 'selected' : ''}>未收取</option>
+                <option value="held" ${customer.id_doc_return_status === 'held' ? 'selected' : ''}>保管中</option>
+                <option value="returned" ${customer.id_doc_return_status === 'returned' ? 'selected' : ''}>已歸還</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">黑名單</label>
+              <select name="blacklisted" class="form-select">
+                <option value="false" ${!isBlacklisted ? 'selected' : ''}>否</option>
+                <option value="true" ${isBlacklisted ? 'selected' : ''}>是</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" id="blacklist-reason-group" style="${isBlacklisted ? '' : 'display:none'}">
+            <label class="form-label">黑名單原因</label>
+            <input type="text" name="blacklist_reason" class="form-input" value="${customer.blacklist_reason || ''}">
           </div>
           <div class="form-group">
-            <label class="form-label required">電郵</label>
-            <input type="email" name="email" class="form-input" value="${customer.email || ''}" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">地址</label>
-            <input type="text" name="address" class="form-input" value="${customer.address || ''}">
-          </div>
-          <div class="form-group">
-            <label class="form-label">信用額度</label>
-            <input type="number" name="credit_balance" class="form-input" step="0.01" value="${customer.credit_balance || 0}">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea">${customer.notes || ''}</textarea>
           </div>
         </form>
       `, `

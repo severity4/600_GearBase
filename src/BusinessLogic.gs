@@ -407,7 +407,7 @@ function processEquipmentCheckIn(checkInData) {
 
   // 建立 Inventory_Log
   const logData = {
-    log_id: 'INV-' + generateNextId('Inventory_Logs', 'inventory_log_id'),
+    log_id: generateNextId('Inventory_Logs', 'log_id', 'IL'),
     unit_id: unit_id,
     rental_id: rental_id || '',
     log_type: 'check_in',
@@ -450,7 +450,7 @@ function processEquipmentCheckIn(checkInData) {
   let damageRecord = null;
   if (damage_found && damage_description) {
     damageRecord = {
-      damage_id: 'DMG-' + generateNextId('Damage_Records', 'damage_id'),
+      damage_id: generateNextId('Damage_Records', 'damage_id', 'DM'),
       rental_id: rental_id || '',
       unit_id: unit_id,
       damage_description: damage_description,
@@ -522,7 +522,7 @@ function getServiceItems(rentalId) {
 }
 
 function createServiceItem(serviceData) {
-  serviceData.service_item_id = 'SVC-' + generateNextId('Service_Items', 'service_item_id');
+  serviceData.service_item_id = generateNextId('Service_Items', 'service_item_id', 'SI');
   serviceData.line_total = (parseFloat(serviceData.unit_price) || 0) * (parseInt(serviceData.quantity) || 1);
   serviceData.is_deleted = false;
 
@@ -589,7 +589,7 @@ function getOverdueRules(filters = {}) {
 }
 
 function createOverdueRule(ruleData) {
-  ruleData.overdue_rule_id = 'OD-' + generateNextId('Overdue_Rules', 'overdue_rule_id');
+  ruleData.overdue_rule_id = generateNextId('Overdue_Rules', 'overdue_rule_id', 'OR');
   ruleData.active = true;
   ruleData.is_deleted = false;
 
@@ -607,7 +607,7 @@ function getWearTolerance(filters = {}) {
 }
 
 function createWearTolerance(toleranceData) {
-  toleranceData.tolerance_id = 'WT-' + generateNextId('Wear_Tolerance', 'tolerance_id');
+  toleranceData.tolerance_id = generateNextId('Wear_Tolerance', 'tolerance_id', 'WT');
   toleranceData.is_deleted = false;
 
   return appendSheetRow('Wear_Tolerance', toleranceData);
@@ -624,7 +624,7 @@ function getPrintTemplates(filters = {}) {
 }
 
 function createPrintTemplate(templateData) {
-  templateData.template_id = 'TPL-' + generateNextId('Print_Templates', 'template_id');
+  templateData.template_id = generateNextId('Print_Templates', 'template_id', 'TPL');
   templateData.created_at = new Date();
   templateData.updated_at = new Date();
   templateData.active = true;
