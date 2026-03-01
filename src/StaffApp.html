@@ -3963,7 +3963,7 @@
 
     async function loadActivityLogs() {
       try {
-        activityLogs = await API.getRecentActivityLogs(100);
+        activityLogs = await API.getRecentActivityLogs(100) || [];
         renderActivityLogs();
       } catch (e) {
         showError('載入活動紀錄失敗: ' + e.message);
