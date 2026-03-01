@@ -24,7 +24,7 @@ jobs:
 
       - name: Authenticate with Google
         run: |
-          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+          echo '${{ secrets.CLASP_CREDENTIALS }}' | base64 --decode > ~/.clasprc.json
 
       - name: Push to Apps Script
         run: clasp push --force
