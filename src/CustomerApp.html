@@ -351,7 +351,11 @@
 <body class="customer-app">
   <div class="customer-header">
     <h1>📹 映奧創意工作室</h1>
-    <p>專業器材租借服務</p>
+    <p>專業器材租借 & 場地出租服務</p>
+    <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
+      <button class="category-btn active" id="tab-equipment" onclick="switchTab('equipment')">器材租借</button>
+      <button class="category-btn" id="tab-venues" onclick="switchTab('venues')">場地出租</button>
+    </div>
   </div>
 
   <button class="toggle-sidebar-btn show" id="toggle-sidebar">☰</button>
@@ -390,6 +394,23 @@
     <div id="empty-state" class="empty-state" style="display: none;">
       <div class="empty-state-icon">📭</div>
       <div class="empty-state-text">沒有找到符合條件的器材</div>
+    </div>
+  </div>
+
+  <!-- Venues Section -->
+  <div class="customer-container" id="venue-section" style="display: none;">
+    <div class="search-section">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="venue-search-input" placeholder="搜尋場地...">
+      </div>
+    </div>
+
+    <div id="venue-list" class="product-grid"></div>
+
+    <div id="venue-empty-state" class="empty-state" style="display: none;">
+      <div class="empty-state-icon">🏢</div>
+      <div class="empty-state-text">目前沒有可用場地</div>
     </div>
   </div>
 
@@ -875,6 +896,293 @@
         }, 1500);
       } catch (error) {
         showError('申請提交失敗: ' + error.message);
+      }
+    }
+
+    // ==================== TAB SWITCHING ====================
+
+    let currentTab = 'equipment';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-equipment').classList.toggle('active', tab === 'equipment');
+      document.getElementById('tab-venues').classList.toggle('active', tab === 'venues');
+
+      // Toggle visibility
+      document.querySelector('.customer-container').style.display = tab === 'equipment' ? '' : 'none';
+      document.getElementById('venue-section').style.display = tab === 'venues' ? '' : 'none';
+
+      // Toggle sidebar & cart for equipment only
+      document.getElementById('toggle-sidebar').style.display = tab === 'equipment' ? '' : 'none';
+      if (tab === 'venues' && !allVenues.length) loadVenues();
+      if (tab === 'equipment') updateCartDisplay();
+      else document.getElementById('cart-summary').style.display = 'none';
+    }
+
+    // ==================== VENUE BROWSING ====================
+
+    let allVenues = [];
+
+    async function loadVenues() {
+      try {
+        allVenues = await API.getActiveVenues();
+        renderVenueList(allVenues);
+      } catch (error) {
+        showError('載入場地失敗');
+        console.error(error);
+      }
+    }
+
+    // Venue search
+    document.getElementById('venue-search-input').addEventListener('input', debounce(() => {
+      const query = document.getElementById('venue-search-input').value.toLowerCase();
+      const filtered = allVenues.filter(v =>
+        (v.name && v.name.toLowerCase().includes(query)) ||
+        (v.venue_type && v.venue_type.toLowerCase().includes(query)) ||
+        (v.amenities && v.amenities.toLowerCase().includes(query))
+      );
+      renderVenueList(filtered);
+    }, 300));
+
+    const VENUE_TYPE_MAP = {
+      studio: { label: '攝影棚', emoji: '🎬' },
+      meeting_room: { label: '會議室', emoji: '🏢' },
+      event_space: { label: '活動場地', emoji: '🎪' },
+      outdoor: { label: '戶外場地', emoji: '🌳' },
+      warehouse: { label: '倉庫空間', emoji: '🏭' },
+      other: { label: '其他', emoji: '📍' }
+    };
+
+    function renderVenueList(venueList) {
+      const container = document.getElementById('venue-list');
+      const emptyState = document.getElementById('venue-empty-state');
+
+      clearElement(container);
+
+      if (venueList.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      container.style.display = 'grid';
+      emptyState.style.display = 'none';
+
+      venueList.forEach(venue => {
+        const vt = VENUE_TYPE_MAP[venue.venue_type] || VENUE_TYPE_MAP.other;
+        const card = document.createElement('div');
+        card.className = 'product-card';
+
+        const features = [];
+        if (venue.has_cyclorama === true || venue.has_cyclorama === 'true') features.push('圓弧牆');
+        if (venue.has_blackout === true || venue.has_blackout === 'true') features.push('全遮光');
+        if (venue.ceiling_height_m) features.push(`天花板 ${venue.ceiling_height_m}m`);
+
+        card.innerHTML = `
+          <div class="product-image">${vt.emoji}</div>
+          <div class="product-info">
+            <div class="product-category">${vt.label}</div>
+            <div class="product-name">${venue.name}</div>
+            <div class="product-desc">
+              ${venue.max_capacity ? `容納 ${venue.max_capacity} 人` : ''}
+              ${venue.floor_area_sqm ? ` / ${venue.floor_area_sqm} 坪` : ''}
+              ${features.length ? `<br>${features.join(' / ')}` : ''}
+              ${venue.amenities ? `<br>設備：${venue.amenities}` : ''}
+            </div>
+            <div class="product-price">
+              ${formatCurrency(venue.hourly_rate)}<span style="font-size: 12px; color: var(--text-secondary);">/時</span>
+              ${venue.daily_rate ? `<span style="font-size: 14px; margin-left: 8px;">${formatCurrency(venue.daily_rate)}/天</span>` : ''}
+            </div>
+            <div class="product-actions">
+              <button class="btn btn-primary btn-sm" onclick="openVenueBookingModal('${venue.venue_id}')">預約場地</button>
+              <button class="btn btn-outline btn-sm" onclick="showVenueDetails('${venue.venue_id}')">詳情</button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function showVenueDetails(venueId) {
+      const venue = allVenues.find(v => v.venue_id === venueId);
+      if (!venue) return;
+      const vt = VENUE_TYPE_MAP[venue.venue_type] || VENUE_TYPE_MAP.other;
+
+      const modal = new Modal(`${venue.name} - 詳情`, `
+        <div style="line-height: 1.8; color: var(--text-primary);">
+          <p><strong>類型:</strong> ${vt.label}</p>
+          <p><strong>地址:</strong> ${venue.address || '-'}${venue.floor ? ' ' + venue.floor : ''}</p>
+          <p><strong>容納人數:</strong> ${venue.max_capacity || '-'} 人</p>
+          ${venue.floor_area_sqm ? `<p><strong>面積:</strong> ${venue.floor_area_sqm} 平方公尺</p>` : ''}
+          <hr style="margin: 12px 0;">
+          <p><strong>時租:</strong> ${formatCurrency(venue.hourly_rate)}/時</p>
+          ${venue.half_day_rate ? `<p><strong>半日租:</strong> ${formatCurrency(venue.half_day_rate)}/4hr</p>` : ''}
+          ${venue.daily_rate ? `<p><strong>日租:</strong> ${formatCurrency(venue.daily_rate)}/天</p>` : ''}
+          <p><strong>最低預約:</strong> ${venue.min_booking_hours || 2} 小時</p>
+          <p><strong>可預約時段:</strong> ${venue.available_start_time || '09:00'} ~ ${venue.available_end_time || '22:00'}</p>
+          ${venue.amenities ? `<hr style="margin: 12px 0;"><p><strong>設備:</strong> ${venue.amenities}</p>` : ''}
+          ${venue.ceiling_height_m ? `<p><strong>天花板高度:</strong> ${venue.ceiling_height_m} 公尺</p>` : ''}
+          ${venue.power_specs ? `<p><strong>電力規格:</strong> ${venue.power_specs}</p>` : ''}
+          ${venue.parking_info ? `<p><strong>停車:</strong> ${venue.parking_info}</p>` : ''}
+          ${venue.rules ? `<hr style="margin: 12px 0;"><p><strong>場地規範:</strong> ${venue.rules}</p>` : ''}
+          ${venue.description ? `<p><strong>描述:</strong> ${venue.description}</p>` : ''}
+        </div>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
+        <button class="btn btn-primary" onclick="document.querySelector('.modal-overlay').remove(); openVenueBookingModal('${venueId}');">預約場地</button>
+      `);
+
+      modal.open();
+    }
+
+    function openVenueBookingModal(venueId) {
+      const venue = allVenues.find(v => v.venue_id === venueId);
+      if (!venue) return;
+
+      const rateOptions = [`<option value="hourly">時租 (${formatCurrency(venue.hourly_rate)}/時)</option>`];
+      if (venue.half_day_rate) rateOptions.push(`<option value="half_day">半日租 (${formatCurrency(venue.half_day_rate)}/4hr)</option>`);
+      if (venue.daily_rate) rateOptions.push(`<option value="daily">日租 (${formatCurrency(venue.daily_rate)}/天)</option>`);
+
+      const modal = new Modal(`預約 ${venue.name}`, `
+        <form id="venue-booking-form">
+          <input type="hidden" name="venue_id" value="${venueId}">
+
+          <div class="rental-form-section">
+            <div class="rental-form-title">個人資訊</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">姓名</label>
+                <input type="text" name="customer_name" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">公司名稱</label>
+                <input type="text" name="company_name" class="form-input">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">電話</label>
+                <input type="tel" name="phone" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">電郵</label>
+                <input type="email" name="email" class="form-input">
+              </div>
+            </div>
+          </div>
+
+          <div class="rental-form-section">
+            <div class="rental-form-title">預約時段</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">開始時間</label>
+                <input type="datetime-local" name="booking_start" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label required">結束時間</label>
+                <input type="datetime-local" name="booking_end" class="form-input" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">計費方式</label>
+                <select name="rate_type" class="form-select" required>
+                  ${rateOptions.join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label required">數量</label>
+                <input type="number" name="rate_quantity" class="form-input" value="1" min="1" step="0.5" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="rental-form-section">
+            <div class="rental-form-title">其他</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">預計人數</label>
+                <input type="number" name="attendee_count" class="form-input" min="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label">使用目的</label>
+                <input type="text" name="use_purpose" class="form-input" placeholder="例：商品攝影">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">特殊需求</label>
+              <textarea name="special_requirements" class="form-textarea" placeholder="例：需全遮光、需佈置"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">備註</label>
+              <textarea name="notes" class="form-textarea"></textarea>
+            </div>
+            <div class="form-checkbox">
+              <input type="checkbox" name="accept_terms" required>
+              <label>我同意場地租借條款及細則</label>
+            </div>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="submitVenueBooking(event)">提交預約</button>
+      `);
+
+      modal.open();
+    }
+
+    async function submitVenueBooking(e) {
+      const form = document.getElementById('venue-booking-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      const formData = getFormData(form);
+
+      try {
+        // Find or create customer
+        const allCustomers = await API.getCustomers();
+        let customer = allCustomers.find(c =>
+          !c.is_deleted && (
+            (formData.email && c.email === formData.email) ||
+            (formData.phone && c.phone === formData.phone)
+          )
+        );
+
+        if (!customer) {
+          await API.createCustomer({
+            name: formData.customer_name,
+            company_name: formData.company_name || '',
+            phone: formData.phone,
+            email: formData.email || ''
+          });
+          const updatedCustomers = await API.getCustomers();
+          customer = updatedCustomers.find(c => !c.is_deleted && c.phone === formData.phone);
+        }
+
+        // Create venue booking
+        const bookingData = {
+          venue_id: formData.venue_id,
+          customer_id: customer.customer_id,
+          booking_start: formData.booking_start,
+          booking_end: formData.booking_end,
+          rate_type: formData.rate_type,
+          rate_quantity: formData.rate_quantity || 1,
+          attendee_count: formData.attendee_count || '',
+          use_purpose: formData.use_purpose || '',
+          special_requirements: formData.special_requirements || '',
+          notes: formData.notes || ''
+        };
+
+        await API.createVenueBooking(bookingData);
+        showSuccess('場地預約已提交！我們將盡快與您確認');
+        document.querySelector('.modal-overlay').remove();
+      } catch (error) {
+        showError('預約提交失敗: ' + error.message);
       }
     }
   </script>

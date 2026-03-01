@@ -582,6 +582,219 @@ function createRentalAddendum(addendumData) {
   return addendumData;
 }
 
+// ==================== VENUE BOOKING WORKFLOW ====================
+
+/**
+ * 場地預約合法的狀態轉換表
+ * draft → reserved → confirmed → active → completed
+ * draft/reserved/confirmed → cancelled
+ */
+const VENUE_BOOKING_TRANSITIONS = {
+  draft: ['reserved', 'cancelled'],
+  reserved: ['confirmed', 'cancelled'],
+  confirmed: ['active', 'cancelled'],
+  active: ['completed'],
+  completed: [],
+  cancelled: []
+};
+
+/**
+ * 推進場地預約狀態
+ * @param {string} bookingId - 預約 ID
+ * @param {string} newStatus - 新狀態
+ * @param {Object} metadata - 附加資料
+ * @return {boolean}
+ */
+function advanceVenueBookingStatus(bookingId, newStatus, metadata = {}) {
+  const booking = getSheetDataFiltered('Venue_Bookings', { booking_id: bookingId })[0];
+  if (!booking) throw new Error('找不到場地預約: ' + bookingId);
+
+  const currentStatus = booking.status;
+  const allowed = VENUE_BOOKING_TRANSITIONS[currentStatus] || [];
+
+  if (!allowed.includes(newStatus)) {
+    throw new Error(`無法從「${currentStatus}」轉換到「${newStatus}」。允許的轉換：${allowed.join(', ') || '無'}`);
+  }
+
+  const updates = {
+    status: newStatus,
+    updated_at: new Date()
+  };
+
+  switch (newStatus) {
+    case 'active':
+      updates.actual_start = metadata.actual_start || new Date();
+      break;
+
+    case 'completed':
+      updates.actual_end = metadata.actual_end || new Date();
+      updates.post_use_condition = metadata.post_use_condition || '';
+      // Calculate overtime if applicable
+      if (booking.booking_end) {
+        const expectedEnd = new Date(booking.booking_end);
+        const actualEnd = new Date(updates.actual_end);
+        if (actualEnd > expectedEnd) {
+          const overtimeMs = actualEnd - expectedEnd;
+          const overtimeHours = Math.ceil(overtimeMs / (1000 * 60 * 60));
+          updates.overtime_hours = overtimeHours;
+          // Get venue overtime rate
+          const venue = getSheetDataFiltered('Venues', { venue_id: booking.venue_id })[0];
+          const overtimeRate = venue ? (parseFloat(venue.overtime_hourly_rate) || parseFloat(venue.hourly_rate) || 0) : 0;
+          updates.overtime_fee = Math.round(overtimeHours * overtimeRate);
+        }
+      }
+      // Recalculate total
+      recalculateVenueBooking(bookingId, updates);
+      break;
+
+    case 'cancelled':
+      updates.cancellation_date = new Date();
+      updates.cancellation_reason = metadata.reason || '';
+      updates.cancellation_fee = metadata.cancellation_fee || 0;
+      break;
+  }
+
+  updateSheetRow('Venue_Bookings', 'booking_id', bookingId, updates);
+  return true;
+}
+
+/**
+ * 重新計算場地預約金額
+ * @param {string} bookingId
+ * @param {Object} additionalUpdates - 額外更新（如超時費）
+ */
+function recalculateVenueBooking(bookingId, additionalUpdates = {}) {
+  const booking = getSheetDataFiltered('Venue_Bookings', { booking_id: bookingId })[0];
+  if (!booking) return;
+
+  const unitRate = parseFloat(booking.unit_rate) || 0;
+  const rateQty = parseFloat(booking.rate_quantity) || 1;
+  const subtotal = Math.round(unitRate * rateQty);
+  const discountAmount = parseFloat(booking.discount_amount) || 0;
+  const overtimeFee = parseFloat(additionalUpdates.overtime_fee || booking.overtime_fee) || 0;
+  const taxRate = parseFloat(booking.tax_rate) || 0.05;
+
+  const taxableAmount = subtotal - discountAmount + overtimeFee;
+  const taxAmount = Math.round(taxableAmount * taxRate);
+  const totalAmount = taxableAmount + taxAmount;
+
+  // Get service items for this booking
+  const services = getSheetDataFiltered('Service_Items', { booking_id: bookingId })
+    .filter(s => !s.is_deleted);
+  const serviceTotal = services.reduce((sum, s) => sum + (parseFloat(s.line_total) || 0), 0);
+
+  const updates = {
+    subtotal: subtotal,
+    overtime_fee: overtimeFee,
+    tax_amount: Math.round((taxableAmount + serviceTotal) * taxRate),
+    total_amount: taxableAmount + serviceTotal + Math.round((taxableAmount + serviceTotal) * taxRate),
+    updated_at: new Date(),
+    ...additionalUpdates
+  };
+
+  updateSheetRow('Venue_Bookings', 'booking_id', bookingId, updates);
+  return updates;
+}
+
+/**
+ * 計算場地預約費用明細
+ * @param {string} bookingId
+ * @return {Object} 費用明細
+ */
+function calculateVenueBookingBreakdown(bookingId) {
+  const booking = getSheetDataFiltered('Venue_Bookings', { booking_id: bookingId })[0];
+  if (!booking) throw new Error('找不到場地預約: ' + bookingId);
+
+  const venue = getSheetDataFiltered('Venues', { venue_id: booking.venue_id })[0];
+  const services = getSheetDataFiltered('Service_Items', { booking_id: bookingId })
+    .filter(s => !s.is_deleted);
+  const payments = getSheetDataFiltered('Payments', { booking_id: bookingId })
+    .filter(p => !p.is_deleted);
+
+  const unitRate = parseFloat(booking.unit_rate) || 0;
+  const rateQty = parseFloat(booking.rate_quantity) || 1;
+  const subtotal = Math.round(unitRate * rateQty);
+  const discountAmount = parseFloat(booking.discount_amount) || 0;
+  const overtimeFee = parseFloat(booking.overtime_fee) || 0;
+  const serviceTotal = services.reduce((sum, s) => sum + (parseFloat(s.line_total) || 0), 0);
+  const taxRate = parseFloat(booking.tax_rate) || 0.05;
+  const taxableAmount = subtotal - discountAmount + overtimeFee + serviceTotal;
+  const taxAmount = Math.round(taxableAmount * taxRate);
+  const totalAmount = taxableAmount + taxAmount;
+  const paidAmount = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
+  return {
+    booking_id: bookingId,
+    venue_name: venue ? venue.name : '',
+    rate_type: booking.rate_type,
+    unit_rate: unitRate,
+    rate_quantity: rateQty,
+    subtotal: subtotal,
+    discount_amount: discountAmount,
+    overtime_fee: overtimeFee,
+    service_total: serviceTotal,
+    services: services,
+    taxable_amount: taxableAmount,
+    tax_rate: taxRate,
+    tax_amount: taxAmount,
+    total_amount: totalAmount,
+    deposit_amount: parseFloat(booking.deposit_amount) || 0,
+    paid_amount: paidAmount,
+    outstanding: Math.max(0, totalAmount - paidAmount)
+  };
+}
+
+/**
+ * 檢查場地在指定時段是否可用
+ * @param {string} venueId
+ * @param {string} startTime - ISO datetime
+ * @param {string} endTime - ISO datetime
+ * @param {string} excludeBookingId - 排除的預約 ID（編輯時用）
+ * @return {boolean}
+ */
+function checkVenueAvailability(venueId, startTime, endTime, excludeBookingId) {
+  const bookings = getSheetData('Venue_Bookings').filter(b =>
+    !b.is_deleted &&
+    b.venue_id === venueId &&
+    !['cancelled', 'completed'].includes(b.status) &&
+    b.booking_id !== excludeBookingId
+  );
+
+  const reqStart = new Date(startTime);
+  const reqEnd = new Date(endTime);
+
+  return !bookings.some(b => {
+    const bStart = new Date(b.booking_start);
+    const bEnd = new Date(b.booking_end);
+    return bStart < reqEnd && bEnd > reqStart; // overlap check
+  });
+}
+
+/**
+ * 取得場地在指定日期範圍的預約
+ * @param {string} venueId
+ * @param {string} startDate
+ * @param {string} endDate
+ * @return {Array}
+ */
+function getVenueSchedule(venueId, startDate, endDate) {
+  const bookings = getSheetData('Venue_Bookings').filter(b =>
+    !b.is_deleted &&
+    b.venue_id === venueId &&
+    b.status !== 'cancelled'
+  );
+
+  const rangeStart = new Date(startDate);
+  const rangeEnd = new Date(endDate);
+  rangeEnd.setHours(23, 59, 59);
+
+  return bookings.filter(b => {
+    const bStart = new Date(b.booking_start);
+    const bEnd = new Date(b.booking_end);
+    return bStart <= rangeEnd && bEnd >= rangeStart;
+  });
+}
+
 // ==================== OVERDUE RULES ====================
 
 function getOverdueRules(filters = {}) {

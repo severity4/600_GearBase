@@ -538,11 +538,20 @@ function createPayment(paymentData) {
   paymentData.receive_channel = paymentData.receive_channel || 'company_direct';
   paymentData.relay_status = paymentData.receive_channel === 'staff_relay' ? 'pending' : 'na';
 
-  // Update rental paid amount
-  const rental = getSheetDataFiltered('Rentals', { rental_id: paymentData.rental_id })[0];
-  if (rental) {
-    const newPaidAmount = (parseFloat(rental.paid_amount) || 0) + parseFloat(paymentData.amount);
-    updateRental(paymentData.rental_id, { paid_amount: newPaidAmount });
+  // Update rental or booking paid amount
+  if (paymentData.rental_id) {
+    const rental = getSheetDataFiltered('Rentals', { rental_id: paymentData.rental_id })[0];
+    if (rental) {
+      const newPaidAmount = (parseFloat(rental.paid_amount) || 0) + parseFloat(paymentData.amount);
+      updateRental(paymentData.rental_id, { paid_amount: newPaidAmount });
+    }
+  }
+  if (paymentData.booking_id) {
+    const booking = getSheetDataFiltered('Venue_Bookings', { booking_id: paymentData.booking_id })[0];
+    if (booking) {
+      const newPaidAmount = (parseFloat(booking.paid_amount) || 0) + parseFloat(paymentData.amount);
+      updateVenueBooking(paymentData.booking_id, { paid_amount: newPaidAmount });
+    }
   }
 
   return appendSheetRow('Payments', paymentData);
@@ -550,7 +559,10 @@ function createPayment(paymentData) {
 
 function validatePayment(data) {
   const errors = [];
-  if (!data.rental_id || data.rental_id.trim() === '') errors.push('租借單必填');
+  // rental_id or booking_id required (at least one)
+  const hasRental = data.rental_id && data.rental_id.trim() !== '';
+  const hasBooking = data.booking_id && data.booking_id.trim() !== '';
+  if (!hasRental && !hasBooking) errors.push('租借單或場地預約必填（至少填一個）');
   if (data.amount === undefined || data.amount === null || data.amount === '' || isNaN(parseFloat(data.amount))) {
     errors.push('金額必填且為數字');
   } else if (parseFloat(data.amount) === 0) {
@@ -656,6 +668,8 @@ function getDashboardStats() {
   const equipmentUnits = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
   const customers = getSheetData('Customers').filter(c => !c.is_deleted);
   const rentals = getSheetData('Rentals').filter(r => !r.is_deleted);
+  const venues = getSheetData('Venues').filter(v => !v.is_deleted);
+  const venueBookings = getSheetData('Venue_Bookings').filter(b => !b.is_deleted);
 
   const availableUnits = equipmentUnits.filter(u => u.status === 'available').length;
   const rentedUnits = equipmentUnits.filter(u => u.status === 'rented').length;
@@ -666,6 +680,12 @@ function getDashboardStats() {
 
   const totalRevenue = rentals.reduce((sum, r) => sum + parseFloat(r.total_amount || 0), 0);
 
+  // Venue stats
+  const activeVenues = venues.filter(v => v.active !== false && v.active !== 'false').length;
+  const activeBookings = venueBookings.filter(b => ['draft', 'reserved', 'confirmed', 'active'].includes(b.status)).length;
+  const completedBookings = venueBookings.filter(b => b.status === 'completed').length;
+  const venueRevenue = venueBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
+
   return {
     total_equipment_types: equipmentTypes.length,
     total_equipment_units: equipmentUnits.length,
@@ -675,7 +695,12 @@ function getDashboardStats() {
     total_customers: customers.length,
     active_rentals: activeRentals,
     completed_rentals: completedRentals,
-    total_revenue: totalRevenue
+    total_revenue: totalRevenue,
+    total_venues: venues.length,
+    active_venues: activeVenues,
+    active_bookings: activeBookings,
+    completed_bookings: completedBookings,
+    venue_revenue: venueRevenue
   };
 }
 
@@ -757,6 +782,158 @@ function createCreditNote(noteData) {
   noteData.is_deleted = false;
 
   return appendSheetRow('Credit_Notes', noteData);
+}
+
+/**
+ * ==================== VENUE FUNCTIONS ====================
+ */
+
+function getVenues(filters = {}) {
+  return getSheetDataFiltered('Venues', filters);
+}
+
+function createVenue(venueData) {
+  requirePermission('create', '無權限建立場地');
+
+  const validation = validateVenue(venueData);
+  if (!validation.valid) {
+    throw new Error(validation.errors.join(', '));
+  }
+
+  const currentUser = getCurrentUser();
+  venueData.venue_id = generateNextId('Venues', 'venue_id', 'VN');
+  venueData.created_by = currentUser ? currentUser.staff_id : '';
+  venueData.created_at = new Date();
+  venueData.is_deleted = false;
+  venueData.active = venueData.active !== undefined ? venueData.active : true;
+
+  return appendSheetRow('Venues', venueData);
+}
+
+function updateVenue(venueId, updates) {
+  return updateSheetRow('Venues', 'venue_id', venueId, updates);
+}
+
+function deleteVenue(venueId) {
+  requirePermission('delete', '無權限刪除場地');
+  return updateSheetRow('Venues', 'venue_id', venueId, { is_deleted: true });
+}
+
+function validateVenue(data) {
+  const errors = [];
+  if (!data.name || data.name.trim() === '') errors.push('場地名稱必填');
+  if (!data.venue_type || data.venue_type.trim() === '') errors.push('場地類型必填');
+  if (!data.hourly_rate || isNaN(parseFloat(data.hourly_rate)) || parseFloat(data.hourly_rate) < 0) {
+    errors.push('時租費必填且為正數');
+  }
+  if (!data.max_capacity || isNaN(parseInt(data.max_capacity)) || parseInt(data.max_capacity) <= 0) {
+    errors.push('最大容納人數必填且為正整數');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors
+  };
+}
+
+/**
+ * ==================== VENUE BOOKING FUNCTIONS ====================
+ */
+
+function getVenueBookings(filters = {}) {
+  return getSheetDataFiltered('Venue_Bookings', filters);
+}
+
+function createVenueBooking(bookingData) {
+  requirePermission('create_rental', '無權限建立場地預約');
+
+  const validation = validateVenueBooking(bookingData);
+  if (!validation.valid) {
+    throw new Error(validation.errors.join(', '));
+  }
+
+  // Blacklist check
+  if (bookingData.customer_id) {
+    const customer = getSheetDataFiltered('Customers', { customer_id: bookingData.customer_id })[0];
+    if (customer && (customer.blacklisted === true || customer.blacklisted === 'true' || customer.blacklisted === '1')) {
+      const reason = customer.blacklist_reason ? `（原因：${customer.blacklist_reason}）` : '';
+      throw new Error(`此客戶已列入黑名單，無法建立場地預約${reason}`);
+    }
+  }
+
+  // Snapshot rate from Venue
+  if (bookingData.venue_id) {
+    const venue = getSheetDataFiltered('Venues', { venue_id: bookingData.venue_id })[0];
+    if (venue) {
+      const rateType = bookingData.rate_type || 'hourly';
+      if (!bookingData.unit_rate) {
+        if (rateType === 'hourly') bookingData.unit_rate = parseFloat(venue.hourly_rate) || 0;
+        else if (rateType === 'half_day') bookingData.unit_rate = parseFloat(venue.half_day_rate) || parseFloat(venue.hourly_rate) * 4;
+        else if (rateType === 'daily') bookingData.unit_rate = parseFloat(venue.daily_rate) || parseFloat(venue.hourly_rate) * 8;
+      }
+    }
+  }
+
+  const currentUser = getCurrentUser();
+  bookingData.booking_id = generateYearBasedId('Venue_Bookings', 'booking_id', 'VB');
+  bookingData.created_at = new Date();
+  bookingData.updated_at = new Date();
+  bookingData.status = 'draft';
+  bookingData.is_deleted = false;
+
+  // Calculate subtotal
+  const unitRate = parseFloat(bookingData.unit_rate) || 0;
+  const rateQty = parseFloat(bookingData.rate_quantity) || 1;
+  bookingData.subtotal = Math.round(unitRate * rateQty);
+  bookingData.discount_amount = parseFloat(bookingData.discount_amount) || 0;
+  bookingData.overtime_fee = parseFloat(bookingData.overtime_fee) || 0;
+  bookingData.tax_rate = parseFloat(bookingData.tax_rate) || 0.05;
+  const taxableAmount = bookingData.subtotal - bookingData.discount_amount + bookingData.overtime_fee;
+  bookingData.tax_amount = Math.round(taxableAmount * bookingData.tax_rate);
+  bookingData.total_amount = taxableAmount + bookingData.tax_amount;
+
+  bookingData.deposit_status = bookingData.deposit_status || 'pending';
+  bookingData.setup_required = bookingData.setup_required || false;
+  bookingData.cleanup_included = bookingData.cleanup_included || false;
+  bookingData.contract_signed = bookingData.contract_signed || false;
+  bookingData.invoice_required = bookingData.invoice_required || false;
+  bookingData.invoice_status = bookingData.invoice_required ? 'pending' : 'not_required';
+
+  bookingData.prepared_by = bookingData.prepared_by || (currentUser ? currentUser.staff_id : '');
+  bookingData.handled_by = bookingData.handled_by || (currentUser ? currentUser.staff_id : '');
+
+  return appendSheetRow('Venue_Bookings', bookingData);
+}
+
+function updateVenueBooking(bookingId, updates) {
+  updates.updated_at = new Date();
+  return updateSheetRow('Venue_Bookings', 'booking_id', bookingId, updates);
+}
+
+function deleteVenueBooking(bookingId) {
+  return updateSheetRow('Venue_Bookings', 'booking_id', bookingId, { is_deleted: true, updated_at: new Date() });
+}
+
+function validateVenueBooking(data) {
+  const errors = [];
+  if (!data.venue_id || data.venue_id.trim() === '') errors.push('場地必填');
+  if (!data.customer_id || data.customer_id.trim() === '') errors.push('客戶必填');
+  if (!data.booking_start) errors.push('預約開始時間必填');
+  if (!data.booking_end) errors.push('預約結束時間必填');
+  if (!data.rate_type) errors.push('計費方式必填');
+
+  if (data.booking_start && data.booking_end) {
+    const start = new Date(data.booking_start);
+    const end = new Date(data.booking_end);
+    if (end <= start) {
+      errors.push('結束時間必須晚於開始時間');
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors
+  };
 }
 
 /**

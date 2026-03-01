@@ -123,6 +123,25 @@
 
       // Auth / User Info
       getCurrentUserInfo: () => runAsync(google.script.run.withSuccessHandler(x => x).getCurrentUserInfo),
+
+      // Venues
+      getVenues: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getVenues, filters),
+      createVenue: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createVenue, data),
+      updateVenue: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateVenue, id, data),
+      deleteVenue: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteVenue, id),
+      getActiveVenues: () => runAsync(google.script.run.withSuccessHandler(x => x).getActiveVenues),
+      searchVenues: (query) => runAsync(google.script.run.withSuccessHandler(x => x).searchVenues, query),
+      getAvailableVenues: (start, end) => runAsync(google.script.run.withSuccessHandler(x => x).getAvailableVenues, start, end),
+
+      // Venue Bookings
+      getVenueBookings: (filters) => runAsync(google.script.run.withSuccessHandler(x => x).getVenueBookings, filters),
+      createVenueBooking: (data) => runAsync(google.script.run.withSuccessHandler(x => x).createVenueBooking, data),
+      updateVenueBooking: (id, data) => runAsync(google.script.run.withSuccessHandler(x => x).updateVenueBooking, id, data),
+      deleteVenueBooking: (id) => runAsync(google.script.run.withSuccessHandler(x => x).deleteVenueBooking, id),
+      advanceVenueBookingStatus: (id, status, meta) => runAsync(google.script.run.withSuccessHandler(x => x).advanceVenueBookingStatus, id, status, meta),
+      calculateVenueBookingBreakdown: (id) => runAsync(google.script.run.withSuccessHandler(x => x).calculateVenueBookingBreakdown, id),
+      checkVenueAvailability: (venueId, start, end, excludeId) => runAsync(google.script.run.withSuccessHandler(x => x).checkVenueAvailability, venueId, start, end, excludeId),
+      getVenueSchedule: (venueId, start, end) => runAsync(google.script.run.withSuccessHandler(x => x).getVenueSchedule, venueId, start, end),
     };
 
     /**

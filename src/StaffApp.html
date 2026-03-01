@@ -91,6 +91,10 @@
           <div class="nav-icon">📋</div>
           <span>租借管理</span>
         </div>
+        <div class="nav-item" data-page="venues">
+          <div class="nav-icon">🏢</div>
+          <span>場地管理</span>
+        </div>
         <div class="nav-item" data-page="customers">
           <div class="nav-icon">👥</div>
           <span>客戶管理</span>
@@ -211,6 +215,69 @@
                     <th>客戶</th>
                     <th>開始日期</th>
                     <th>結束日期</th>
+                    <th>金額</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Venues Page -->
+        <div id="venues" class="page-content">
+          <div class="section-title">場地管理</div>
+
+          <!-- Venues List -->
+          <div class="card mb-3">
+            <div class="card-header">場地列表</div>
+            <div class="table-toolbar">
+              <div class="search-box" style="flex: 1; max-width: 300px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="venue-search" placeholder="搜尋場地...">
+              </div>
+              <button class="btn btn-primary" id="add-venue-btn">+ 新增場地</button>
+            </div>
+            <div class="table-wrapper">
+              <table id="venues-table">
+                <thead>
+                  <tr>
+                    <th>場地名稱</th>
+                    <th>類型</th>
+                    <th>容納人數</th>
+                    <th>時租</th>
+                    <th>半日租</th>
+                    <th>日租</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Venue Bookings -->
+          <div class="card">
+            <div class="card-header">場地預約</div>
+            <div class="table-toolbar">
+              <div class="search-box" style="flex: 1; max-width: 300px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="booking-search" placeholder="搜尋預約...">
+              </div>
+              <button class="btn btn-primary" id="create-booking-btn">+ 新增預約</button>
+            </div>
+            <div class="table-wrapper">
+              <table id="bookings-table">
+                <thead>
+                  <tr>
+                    <th>預約ID</th>
+                    <th>場地</th>
+                    <th>客戶</th>
+                    <th>預約時段</th>
+                    <th>計費方式</th>
                     <th>金額</th>
                     <th>狀態</th>
                     <th>操作</th>
@@ -391,6 +458,8 @@
     let rentals = [];
     let payments = [];
     let locations = [];
+    let venues = [];
+    let venueBookings = [];
 
     // ==================== INITIALIZATION ====================
 
@@ -437,6 +506,9 @@
           break;
         case 'customers':
           loadCustomersPage();
+          break;
+        case 'venues':
+          loadVenuesPage();
           break;
         case 'inventory':
           loadInventoryPage();
@@ -488,6 +560,16 @@
         filterTable(document.getElementById('customers-table'), e.target.value, 0);
       });
 
+      // Venues
+      document.getElementById('add-venue-btn').addEventListener('click', openAddVenueModal);
+      document.getElementById('create-booking-btn').addEventListener('click', openCreateBookingModal);
+      document.getElementById('venue-search').addEventListener('input', (e) => {
+        filterTable(document.getElementById('venues-table'), e.target.value, 0);
+      });
+      document.getElementById('booking-search').addEventListener('input', (e) => {
+        filterTable(document.getElementById('bookings-table'), e.target.value, 1);
+      });
+
       // Inventory
       document.getElementById('add-location-btn').addEventListener('click', openAddLocationModal);
 
@@ -530,7 +612,10 @@
         { label: '客戶總數', value: stats.total_customers || 0, icon: '👥' },
         { label: '活躍租借', value: stats.active_rentals || 0, icon: '📌' },
         { label: '已完成租借', value: stats.completed_rentals || 0, icon: '✅' },
-        { label: '總收入', value: formatCurrency(stats.total_revenue || 0), icon: '💰' }
+        { label: '總收入', value: formatCurrency(stats.total_revenue || 0), icon: '💰' },
+        { label: '場地數', value: stats.total_venues || 0, icon: '🏢' },
+        { label: '進行中預約', value: stats.active_bookings || 0, icon: '📅' },
+        { label: '場地收入', value: formatCurrency(stats.venue_revenue || 0), icon: '🏠' }
       ];
 
       cardData.forEach(data => {
@@ -1167,6 +1252,635 @@
         await API.updateRental(button.dataset.id, { is_deleted: true });
         showSuccess('租借單已刪除');
         loadRentalsPage();
+      } catch (error) {
+        showError('刪除失敗: ' + error.message);
+      }
+    }
+
+    // ==================== VENUES PAGE ====================
+
+    const VENUE_TYPE_LABELS = {
+      studio: '攝影棚',
+      meeting_room: '會議室',
+      event_space: '活動場地',
+      outdoor: '戶外場地',
+      warehouse: '倉庫空間',
+      other: '其他'
+    };
+
+    const BOOKING_STATUS_LABELS = {
+      draft: '草稿',
+      reserved: '已預約',
+      confirmed: '已確認',
+      active: '使用中',
+      completed: '已完成',
+      cancelled: '已取消'
+    };
+
+    async function loadVenuesPage() {
+      try {
+        venues = await API.getVenues();
+        venueBookings = await API.getVenueBookings();
+        if (!customers.length) customers = await API.getCustomers();
+        renderVenues();
+        renderVenueBookings();
+      } catch (error) {
+        showError('載入場地數據失敗');
+        console.error(error);
+      }
+    }
+
+    function renderVenues() {
+      const tbody = document.querySelector('#venues-table tbody');
+      clearElement(tbody);
+
+      venues.filter(v => !v.is_deleted).forEach(venue => {
+        const isActive = venue.active !== false && venue.active !== 'false';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${venue.name || '-'}</td>
+          <td>${VENUE_TYPE_LABELS[venue.venue_type] || venue.venue_type || '-'}</td>
+          <td>${venue.max_capacity || '-'} 人</td>
+          <td>${formatCurrency(venue.hourly_rate || 0)}</td>
+          <td>${venue.half_day_rate ? formatCurrency(venue.half_day_rate) : '-'}</td>
+          <td>${venue.daily_rate ? formatCurrency(venue.daily_rate) : '-'}</td>
+          <td>${isActive ? '<span class="badge badge-success">開放</span>' : '<span class="badge badge-danger">停用</span>'}</td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" data-id="${venue.venue_id}" onclick="openEditVenueModal(this)">編輯</button>
+            <button class="btn btn-sm btn-danger" data-id="${venue.venue_id}" onclick="deleteVenueItem(this)">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderVenueBookings() {
+      const tbody = document.querySelector('#bookings-table tbody');
+      clearElement(tbody);
+
+      venueBookings.filter(b => !b.is_deleted).forEach(booking => {
+        const venue = venues.find(v => v.venue_id === booking.venue_id);
+        const customer = customers.find(c => c.customer_id === booking.customer_id);
+        const rateLabels = { hourly: '時租', half_day: '半日租', daily: '日租', custom: '自訂' };
+        const statusClass = {
+          draft: 'badge-secondary',
+          reserved: 'badge-info',
+          confirmed: 'badge-primary',
+          active: 'badge-warning',
+          completed: 'badge-success',
+          cancelled: 'badge-danger'
+        };
+
+        const startStr = booking.booking_start ? new Date(booking.booking_start).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+        const endStr = booking.booking_end ? new Date(booking.booking_end).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${booking.booking_id || '-'}</td>
+          <td>${venue ? venue.name : '-'}</td>
+          <td>${customer ? (customer.name || customer.company_name) : '-'}</td>
+          <td>${startStr} ~ ${endStr}</td>
+          <td>${rateLabels[booking.rate_type] || booking.rate_type || '-'}</td>
+          <td>${formatCurrency(booking.total_amount || 0)}</td>
+          <td><span class="badge ${statusClass[booking.status] || 'badge-info'}">${BOOKING_STATUS_LABELS[booking.status] || booking.status || '-'}</span></td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" data-id="${booking.booking_id}" onclick="openViewBookingModal(this)">查看</button>
+            <button class="btn btn-sm btn-danger" data-id="${booking.booking_id}" onclick="deleteBookingItem(this)">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openAddVenueModal() {
+      const modal = new Modal('新增場地', `
+        <form id="venue-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">場地名稱</label>
+              <input type="text" name="name" class="form-input" required placeholder="例：A 攝影棚">
+            </div>
+            <div class="form-group">
+              <label class="form-label required">場地類型</label>
+              <select name="venue_type" class="form-select" required>
+                <option value="studio">攝影棚</option>
+                <option value="meeting_room">會議室</option>
+                <option value="event_space">活動場地</option>
+                <option value="outdoor">戶外場地</option>
+                <option value="warehouse">倉庫空間</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">地址</label>
+              <input type="text" name="address" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">樓層</label>
+              <input type="text" name="floor" class="form-input" placeholder="例：1F">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">最大容納人數</label>
+              <input type="number" name="max_capacity" class="form-input" required min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">面積（平方公尺）</label>
+              <input type="number" name="floor_area_sqm" class="form-input" step="0.1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">時租費 (NT$)</label>
+              <input type="number" name="hourly_rate" class="form-input" required min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">半日租費 (NT$/4hr)</label>
+              <input type="number" name="half_day_rate" class="form-input" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">日租費 (NT$/天)</label>
+              <input type="number" name="daily_rate" class="form-input" min="0" step="1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">押金 (NT$)</label>
+              <input type="number" name="deposit_required" class="form-input" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label required">最低預約時數</label>
+              <input type="number" name="min_booking_hours" class="form-input" required value="2" min="1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">可預約開始時間</label>
+              <input type="text" name="available_start_time" class="form-input" required value="09:00" placeholder="09:00">
+            </div>
+            <div class="form-group">
+              <label class="form-label required">可預約結束時間</label>
+              <input type="text" name="available_end_time" class="form-input" required value="22:00" placeholder="22:00">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">設備（逗號分隔）</label>
+            <input type="text" name="amenities" class="form-input" placeholder="冷氣, 投影機, 白板, Wi-Fi">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">天花板高度（公尺）</label>
+              <input type="number" name="ceiling_height_m" class="form-input" step="0.1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">攝影棚選項</label>
+              <div style="display: flex; gap: 12px; padding-top: 8px;">
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="has_cyclorama" value="true"> 圓弧牆</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="has_blackout" value="true"> 全遮光</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="has_loading_dock" value="true"> 卸貨區</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">使用規範</label>
+            <textarea name="rules" class="form-textarea" placeholder="禁菸、禁食、21:00 後降低音量"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">場地描述</label>
+            <textarea name="description" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveVenueForm(event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function saveVenueForm(e) {
+      const form = document.getElementById('venue-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createVenue(data);
+        showSuccess('場地已新增');
+        document.querySelector('.modal-overlay').remove();
+        loadVenuesPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    function openEditVenueModal(button) {
+      const venueId = button.dataset.id;
+      const venue = venues.find(v => v.venue_id === venueId);
+      if (!venue) return;
+
+      const hasCyc = venue.has_cyclorama === true || venue.has_cyclorama === 'true';
+      const hasBlack = venue.has_blackout === true || venue.has_blackout === 'true';
+      const hasDock = venue.has_loading_dock === true || venue.has_loading_dock === 'true';
+      const isActive = venue.active !== false && venue.active !== 'false';
+
+      const modal = new Modal('編輯場地', `
+        <form id="edit-venue-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">場地名稱</label>
+              <input type="text" name="name" class="form-input" value="${venue.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">場地類型</label>
+              <select name="venue_type" class="form-select" required>
+                <option value="studio" ${venue.venue_type === 'studio' ? 'selected' : ''}>攝影棚</option>
+                <option value="meeting_room" ${venue.venue_type === 'meeting_room' ? 'selected' : ''}>會議室</option>
+                <option value="event_space" ${venue.venue_type === 'event_space' ? 'selected' : ''}>活動場地</option>
+                <option value="outdoor" ${venue.venue_type === 'outdoor' ? 'selected' : ''}>戶外場地</option>
+                <option value="warehouse" ${venue.venue_type === 'warehouse' ? 'selected' : ''}>倉庫空間</option>
+                <option value="other" ${venue.venue_type === 'other' ? 'selected' : ''}>其他</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">地址</label>
+              <input type="text" name="address" class="form-input" value="${venue.address || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">樓層</label>
+              <input type="text" name="floor" class="form-input" value="${venue.floor || ''}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">最大容納人數</label>
+              <input type="number" name="max_capacity" class="form-input" value="${venue.max_capacity || ''}" required min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">面積（平方公尺）</label>
+              <input type="number" name="floor_area_sqm" class="form-input" value="${venue.floor_area_sqm || ''}" step="0.1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">時租費 (NT$)</label>
+              <input type="number" name="hourly_rate" class="form-input" value="${venue.hourly_rate || 0}" required min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">半日租費 (NT$/4hr)</label>
+              <input type="number" name="half_day_rate" class="form-input" value="${venue.half_day_rate || ''}" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">日租費 (NT$/天)</label>
+              <input type="number" name="daily_rate" class="form-input" value="${venue.daily_rate || ''}" min="0" step="1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">押金 (NT$)</label>
+              <input type="number" name="deposit_required" class="form-input" value="${venue.deposit_required || ''}" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label required">最低預約時數</label>
+              <input type="number" name="min_booking_hours" class="form-input" value="${venue.min_booking_hours || 2}" required min="1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">可預約開始時間</label>
+              <input type="text" name="available_start_time" class="form-input" value="${venue.available_start_time || '09:00'}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">可預約結束時間</label>
+              <input type="text" name="available_end_time" class="form-input" value="${venue.available_end_time || '22:00'}" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">設備（逗號分隔）</label>
+            <input type="text" name="amenities" class="form-input" value="${venue.amenities || ''}">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">天花板高度（公尺）</label>
+              <input type="number" name="ceiling_height_m" class="form-input" value="${venue.ceiling_height_m || ''}" step="0.1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">攝影棚選項</label>
+              <div style="display: flex; gap: 12px; padding-top: 8px;">
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="has_cyclorama" value="true" ${hasCyc ? 'checked' : ''}> 圓弧牆</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="has_blackout" value="true" ${hasBlack ? 'checked' : ''}> 全遮光</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" name="has_loading_dock" value="true" ${hasDock ? 'checked' : ''}> 卸貨區</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">開放狀態</label>
+            <select name="active" class="form-select">
+              <option value="true" ${isActive ? 'selected' : ''}>開放預約</option>
+              <option value="false" ${!isActive ? 'selected' : ''}>暫停預約</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">使用規範</label>
+            <textarea name="rules" class="form-textarea">${venue.rules || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">場地描述</label>
+            <textarea name="description" class="form-textarea">${venue.description || ''}</textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="updateVenueForm('${venueId}', event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function updateVenueForm(venueId, e) {
+      const form = document.getElementById('edit-venue-form');
+      try {
+        const data = getFormData(form);
+        await API.updateVenue(venueId, data);
+        showSuccess('場地已更新');
+        document.querySelector('.modal-overlay').remove();
+        loadVenuesPage();
+      } catch (error) {
+        showError('更新失敗: ' + error.message);
+      }
+    }
+
+    async function deleteVenueItem(button) {
+      if (!confirm('確定要刪除此場地嗎？')) return;
+
+      try {
+        await API.deleteVenue(button.dataset.id);
+        showSuccess('場地已刪除');
+        loadVenuesPage();
+      } catch (error) {
+        showError('刪除失敗: ' + error.message);
+      }
+    }
+
+    function openCreateBookingModal() {
+      const activeVenues = venues.filter(v => !v.is_deleted && v.active !== false && v.active !== 'false');
+
+      const modal = new Modal('新增場地預約', `
+        <form id="booking-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">場地</label>
+              <select name="venue_id" class="form-select" required id="booking-venue-select">
+                <option value="">選擇場地...</option>
+                ${activeVenues.map(v => `<option value="${v.venue_id}" data-hourly="${v.hourly_rate || 0}" data-halfday="${v.half_day_rate || ''}" data-daily="${v.daily_rate || ''}">${v.name} (${VENUE_TYPE_LABELS[v.venue_type] || v.venue_type})</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">客戶</label>
+              <select name="customer_id" class="form-select" required>
+                <option value="">選擇客戶...</option>
+                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">預約開始</label>
+              <input type="datetime-local" name="booking_start" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">預約結束</label>
+              <input type="datetime-local" name="booking_end" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">計費方式</label>
+              <select name="rate_type" class="form-select" required id="booking-rate-type">
+                <option value="hourly">時租</option>
+                <option value="half_day">半日租</option>
+                <option value="daily">日租</option>
+                <option value="custom">自訂</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">費率數量</label>
+              <input type="number" name="rate_quantity" class="form-input" required value="1" min="1" step="0.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">單價 (NT$)</label>
+              <input type="number" name="unit_rate" class="form-input" id="booking-unit-rate" min="0" step="1" placeholder="自動帶入">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">預計人數</label>
+              <input type="number" name="attendee_count" class="form-input" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">使用目的</label>
+              <input type="text" name="use_purpose" class="form-input" placeholder="例：商品攝影">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">關聯器材租借單</label>
+              <input type="text" name="rental_id" class="form-input" placeholder="RENT-2026-xxx（選填）">
+            </div>
+            <div class="form-group">
+              <label class="form-label">押金 (NT$)</label>
+              <input type="number" name="deposit_amount" class="form-input" min="0" step="1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">特殊需求</label>
+            <textarea name="special_requirements" class="form-textarea" placeholder="例：需全遮光、需額外電力迴路"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea"></textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveBookingForm(event)">保存</button>
+      `);
+
+      modal.open();
+
+      // Auto-fill unit_rate when venue or rate_type changes
+      const venueSelect = document.getElementById('booking-venue-select');
+      const rateType = document.getElementById('booking-rate-type');
+      const unitRate = document.getElementById('booking-unit-rate');
+
+      function updateRate() {
+        const opt = venueSelect.selectedOptions[0];
+        if (!opt || !opt.value) return;
+        const type = rateType.value;
+        if (type === 'hourly') unitRate.value = opt.dataset.hourly || '';
+        else if (type === 'half_day') unitRate.value = opt.dataset.halfday || '';
+        else if (type === 'daily') unitRate.value = opt.dataset.daily || '';
+      }
+
+      venueSelect.addEventListener('change', updateRate);
+      rateType.addEventListener('change', updateRate);
+    }
+
+    async function saveBookingForm(e) {
+      const form = document.getElementById('booking-form');
+      const validation = validateForm(form);
+
+      if (!validation.valid) {
+        showError(validation.errors[0]);
+        return;
+      }
+
+      try {
+        const data = getFormData(form);
+        await API.createVenueBooking(data);
+        showSuccess('場地預約已建立');
+        document.querySelector('.modal-overlay').remove();
+        loadVenuesPage();
+      } catch (error) {
+        showError('保存失敗: ' + error.message);
+      }
+    }
+
+    function openViewBookingModal(button) {
+      const bookingId = button.dataset.id;
+      const booking = venueBookings.find(b => b.booking_id === bookingId);
+      if (!booking) return;
+
+      const venue = venues.find(v => v.venue_id === booking.venue_id);
+      const customer = customers.find(c => c.customer_id === booking.customer_id);
+      const rateLabels = { hourly: '時租', half_day: '半日租', daily: '日租', custom: '自訂' };
+
+      const startStr = booking.booking_start ? new Date(booking.booking_start).toLocaleString('zh-TW') : '-';
+      const endStr = booking.booking_end ? new Date(booking.booking_end).toLocaleString('zh-TW') : '-';
+
+      const modal = new Modal('場地預約詳情', `
+        <div style="line-height: 1.8;">
+          <p><strong>預約ID:</strong> ${booking.booking_id}</p>
+          <p><strong>場地:</strong> ${venue ? venue.name : '-'}</p>
+          <p><strong>客戶:</strong> ${customer ? (customer.name || customer.company_name) : '-'}</p>
+          <p><strong>時段:</strong> ${startStr} ~ ${endStr}</p>
+          <p><strong>計費:</strong> ${rateLabels[booking.rate_type] || '-'} ${formatCurrency(booking.unit_rate || 0)} x ${booking.rate_quantity || 1}</p>
+          <p><strong>小計:</strong> ${formatCurrency(booking.subtotal || 0)}</p>
+          ${booking.overtime_fee ? `<p><strong>超時費:</strong> ${formatCurrency(booking.overtime_fee)}</p>` : ''}
+          ${booking.discount_amount ? `<p><strong>折扣:</strong> -${formatCurrency(booking.discount_amount)}</p>` : ''}
+          <p><strong>稅額:</strong> ${formatCurrency(booking.tax_amount || 0)}</p>
+          <p><strong>總金額:</strong> ${formatCurrency(booking.total_amount || 0)}</p>
+          <p><strong>押金:</strong> ${formatCurrency(booking.deposit_amount || 0)} (${booking.deposit_status || '-'})</p>
+          <p><strong>狀態:</strong> <span class="badge badge-info">${BOOKING_STATUS_LABELS[booking.status] || booking.status}</span></p>
+          ${booking.use_purpose ? `<p><strong>用途:</strong> ${booking.use_purpose}</p>` : ''}
+          ${booking.rental_id ? `<p><strong>關聯租借單:</strong> ${booking.rental_id}</p>` : ''}
+          ${booking.special_requirements ? `<p><strong>特殊需求:</strong> ${booking.special_requirements}</p>` : ''}
+          ${booking.notes ? `<p><strong>備註:</strong> ${booking.notes}</p>` : ''}
+        </div>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
+        <button class="btn btn-primary" onclick="openEditBookingModal('${bookingId}')">編輯</button>
+      `);
+
+      modal.open();
+    }
+
+    function openEditBookingModal(bookingId) {
+      const booking = venueBookings.find(b => b.booking_id === bookingId);
+      if (!booking) return;
+
+      document.querySelector('.modal-overlay').remove();
+
+      const formatDT = (val) => {
+        if (!val) return '';
+        const d = new Date(val);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${day}T${h}:${min}`;
+      };
+
+      const modal = new Modal('編輯場地預約', `
+        <form id="edit-booking-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">預約開始</label>
+              <input type="datetime-local" name="booking_start" class="form-input" value="${formatDT(booking.booking_start)}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">預約結束</label>
+              <input type="datetime-local" name="booking_end" class="form-input" value="${formatDT(booking.booking_end)}" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">總金額 (NT$)</label>
+              <input type="number" name="total_amount" class="form-input" value="${booking.total_amount || 0}" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">折扣 (NT$)</label>
+              <input type="number" name="discount_amount" class="form-input" value="${booking.discount_amount || 0}" step="1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">狀態</label>
+            <select name="status" class="form-select">
+              <option value="draft" ${booking.status === 'draft' ? 'selected' : ''}>草稿</option>
+              <option value="reserved" ${booking.status === 'reserved' ? 'selected' : ''}>已預約</option>
+              <option value="confirmed" ${booking.status === 'confirmed' ? 'selected' : ''}>已確認</option>
+              <option value="active" ${booking.status === 'active' ? 'selected' : ''}>使用中</option>
+              <option value="completed" ${booking.status === 'completed' ? 'selected' : ''}>已完成</option>
+              <option value="cancelled" ${booking.status === 'cancelled' ? 'selected' : ''}>已取消</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">特殊需求</label>
+            <textarea name="special_requirements" class="form-textarea">${booking.special_requirements || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea name="notes" class="form-textarea">${booking.notes || ''}</textarea>
+          </div>
+        </form>
+      `, `
+        <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">取消</button>
+        <button class="btn btn-primary" onclick="updateBookingForm('${bookingId}', event)">保存</button>
+      `);
+
+      modal.open();
+    }
+
+    async function updateBookingForm(bookingId, e) {
+      const form = document.getElementById('edit-booking-form');
+      try {
+        const data = getFormData(form);
+        await API.updateVenueBooking(bookingId, data);
+        showSuccess('場地預約已更新');
+        document.querySelector('.modal-overlay').remove();
+        loadVenuesPage();
+      } catch (error) {
+        showError('更新失敗: ' + error.message);
+      }
+    }
+
+    async function deleteBookingItem(button) {
+      if (!confirm('確定要刪除此場地預約嗎？')) return;
+
+      try {
+        await API.deleteVenueBooking(button.dataset.id);
+        showSuccess('場地預約已刪除');
+        loadVenuesPage();
       } catch (error) {
         showError('刪除失敗: ' + error.message);
       }
