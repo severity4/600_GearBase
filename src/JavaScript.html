@@ -148,6 +148,23 @@
       calculateVenueBookingBreakdown: (id) => runAsync('calculateVenueBookingBreakdown', id),
       checkVenueAvailability: (venueId, start, end, excludeId) => runAsync('checkVenueAvailability', venueId, start, end, excludeId),
       getVenueSchedule: (venueId, start, end) => runAsync('getVenueSchedule', venueId, start, end),
+
+      // Schedule / Calendar
+      getScheduleData: (startDate, endDate) => runAsync('getScheduleData', startDate, endDate),
+
+      // Receipt / Print
+      generateRentalReceipt: (rentalId) => runAsync('generateRentalReceipt', rentalId),
+      generateVenueBookingReceipt: (bookingId) => runAsync('generateVenueBookingReceipt', bookingId),
+
+      // QR Code
+      getEquipmentQRData: (unitId) => runAsync('getEquipmentQRData', unitId),
+      getEquipmentQRBatch: (unitIds) => runAsync('getEquipmentQRBatch', unitIds),
+
+      // Email
+      sendRentalConfirmationEmail: (rentalId) => runAsync('sendRentalConfirmationEmail', rentalId),
+      sendVenueBookingConfirmationEmail: (bookingId) => runAsync('sendVenueBookingConfirmationEmail', bookingId),
+      sendReturnReminderEmail: (rentalId) => runAsync('sendReturnReminderEmail', rentalId),
+      sendOverdueNoticeEmail: (rentalId) => runAsync('sendOverdueNoticeEmail', rentalId),
     };
 
     // Debug mode flag (mirrors server-side)
