@@ -2110,8 +2110,8 @@
                 <input type="tel" id="new-cust-phone" class="form-input" placeholder="例如：0912-345-678">
               </div>
               <div class="form-group">
-                <label class="form-label">電郵</label>
-                <input type="email" id="new-cust-email" class="form-input" placeholder="例如：name@example.com">
+                <label class="form-label">電郵 <span style="color:var(--danger-color)">*</span></label>
+                <input type="email" id="new-cust-email" class="form-input" required placeholder="例如：name@example.com">
               </div>
             </div>
             <div class="form-row">
@@ -2176,7 +2176,8 @@
       else if (!isValidPhone(phone)) errors.push('請輸入有效的台灣電話號碼（例如 0912-345-678）');
 
       const email = document.getElementById('new-cust-email').value.trim();
-      if (email && !isValidEmail(email)) errors.push('電子郵件格式不正確');
+      if (!email) errors.push('電子郵件必填');
+      else if (!isValidEmail(email)) errors.push('電子郵件格式不正確');
 
       const idNumber = document.getElementById('new-cust-id-number').value.trim();
       if (idNumber && !isValidIdNumber(idNumber)) errors.push('身分證字號或統一編號格式不正確');
@@ -2187,7 +2188,7 @@
       const company = document.getElementById('new-cust-company').value.trim();
       const notes = document.getElementById('new-cust-notes').value.trim();
       if (company) custData.company_name = company;
-      if (email) custData.email = email.toLowerCase();
+      custData.email = email.toLowerCase();
       if (idNumber) custData.id_number = idNumber;
       if (notes) custData.notes = notes;
 
@@ -3037,8 +3038,8 @@
               <input type="tel" name="phone" class="form-input" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
-              <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input" placeholder="例如：name@example.com">
+              <label class="form-label required">電郵</label>
+              <input type="email" name="email" class="form-input" required placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
@@ -3112,8 +3113,10 @@
         if (!v) errors.push('電話必填');
         else if (!isValidPhone(v)) errors.push('請輸入有效的台灣電話號碼（例如 0912-345-678）');
       }
-      if (email && email.value.trim()) {
-        if (!isValidEmail(email.value.trim())) errors.push('電子郵件格式不正確');
+      if (email) {
+        const ev = email.value.trim();
+        if (!ev) errors.push('電子郵件必填');
+        else if (!isValidEmail(ev)) errors.push('電子郵件格式不正確');
       }
       if (idNum && idNum.value.trim()) {
         if (!isValidIdNumber(idNum.value.trim())) errors.push('身分證字號或統一編號格式不正確');
@@ -3147,8 +3150,8 @@
               <input type="tel" name="phone" class="form-input" value="${escapeHtml(customer.phone || '')}" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
-              <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input" value="${escapeHtml(customer.email || '')}" placeholder="例如：name@example.com">
+              <label class="form-label required">電郵</label>
+              <input type="email" name="email" class="form-input" value="${escapeHtml(customer.email || '')}" required placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
@@ -3577,10 +3580,17 @@
 
     async function loadStaffPage() {
       try {
-        // Load staff list and current user in parallel
-        const [staffData, userInfo, permData] = await Promise.all([
+        const userInfo = await API.getCurrentUserInfo();
+
+        // If not authenticated, check if Staff sheet is empty for bootstrap
+        if (!userInfo || !userInfo.authenticated) {
+          renderCurrentUser(userInfo);
+          return;
+        }
+
+        // Load staff list and permissions in parallel
+        const [staffData, permData] = await Promise.all([
           API.getStaff(),
-          API.getCurrentUserInfo(),
           API.getRolePermissions()
         ]);
 
@@ -3604,10 +3614,29 @@
       }
     }
 
+    async function bootstrapAdmin() {
+      if (!confirm('確定要將目前登入的 Google 帳號設為系統管理員？\n此操作僅在系統無任何員工時可使用。')) return;
+      try {
+        const result = await runAsync('bootstrapFirstAdmin');
+        showSuccess(result.message);
+        loadStaffPage();
+      } catch (e) {
+        showError('初始化失敗: ' + e.message);
+      }
+    }
+
     function renderCurrentUser(userInfo) {
       const el = document.getElementById('current-user-info');
       if (!userInfo || !userInfo.authenticated) {
-        el.innerHTML = '<div style="color:var(--danger-color);">未登入或無員工資料</div>';
+        el.innerHTML = `
+          <div style="color:var(--danger-color);">未登入或無員工資料</div>
+          <button class="btn btn-primary" onclick="bootstrapAdmin()" style="margin-left:12px;">
+            初始化管理員帳號
+          </button>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
+            首次使用系統時，點此將您的 Google 帳號設為管理員
+          </div>
+        `;
         return;
       }
 
@@ -3734,6 +3763,8 @@
         </form>
       `);
 
+      modal.open();
+
       document.getElementById('staff-form').onsubmit = async (e) => {
         e.preventDefault();
         const form = e.target;
@@ -3815,6 +3846,8 @@
           </div>
         </form>
       `);
+
+      modal.open();
 
       document.getElementById('edit-staff-form').onsubmit = async (e) => {
         e.preventDefault();
