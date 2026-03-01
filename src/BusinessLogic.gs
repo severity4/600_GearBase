@@ -296,6 +296,7 @@ const VALID_TRANSITIONS = {
  * @return {boolean}
  */
 function advanceRentalStatus(rentalId, newStatus, metadata = {}) {
+  requirePermission('update', '無權限變更租借單狀態');
   const rental = getSheetDataFiltered('Rentals', { rental_id: rentalId })[0];
   if (!rental) throw new Error('找不到租借單: ' + rentalId);
 
@@ -396,6 +397,7 @@ function checkAndMarkOverdueRentals() {
  * @return {Object} 入庫結果
  */
 function processEquipmentCheckIn(checkInData) {
+  requirePermission('process_check_in', '無權限處理入庫歸還');
   const { unit_id, rental_id, performed_by, to_location_id,
     condition_after, accessories_complete, missing_accessories,
     needs_maintenance, needs_cleaning, damage_found, damage_description,
@@ -522,6 +524,7 @@ function getServiceItems(rentalId) {
 }
 
 function createServiceItem(serviceData) {
+  requirePermission('create', '無權限建立服務項目');
   serviceData.service_item_id = generateNextId('Service_Items', 'service_item_id', 'SI');
   serviceData.line_total = (parseFloat(serviceData.unit_price) || 0) * (parseInt(serviceData.quantity) || 1);
   serviceData.is_deleted = false;
@@ -537,6 +540,7 @@ function createServiceItem(serviceData) {
 }
 
 function updateServiceItem(serviceItemId, updates) {
+  requirePermission('update', '無權限編輯服務項目');
   if (updates.unit_price !== undefined && updates.quantity !== undefined) {
     updates.line_total = (parseFloat(updates.unit_price) || 0) * (parseInt(updates.quantity) || 1);
   }
@@ -544,6 +548,7 @@ function updateServiceItem(serviceItemId, updates) {
 }
 
 function deleteServiceItem(serviceItemId) {
+  requirePermission('delete', '無權限刪除服務項目');
   return updateSheetRow('Service_Items', 'service_item_id', serviceItemId, { is_deleted: true });
 }
 
@@ -555,6 +560,7 @@ function getRentalAddendums(rentalId) {
 }
 
 function createRentalAddendum(addendumData) {
+  requirePermission('create', '無權限建立租借附約');
   const rental = getSheetDataFiltered('Rentals', { rental_id: addendumData.rental_id })[0];
   if (!rental) throw new Error('找不到租借單: ' + addendumData.rental_id);
 
@@ -606,6 +612,7 @@ const VENUE_BOOKING_TRANSITIONS = {
  * @return {boolean}
  */
 function advanceVenueBookingStatus(bookingId, newStatus, metadata = {}) {
+  requirePermission('update', '無權限變更場地預約狀態');
   const booking = getSheetDataFiltered('Venue_Bookings', { booking_id: bookingId })[0];
   if (!booking) throw new Error('找不到場地預約: ' + bookingId);
 
@@ -802,6 +809,7 @@ function getOverdueRules(filters = {}) {
 }
 
 function createOverdueRule(ruleData) {
+  requirePermission('manage_rules', '無權限建立逾期規則');
   ruleData.overdue_rule_id = generateNextId('Overdue_Rules', 'overdue_rule_id', 'OR');
   ruleData.active = true;
   ruleData.is_deleted = false;
@@ -810,6 +818,7 @@ function createOverdueRule(ruleData) {
 }
 
 function updateOverdueRule(ruleId, updates) {
+  requirePermission('manage_rules', '無權限編輯逾期規則');
   return updateSheetRow('Overdue_Rules', 'overdue_rule_id', ruleId, updates);
 }
 
@@ -820,6 +829,7 @@ function getWearTolerance(filters = {}) {
 }
 
 function createWearTolerance(toleranceData) {
+  requirePermission('manage_rules', '無權限建立磨損容許');
   toleranceData.tolerance_id = generateNextId('Wear_Tolerance', 'tolerance_id', 'WT');
   toleranceData.is_deleted = false;
 
@@ -827,6 +837,7 @@ function createWearTolerance(toleranceData) {
 }
 
 function updateWearTolerance(toleranceId, updates) {
+  requirePermission('manage_rules', '無權限編輯磨損容許');
   return updateSheetRow('Wear_Tolerance', 'tolerance_id', toleranceId, updates);
 }
 
@@ -837,6 +848,7 @@ function getPrintTemplates(filters = {}) {
 }
 
 function createPrintTemplate(templateData) {
+  requirePermission('manage_rules', '無權限建立列印範本');
   templateData.template_id = generateNextId('Print_Templates', 'template_id', 'TPL');
   templateData.created_at = new Date();
   templateData.updated_at = new Date();

@@ -534,3 +534,270 @@ function getCustomerCreditInfo(customerId) {
     notes: notes
   };
 }
+
+/**
+ * ==================== CUSTOMER-FACING API ====================
+ */
+
+/**
+ * Get equipment catalog with availability count per type
+ * Groups by equipment type and counts available units
+ * @return {Array} Equipment types with availability info
+ */
+function getEquipmentCatalog() {
+  const types = getSheetData('Equipment_Types').filter(t => !t.is_deleted && t.active !== false);
+  const units = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
+  const bindings = getSheetData('Accessory_Bindings').filter(b => !b.is_deleted);
+
+  return types.map(type => {
+    const typeUnits = units.filter(u => u.type_id === type.type_id);
+    const available = typeUnits.filter(u => u.status === 'available').length;
+    const total = typeUnits.length;
+
+    // Get accessories for this type
+    const accessories = bindings
+      .filter(b => b.parent_type_id === type.type_id)
+      .map(b => {
+        const accType = types.find(t => t.type_id === b.accessory_type_id);
+        return {
+          type_id: b.accessory_type_id,
+          type_name: accType ? accType.type_name : b.accessory_type_id,
+          binding_type: b.binding_type,
+          notes: b.notes || ''
+        };
+      });
+
+    return {
+      type_id: type.type_id,
+      type_name: type.type_name,
+      category: type.category || '',
+      sub_category: type.sub_category || '',
+      brand: type.brand || '',
+      model: type.model || '',
+      daily_rate: parseFloat(type.daily_rate || 0),
+      replacement_value: parseFloat(type.replacement_value || 0),
+      deposit_required: parseFloat(type.deposit_required || 0),
+      is_consumable: type.is_consumable === true || type.is_consumable === 'true',
+      description: type.description || '',
+      total_units: total,
+      available_units: available,
+      accessories: accessories
+    };
+  });
+}
+
+/**
+ * Get venue schedule for customer-facing calendar
+ * @param {string} venueId
+ * @param {string} yearMonth - YYYY-MM format
+ * @return {Object} {venue, bookings: [{date, slots}]}
+ */
+function getVenueMonthlySchedule(venueId, yearMonth) {
+  const venue = getSheetData('Venues').find(v => v.venue_id === venueId && !v.is_deleted);
+  if (!venue) return { venue: null, booked_dates: [] };
+
+  const [year, month] = yearMonth.split('-').map(Number);
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+
+  const bookings = getSheetData('Venue_Bookings').filter(b =>
+    !b.is_deleted &&
+    b.venue_id === venueId &&
+    b.status !== 'cancelled'
+  );
+
+  const bookedDates = [];
+  bookings.forEach(b => {
+    const bStart = new Date(b.booking_start);
+    const bEnd = new Date(b.booking_end);
+
+    // Iterate through each day of this booking
+    const cursor = new Date(Math.max(bStart.getTime(), firstDay.getTime()));
+    cursor.setHours(0, 0, 0, 0);
+    const endLimit = new Date(Math.min(bEnd.getTime(), lastDay.getTime()));
+    endLimit.setHours(23, 59, 59);
+
+    while (cursor <= endLimit) {
+      const dateStr = Utilities.formatDate(cursor, 'Asia/Taipei', 'yyyy-MM-dd');
+      // Check if fully booked for the day (simplified: mark as booked if any booking exists)
+      if (!bookedDates.includes(dateStr)) {
+        bookedDates.push(dateStr);
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  });
+
+  return {
+    venue: {
+      venue_id: venue.venue_id,
+      name: venue.name,
+      available_start_time: venue.available_start_time || '09:00',
+      available_end_time: venue.available_end_time || '22:00'
+    },
+    booked_dates: bookedDates.sort()
+  };
+}
+
+/**
+ * Send a verification code to the customer's email for lookup
+ * Uses CacheService to store code with 10-minute expiry
+ * @param {string} email
+ * @return {Object} {success, message}
+ */
+function sendLookupVerificationCode(email) {
+  if (!email || email.trim() === '') {
+    return { success: false, message: '請輸入 Email' };
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cache = CacheService.getScriptCache();
+
+  // Rate limiting: max 1 request per 60 seconds per email
+  const rateLimitKey = 'lookup_rate_' + cleanEmail;
+  if (cache.get(rateLimitKey)) {
+    return { success: false, message: '請稍後再試，每 60 秒僅能發送一次驗證碼' };
+  }
+
+  // Check customer exists
+  const customer = getSheetData('Customers').find(c =>
+    !c.is_deleted && c.email && c.email.toLowerCase() === cleanEmail
+  );
+
+  // Always return success message to prevent email enumeration
+  const successMessage = '若此 Email 已登記，驗證碼將寄送至您的信箱';
+
+  if (!customer) {
+    // Set rate limit even for non-existent emails to prevent enumeration timing attacks
+    cache.put(rateLimitKey, '1', 60);
+    return { success: true, message: successMessage };
+  }
+
+  // Generate 6-digit code
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+
+  // Store in CacheService (10 min expiry)
+  cache.put('lookup_code_' + cleanEmail, code, 600);
+  // Set rate limit
+  cache.put(rateLimitKey, '1', 60);
+
+  // Send email
+  try {
+    MailApp.sendEmail({
+      to: cleanEmail,
+      subject: '【映奧創意】查詢驗證碼',
+      body: `${customer.name} 您好，\n\n您的查詢驗證碼為：${code}\n\n此驗證碼將在 10 分鐘後失效。\n如非本人操作，請忽略此信。\n\n映奧創意工作室`
+    });
+  } catch (e) {
+    Logger.log('sendLookupVerificationCode email error: ' + e.message);
+  }
+
+  return { success: true, message: successMessage };
+}
+
+/**
+ * Verify the lookup code and return rental/booking data
+ * @param {string} email
+ * @param {string} code
+ * @return {Object} Lookup results or error
+ */
+function verifyAndLookup(email, code) {
+  if (!email || !code) {
+    return { verified: false, message: '請輸入 Email 和驗證碼' };
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = code.trim();
+
+  const cache = CacheService.getScriptCache();
+
+  // Rate limiting: max 5 attempts per email per 10 minutes
+  const attemptKey = 'lookup_attempts_' + cleanEmail;
+  const attempts = parseInt(cache.get(attemptKey) || '0');
+  if (attempts >= 5) {
+    return { verified: false, message: '嘗試次數過多，請 10 分鐘後再試' };
+  }
+
+  // Check code from cache
+  const storedCode = cache.get('lookup_code_' + cleanEmail);
+
+  if (!storedCode) {
+    cache.put(attemptKey, String(attempts + 1), 600);
+    return { verified: false, message: '驗證碼已過期，請重新發送' };
+  }
+
+  if (storedCode !== cleanCode) {
+    cache.put(attemptKey, String(attempts + 1), 600);
+    return { verified: false, message: '驗證碼不正確' };
+  }
+
+  // Code is valid — remove it (one-time use)
+  cache.remove('lookup_code_' + cleanEmail);
+
+  // Find customer
+  const allCustomers = getSheetData('Customers').filter(c => !c.is_deleted);
+  const customer = allCustomers.find(c => c.email && c.email.toLowerCase() === cleanEmail);
+  if (!customer) {
+    return { verified: true, found: false, message: '查無客戶紀錄' };
+  }
+
+  // Gather data
+  const allRentals = getSheetData('Rentals').filter(r => !r.is_deleted);
+  const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
+  const types = getSheetData('Equipment_Types');
+  const bookings = getSheetData('Venue_Bookings').filter(b => !b.is_deleted);
+  const venues = getSheetData('Venues');
+
+  const typeMap = {};
+  types.forEach(t => { typeMap[t.type_id] = t; });
+  const venueMap = {};
+  venues.forEach(v => { venueMap[v.venue_id] = v; });
+
+  const statusLabels = {
+    draft: '草稿', reserved: '已預約', active: '進行中',
+    overdue: '逾期', returned: '已歸還', completed: '已完成', cancelled: '已取消'
+  };
+
+  const custRentals = allRentals
+    .filter(r => r.customer_id === customer.customer_id && r.status !== 'cancelled')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 20);
+
+  const custBookings = bookings
+    .filter(b => b.customer_id === customer.customer_id && b.status !== 'cancelled')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 20);
+
+  return {
+    verified: true,
+    found: true,
+    customer_name: customer.name,
+    rentals: custRentals.map(r => {
+      const items = rentalItems.filter(ri => ri.rental_id === r.rental_id);
+      return {
+        rental_id: r.rental_id,
+        status: r.status,
+        status_label: statusLabels[r.status] || r.status,
+        rental_start: r.rental_start || r.start_date,
+        rental_end: r.rental_end || r.end_date,
+        total_amount: parseFloat(r.total_amount || 0),
+        paid_amount: parseFloat(r.paid_amount || 0),
+        items: items.map(i => ({
+          type_name: (typeMap[i.type_id] || {}).type_name || i.type_id,
+          line_total: parseFloat(i.line_total || 0)
+        }))
+      };
+    }),
+    bookings: custBookings.map(b => {
+      const venue = venueMap[b.venue_id] || {};
+      return {
+        booking_id: b.booking_id,
+        venue_name: venue.name || '',
+        status: b.status,
+        status_label: statusLabels[b.status] || b.status,
+        booking_start: b.booking_start,
+        booking_end: b.booking_end,
+        total_amount: parseFloat(b.total_amount || 0)
+      };
+    })
+  };
+}

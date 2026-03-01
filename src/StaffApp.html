@@ -709,13 +709,22 @@
           <span>報表</span>
         </div>
       </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">系統</div>
+        <div class="nav-item" data-page="staff">
+          <div class="nav-icon">👤</div>
+          <span>使用者管理</span>
+        </div>
+      </div>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
       <div class="header">
         <h1>映奧創意工作室 - 器材管理租借系統</h1>
-        <div id="user-info" style="text-align: right;">
+        <div id="user-info" style="text-align: right; display:flex; align-items:center; gap:12px;">
+          <button class="btn btn-sm btn-outline" onclick="openCustomerApp()" title="開啟客戶前台" style="white-space:nowrap;">🌐 客戶前台</button>
           <div id="current-time" style="font-size: 12px; color: var(--text-secondary);"></div>
         </div>
       </div>
@@ -1271,6 +1280,103 @@
             </div>
           </div>
         </div>
+
+        <!-- Staff Management Page -->
+        <div id="staff" class="page-content">
+          <div class="section-title">使用者管理</div>
+
+          <!-- Current User Info -->
+          <div class="card mb-3" id="current-user-card">
+            <div class="card-header">目前登入者</div>
+            <div id="current-user-info" style="display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+              <div>載入中...</div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div style="display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border-color); padding-bottom:0;">
+            <button class="btn btn-sm staff-tab active" data-tab="staff-list" onclick="switchStaffTab('staff-list')">員工列表</button>
+            <button class="btn btn-sm staff-tab" data-tab="role-permissions" onclick="switchStaffTab('role-permissions')">角色權限</button>
+            <button class="btn btn-sm staff-tab" data-tab="activity-log" onclick="switchStaffTab('activity-log')">活動紀錄</button>
+          </div>
+
+          <!-- Staff List Tab -->
+          <div id="staff-tab-staff-list" class="staff-tab-content">
+            <div class="card">
+              <div class="table-toolbar">
+                <input type="text" class="form-input" id="staff-search" placeholder="搜尋員工..." style="width:240px;">
+                <button class="btn btn-primary" onclick="openCreateStaffModal()">+ 新增員工</button>
+              </div>
+              <table class="table" id="staff-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>姓名</th>
+                    <th>Email</th>
+                    <th>電話</th>
+                    <th>角色</th>
+                    <th>折扣核准</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Role Permissions Tab -->
+          <div id="staff-tab-role-permissions" class="staff-tab-content" style="display:none;">
+            <div class="card">
+              <div class="card-header">角色權限對照表</div>
+              <table class="table" id="permissions-table">
+                <thead>
+                  <tr>
+                    <th>權限</th>
+                    <th style="text-align:center;">管理員<br><small>admin</small></th>
+                    <th style="text-align:center;">經理<br><small>manager</small></th>
+                    <th style="text-align:center;">員工<br><small>staff</small></th>
+                    <th style="text-align:center;">僅檢視<br><small>viewer</small></th>
+                  </tr>
+                </thead>
+                <tbody id="permissions-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Activity Log Tab -->
+          <div id="staff-tab-activity-log" class="staff-tab-content" style="display:none;">
+            <div class="card">
+              <div class="table-toolbar">
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <select id="activity-filter-action" class="form-select" style="width:160px; font-size:13px;">
+                    <option value="all">全部動作</option>
+                    <option value="create">新增</option>
+                    <option value="update">編輯</option>
+                    <option value="delete">刪除</option>
+                    <option value="login">登入</option>
+                    <option value="email">寄信</option>
+                  </select>
+                  <input type="text" class="form-input" id="activity-search" placeholder="搜尋..." style="width:200px;">
+                </div>
+                <button class="btn btn-outline" onclick="loadActivityLogs()">重新整理</button>
+              </div>
+              <table class="table" id="activity-table">
+                <thead>
+                  <tr>
+                    <th>時間</th>
+                    <th>操作者</th>
+                    <th>動作</th>
+                    <th>對象類型</th>
+                    <th>對象 ID</th>
+                    <th>描述</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1287,6 +1393,19 @@
     let locations = [];
     let venues = [];
     let venueBookings = [];
+
+    // ==================== CUSTOMER APP LINK ====================
+
+    async function openCustomerApp() {
+      try {
+        const url = await API.getCustomerAppUrl();
+        window.open(url, '_blank');
+      } catch (e) {
+        // Fallback: construct URL manually
+        const currentUrl = window.location.href.split('?')[0];
+        window.open(currentUrl + '?mode=customer', '_blank');
+      }
+    }
 
     // ==================== INITIALIZATION ====================
 
@@ -1360,6 +1479,9 @@
           break;
         case 'payments':
           loadPaymentsPage();
+          break;
+        case 'staff':
+          loadStaffPage();
           break;
       }
     }
@@ -1508,10 +1630,10 @@
       equipmentTypes.filter(t => !t.is_deleted).forEach(type => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${type.type_name || '-'}</td>
-          <td>${type.category || '-'}</td>
+          <td>${escapeHtml(type.type_name || '-')}</td>
+          <td>${escapeHtml(type.category || '-')}</td>
           <td>${formatCurrency(type.daily_rate || 0)}</td>
-          <td>${type.description || '-'}</td>
+          <td>${escapeHtml(type.description || '-')}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" data-id="${type.type_id}" onclick="openEditTypeModal(this)">編輯</button>
             <button class="btn btn-sm btn-danger" data-id="${type.type_id}" onclick="deleteEquipmentType(this)">刪除</button>
@@ -1529,9 +1651,9 @@
         const type = equipmentTypes.find(t => t.type_id === unit.type_id);
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${unit.internal_code || '-'}</td>
-          <td>${type ? type.type_name : '-'}</td>
-          <td>${unit.serial_number || '-'}</td>
+          <td>${escapeHtml(unit.internal_code || '-')}</td>
+          <td>${type ? escapeHtml(type.type_name) : '-'}</td>
+          <td>${escapeHtml(unit.serial_number || '-')}</td>
           <td><span class="badge badge-info">${unit.status || 'unknown'}</span></td>
           <td>${unit.location_id || '-'}</td>
           <td class="table-actions">
@@ -1655,7 +1777,7 @@
         <form id="edit-type-form">
           <div class="form-group">
             <label class="form-label required">類型名稱</label>
-            <input type="text" name="type_name" class="form-input" value="${type.type_name || type.name || ''}" required>
+            <input type="text" name="type_name" class="form-input" value="${escapeHtml(type.type_name || type.name || '')}" required>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1681,17 +1803,17 @@
             </div>
             <div class="form-group">
               <label class="form-label">子分類</label>
-              <input type="text" name="sub_category" class="form-input" value="${type.sub_category || ''}">
+              <input type="text" name="sub_category" class="form-input" value="${escapeHtml(type.sub_category || '')}">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">品牌</label>
-              <input type="text" name="brand" class="form-input" value="${type.brand || ''}">
+              <input type="text" name="brand" class="form-input" value="${escapeHtml(type.brand || '')}">
             </div>
             <div class="form-group">
               <label class="form-label">型號</label>
-              <input type="text" name="model" class="form-input" value="${type.model || ''}">
+              <input type="text" name="model" class="form-input" value="${escapeHtml(type.model || '')}">
             </div>
           </div>
           <div class="form-row">
@@ -1719,7 +1841,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">描述</label>
-            <textarea name="description" class="form-textarea">${type.description || ''}</textarea>
+            <textarea name="description" class="form-textarea">${escapeHtml(type.description || '')}</textarea>
           </div>
         </form>
       `, `
@@ -1770,7 +1892,7 @@
               <label class="form-label required">器材類型</label>
               <select name="type_id" class="form-select" required>
                 <option value="">選擇類型...</option>
-                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}">${t.type_name}</option>`).join('')}
+                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}">${escapeHtml(t.type_name)}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
@@ -1859,7 +1981,7 @@
             <div class="form-group">
               <label class="form-label required">器材類型</label>
               <select name="type_id" class="form-select" required>
-                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}" ${unit.type_id === t.type_id ? 'selected' : ''}>${t.type_name}</option>`).join('')}
+                ${equipmentTypes.filter(t => !t.is_deleted).map(t => `<option value="${t.type_id}" ${unit.type_id === t.type_id ? 'selected' : ''}>${escapeHtml(t.type_name)}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
@@ -1879,7 +2001,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${unit.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(unit.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -1936,7 +2058,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${rental.rental_id || '-'}</td>
-          <td>${customer ? (customer.name || customer.company_name) : '-'}</td>
+          <td>${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</td>
           <td>${formatDate(rental.rental_start || rental.start_date)}</td>
           <td>${formatDate(rental.rental_end || rental.end_date)}</td>
           <td>${formatCurrency(rental.total_amount || 0)}</td>
@@ -1960,7 +2082,7 @@
             <div style="display:flex; gap:8px; align-items:center;">
               <select name="customer_id" id="rental-customer-select" class="form-select" required style="flex:1;">
                 <option value="">選擇客戶...</option>
-                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`).join('')}
               </select>
               <button type="button" class="btn btn-sm btn-outline" onclick="toggleInlineCustomerForm()" title="新增客戶">+ 新增</button>
             </div>
@@ -2077,7 +2199,7 @@
         const select = document.getElementById('rental-customer-select');
         select.innerHTML = '<option value="">選擇客戶...</option>' +
           customers.filter(c => !c.is_deleted).map(c =>
-            `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`
+            `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`
           ).join('');
         // Select the newly created customer (last CU-xxx ID)
         const newId = newCustomer.customer_id || customers[customers.length - 1]?.customer_id;
@@ -2124,12 +2246,12 @@
       const modal = new Modal('租借單詳情', `
         <div style="line-height: 1.8;">
           <p><strong>租借ID:</strong> ${rental.rental_id}</p>
-          <p><strong>客戶:</strong> ${customer ? (customer.name || customer.company_name) : '-'}</p>
+          <p><strong>客戶:</strong> ${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</p>
           <p><strong>期間:</strong> ${formatDate(startDate)} 至 ${formatDate(endDate)} (${days}天)</p>
           <p><strong>總金額:</strong> ${formatCurrency(rental.total_amount || 0)}</p>
           <p><strong>已付款:</strong> ${formatCurrency(rental.paid_amount || 0)}</p>
           <p><strong>狀態:</strong> ${rental.status}</p>
-          <p><strong>備註:</strong> ${rental.notes || '-'}</p>
+          <p><strong>備註:</strong> ${escapeHtml(rental.notes || '-')}</p>
         </div>
       `, `
         <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
@@ -2150,7 +2272,7 @@
           <div class="form-group">
             <label class="form-label required">客戶</label>
             <select name="customer_id" class="form-select" required>
-              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}" ${rental.customer_id === c.customer_id ? 'selected' : ''}>${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}" ${rental.customer_id === c.customer_id ? 'selected' : ''}>${escapeHtml(c.name || c.company_name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`).join('')}
             </select>
           </div>
           <div class="form-row">
@@ -2186,7 +2308,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${rental.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(rental.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -2272,7 +2394,7 @@
         const isActive = venue.active !== false && venue.active !== 'false';
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${venue.name || '-'}</td>
+          <td>${escapeHtml(venue.name || '-')}</td>
           <td>${VENUE_TYPE_LABELS[venue.venue_type] || venue.venue_type || '-'}</td>
           <td>${venue.max_capacity || '-'} 人</td>
           <td>${formatCurrency(venue.hourly_rate || 0)}</td>
@@ -2311,8 +2433,8 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${booking.booking_id || '-'}</td>
-          <td>${venue ? venue.name : '-'}</td>
-          <td>${customer ? (customer.name || customer.company_name) : '-'}</td>
+          <td>${venue ? escapeHtml(venue.name) : '-'}</td>
+          <td>${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</td>
           <td>${startStr} ~ ${endStr}</td>
           <td>${rateLabels[booking.rate_type] || booking.rate_type || '-'}</td>
           <td>${formatCurrency(booking.total_amount || 0)}</td>
@@ -2472,7 +2594,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">場地名稱</label>
-              <input type="text" name="name" class="form-input" value="${venue.name || ''}" required>
+              <input type="text" name="name" class="form-input" value="${escapeHtml(venue.name || '')}" required>
             </div>
             <div class="form-group">
               <label class="form-label required">場地類型</label>
@@ -2489,11 +2611,11 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">地址</label>
-              <input type="text" name="address" class="form-input" value="${venue.address || ''}" required>
+              <input type="text" name="address" class="form-input" value="${escapeHtml(venue.address || '')}" required>
             </div>
             <div class="form-group">
               <label class="form-label">樓層</label>
-              <input type="text" name="floor" class="form-input" value="${venue.floor || ''}">
+              <input type="text" name="floor" class="form-input" value="${escapeHtml(venue.floor || '')}">
             </div>
           </div>
           <div class="form-row">
@@ -2542,7 +2664,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">設備（逗號分隔）</label>
-            <input type="text" name="amenities" class="form-input" value="${venue.amenities || ''}">
+            <input type="text" name="amenities" class="form-input" value="${escapeHtml(venue.amenities || '')}">
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -2567,11 +2689,11 @@
           </div>
           <div class="form-group">
             <label class="form-label">使用規範</label>
-            <textarea name="rules" class="form-textarea">${venue.rules || ''}</textarea>
+            <textarea name="rules" class="form-textarea">${escapeHtml(venue.rules || '')}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">場地描述</label>
-            <textarea name="description" class="form-textarea">${venue.description || ''}</textarea>
+            <textarea name="description" class="form-textarea">${escapeHtml(venue.description || '')}</textarea>
           </div>
         </form>
       `, `
@@ -2617,14 +2739,14 @@
               <label class="form-label required">場地</label>
               <select name="venue_id" class="form-select" required id="booking-venue-select">
                 <option value="">選擇場地...</option>
-                ${activeVenues.map(v => `<option value="${v.venue_id}" data-hourly="${v.hourly_rate || 0}" data-halfday="${v.half_day_rate || ''}" data-daily="${v.daily_rate || ''}">${v.name} (${VENUE_TYPE_LABELS[v.venue_type] || v.venue_type})</option>`).join('')}
+                ${activeVenues.map(v => `<option value="${v.venue_id}" data-hourly="${v.hourly_rate || 0}" data-halfday="${v.half_day_rate || ''}" data-daily="${v.daily_rate || ''}">${escapeHtml(v.name)} (${VENUE_TYPE_LABELS[v.venue_type] || v.venue_type})</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
               <label class="form-label required">客戶</label>
               <select name="customer_id" class="form-select" required>
                 <option value="">選擇客戶...</option>
-                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${escapeHtml(c.name || c.company_name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -2746,8 +2868,8 @@
       const modal = new Modal('場地預約詳情', `
         <div style="line-height: 1.8;">
           <p><strong>預約ID:</strong> ${booking.booking_id}</p>
-          <p><strong>場地:</strong> ${venue ? venue.name : '-'}</p>
-          <p><strong>客戶:</strong> ${customer ? (customer.name || customer.company_name) : '-'}</p>
+          <p><strong>場地:</strong> ${venue ? escapeHtml(venue.name) : '-'}</p>
+          <p><strong>客戶:</strong> ${customer ? escapeHtml(customer.name || customer.company_name) : '-'}</p>
           <p><strong>時段:</strong> ${startStr} ~ ${endStr}</p>
           <p><strong>計費:</strong> ${rateLabels[booking.rate_type] || '-'} ${formatCurrency(booking.unit_rate || 0)} x ${booking.rate_quantity || 1}</p>
           <p><strong>小計:</strong> ${formatCurrency(booking.subtotal || 0)}</p>
@@ -2757,10 +2879,10 @@
           <p><strong>總金額:</strong> ${formatCurrency(booking.total_amount || 0)}</p>
           <p><strong>押金:</strong> ${formatCurrency(booking.deposit_amount || 0)} (${booking.deposit_status || '-'})</p>
           <p><strong>狀態:</strong> <span class="badge badge-info">${BOOKING_STATUS_LABELS[booking.status] || booking.status}</span></p>
-          ${booking.use_purpose ? `<p><strong>用途:</strong> ${booking.use_purpose}</p>` : ''}
+          ${booking.use_purpose ? `<p><strong>用途:</strong> ${escapeHtml(booking.use_purpose)}</p>` : ''}
           ${booking.rental_id ? `<p><strong>關聯租借單:</strong> ${booking.rental_id}</p>` : ''}
-          ${booking.special_requirements ? `<p><strong>特殊需求:</strong> ${booking.special_requirements}</p>` : ''}
-          ${booking.notes ? `<p><strong>備註:</strong> ${booking.notes}</p>` : ''}
+          ${booking.special_requirements ? `<p><strong>特殊需求:</strong> ${escapeHtml(booking.special_requirements)}</p>` : ''}
+          ${booking.notes ? `<p><strong>備註:</strong> ${escapeHtml(booking.notes)}</p>` : ''}
         </div>
       `, `
         <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
@@ -2822,11 +2944,11 @@
           </div>
           <div class="form-group">
             <label class="form-label">特殊需求</label>
-            <textarea name="special_requirements" class="form-textarea">${booking.special_requirements || ''}</textarea>
+            <textarea name="special_requirements" class="form-textarea">${escapeHtml(booking.special_requirements || '')}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${booking.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(booking.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -2882,10 +3004,10 @@
         const isBlacklisted = customer.blacklisted === true || customer.blacklisted === 'true';
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${customer.name || customer.company_name || '-'}</td>
-          <td>${customer.company_name || '-'}</td>
-          <td>${customer.phone || '-'}</td>
-          <td>${customer.email || '-'}</td>
+          <td>${escapeHtml(customer.name || customer.company_name || '-')}</td>
+          <td>${escapeHtml(customer.company_name || '-')}</td>
+          <td>${escapeHtml(customer.phone || '-')}</td>
+          <td>${escapeHtml(customer.email || '-')}</td>
           <td>${isBlacklisted ? '<span class="badge badge-danger">黑名單</span>' : '<span class="badge badge-success">正常</span>'}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-outline" data-id="${customer.customer_id}" onclick="openEditCustomerModal(this)">編輯</button>
@@ -3012,27 +3134,27 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">租借人姓名</label>
-              <input type="text" name="name" class="form-input" value="${customer.name || ''}" required placeholder="例如：王小明">
+              <input type="text" name="name" class="form-input" value="${escapeHtml(customer.name || '')}" required placeholder="例如：王小明">
             </div>
             <div class="form-group">
               <label class="form-label">公司名稱</label>
-              <input type="text" name="company_name" class="form-input" value="${customer.company_name || ''}" placeholder="選填">
+              <input type="text" name="company_name" class="form-input" value="${escapeHtml(customer.company_name || '')}" placeholder="選填">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">電話</label>
-              <input type="tel" name="phone" class="form-input" value="${customer.phone || ''}" required placeholder="例如：0912-345-678">
+              <input type="tel" name="phone" class="form-input" value="${escapeHtml(customer.phone || '')}" required placeholder="例如：0912-345-678">
             </div>
             <div class="form-group">
               <label class="form-label">電郵</label>
-              <input type="email" name="email" class="form-input" value="${customer.email || ''}" placeholder="例如：name@example.com">
+              <input type="email" name="email" class="form-input" value="${escapeHtml(customer.email || '')}" placeholder="例如：name@example.com">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">身分證/統編</label>
-              <input type="text" name="id_number" class="form-input" value="${customer.id_number || ''}" placeholder="例如：A123456789 或 12345678">
+              <input type="text" name="id_number" class="form-input" value="${escapeHtml(customer.id_number || '')}" placeholder="例如：A123456789 或 12345678">
             </div>
             <div class="form-group">
               <label class="form-label">證件驗證</label>
@@ -3062,11 +3184,11 @@
           </div>
           <div class="form-group" id="blacklist-reason-group" style="${isBlacklisted ? '' : 'display:none'}">
             <label class="form-label">黑名單原因</label>
-            <input type="text" name="blacklist_reason" class="form-input" value="${customer.blacklist_reason || ''}">
+            <input type="text" name="blacklist_reason" class="form-input" value="${escapeHtml(customer.blacklist_reason || '')}">
           </div>
           <div class="form-group">
             <label class="form-label">備註</label>
-            <textarea name="notes" class="form-textarea">${customer.notes || ''}</textarea>
+            <textarea name="notes" class="form-textarea">${escapeHtml(customer.notes || '')}</textarea>
           </div>
         </form>
       `, `
@@ -3134,7 +3256,7 @@
       locations.filter(l => !l.is_deleted).forEach(location => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${location.location_name || '-'}</td>
+          <td>${escapeHtml(location.location_name || '-')}</td>
           <td>${location.capacity || '-'}</td>
           <td class="table-actions">
             <button class="btn btn-sm btn-danger" data-id="${location.location_id}" onclick="deleteLocation(this)">刪除</button>
@@ -3154,7 +3276,7 @@
           <td>${formatDate(log.logged_at)}</td>
           <td>${log.unit_id || '-'}</td>
           <td>${log.change_type || '-'}</td>
-          <td>${log.notes || '-'}</td>
+          <td>${escapeHtml(log.notes || '-')}</td>
         `;
         tbody.appendChild(row);
       });
@@ -3309,8 +3431,8 @@
           <td>${payment.rental_id || '-'}</td>
           <td>${formatCurrency(payment.amount || 0)}</td>
           <td>${formatDate(payment.payment_date)}</td>
-          <td>${payment.payment_method || '-'}</td>
-          <td>${payment.notes || '-'}</td>
+          <td>${escapeHtml(payment.payment_method || '-')}</td>
+          <td>${escapeHtml(payment.notes || '-')}</td>
         `;
         tbody.appendChild(row);
       });
@@ -3447,6 +3569,392 @@
       }
     }
 
+    // ==================== STAFF MANAGEMENT ====================
+
+    let staffList = [];
+    let rolePermData = null;
+    let activityLogs = [];
+
+    async function loadStaffPage() {
+      try {
+        // Load staff list and current user in parallel
+        const [staffData, userInfo, permData] = await Promise.all([
+          API.getStaff(),
+          API.getCurrentUserInfo(),
+          API.getRolePermissions()
+        ]);
+
+        staffList = (staffData || []).filter(s => !s.is_deleted);
+        rolePermData = permData;
+
+        // Render current user card
+        renderCurrentUser(userInfo);
+
+        // Render staff table
+        renderStaffTable();
+
+        // Render permission matrix
+        renderPermissionMatrix();
+
+        // Setup search
+        const searchInput = document.getElementById('staff-search');
+        searchInput.oninput = debounce(() => renderStaffTable(searchInput.value), 300);
+      } catch (e) {
+        showError('載入員工資料失敗: ' + e.message);
+      }
+    }
+
+    function renderCurrentUser(userInfo) {
+      const el = document.getElementById('current-user-info');
+      if (!userInfo || !userInfo.authenticated) {
+        el.innerHTML = '<div style="color:var(--danger-color);">未登入或無員工資料</div>';
+        return;
+      }
+
+      const roleBadges = {
+        admin: 'badge-danger',
+        manager: 'badge-warning',
+        staff: 'badge-info',
+        viewer: 'badge-secondary'
+      };
+      const roleLabels = { admin: '管理員', manager: '經理', staff: '員工', viewer: '僅檢視' };
+
+      el.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:48px; height:48px; border-radius:50%; background:var(--primary-color); color:white; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700;">
+            ${escapeHtml((userInfo.name || '?')[0])}
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:16px;">${escapeHtml(userInfo.name || '-')}</div>
+            <div style="font-size:13px; color:var(--text-secondary);">${escapeHtml(userInfo.email || '-')}</div>
+          </div>
+        </div>
+        <div>
+          <span class="badge ${roleBadges[userInfo.role] || 'badge-info'}">${roleLabels[userInfo.role] || userInfo.role}</span>
+          ${userInfo.can_approve_discount ? '<span class="badge badge-success" style="margin-left:4px;">可核准折扣</span>' : ''}
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary);">
+          ID: ${userInfo.staff_id || '-'}
+        </div>
+      `;
+    }
+
+    function renderStaffTable(searchText) {
+      const tbody = document.querySelector('#staff-table tbody');
+      clearElement(tbody);
+
+      const roleLabels = { admin: '管理員', manager: '經理', staff: '員工', viewer: '僅檢視' };
+      const roleBadges = { admin: 'badge-danger', manager: 'badge-warning', staff: 'badge-info', viewer: 'badge-secondary' };
+
+      let filtered = staffList;
+      if (searchText) {
+        const q = searchText.toLowerCase();
+        filtered = filtered.filter(s =>
+          (s.name || '').toLowerCase().includes(q) ||
+          (s.email || '').toLowerCase().includes(q) ||
+          (s.phone || '').toLowerCase().includes(q) ||
+          (s.staff_id || '').toLowerCase().includes(q)
+        );
+      }
+
+      if (filtered.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="8" style="text-align:center; color:var(--text-secondary); padding:24px;">沒有符合條件的員工</td>';
+        tbody.appendChild(row);
+        return;
+      }
+
+      filtered.forEach(staff => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${staff.staff_id || '-'}</td>
+          <td><strong>${escapeHtml(staff.name || '-')}</strong></td>
+          <td>${escapeHtml(staff.email || '-')}</td>
+          <td>${escapeHtml(staff.phone || '-')}</td>
+          <td><span class="badge ${roleBadges[staff.role] || 'badge-info'}">${roleLabels[staff.role] || staff.role || '-'}</span></td>
+          <td>${staff.can_approve_discount === true || staff.can_approve_discount === 'true' ? '<span class="badge badge-success">是</span>' : '<span class="badge badge-secondary">否</span>'}</td>
+          <td>${staff.active === false || staff.active === 'false' ? '<span class="badge badge-danger">停用</span>' : '<span class="badge badge-success">啟用</span>'}</td>
+          <td class="table-actions">
+            <button class="btn btn-sm btn-outline" onclick="openEditStaffModal('${staff.staff_id}')">編輯</button>
+            <button class="btn btn-sm btn-danger" onclick="confirmDeleteStaff('${staff.staff_id}', '${escapeHtml(staff.name)}')">停用</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openCreateStaffModal() {
+      const modal = new Modal('新增員工', `
+        <form id="staff-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">姓名</label>
+              <input type="text" name="name" class="form-input" required placeholder="例如：王小明">
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Email</label>
+              <input type="email" name="email" class="form-input" required placeholder="Google Workspace 帳號">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">電話</label>
+              <input type="tel" name="phone" class="form-input" placeholder="例如：0912-345-678">
+            </div>
+            <div class="form-group">
+              <label class="form-label required">角色</label>
+              <select name="role" class="form-select" required>
+                <option value="staff">員工 (staff)</option>
+                <option value="viewer">僅檢視 (viewer)</option>
+                <option value="manager">經理 (manager)</option>
+                <option value="admin">管理員 (admin)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">可核准折扣</label>
+              <select name="can_approve_discount" class="form-select">
+                <option value="false">否</option>
+                <option value="true">是</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">狀態</label>
+              <select name="active" class="form-select">
+                <option value="true">啟用</option>
+                <option value="false">停用</option>
+              </select>
+            </div>
+          </div>
+          <div style="text-align:right; margin-top:16px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn-primary">新增</button>
+          </div>
+        </form>
+      `);
+
+      document.getElementById('staff-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+          name: form.name.value.trim(),
+          email: form.email.value.trim(),
+          phone: form.phone.value.trim(),
+          role: form.role.value,
+          can_approve_discount: form.can_approve_discount.value === 'true',
+          active: form.active.value !== 'false'
+        };
+
+        try {
+          await API.createStaff(data);
+          await API.logActivity('create', 'staff', '', '新增員工: ' + data.name);
+          showSuccess('員工已新增');
+          closeModal();
+          loadStaffPage();
+        } catch (e) {
+          showError('新增失敗: ' + e.message);
+        }
+      };
+    }
+
+    function openEditStaffModal(staffId) {
+      const staff = staffList.find(s => s.staff_id === staffId);
+      if (!staff) return showError('找不到員工');
+
+      const modal = new Modal('編輯員工 - ' + escapeHtml(staff.name), `
+        <form id="edit-staff-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">員工 ID</label>
+              <input type="text" class="form-input" value="${staff.staff_id}" disabled>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">姓名</label>
+              <input type="text" name="name" class="form-input" required value="${escapeHtml(staff.name || '')}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">Email</label>
+              <input type="email" name="email" class="form-input" required value="${escapeHtml(staff.email || '')}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">電話</label>
+              <input type="tel" name="phone" class="form-input" value="${escapeHtml(staff.phone || '')}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">角色</label>
+              <select name="role" class="form-select" required>
+                <option value="staff" ${staff.role === 'staff' ? 'selected' : ''}>員工 (staff)</option>
+                <option value="viewer" ${staff.role === 'viewer' ? 'selected' : ''}>僅檢視 (viewer)</option>
+                <option value="manager" ${staff.role === 'manager' ? 'selected' : ''}>經理 (manager)</option>
+                <option value="admin" ${staff.role === 'admin' ? 'selected' : ''}>管理員 (admin)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">可核准折扣</label>
+              <select name="can_approve_discount" class="form-select">
+                <option value="false" ${!(staff.can_approve_discount === true || staff.can_approve_discount === 'true') ? 'selected' : ''}>否</option>
+                <option value="true" ${(staff.can_approve_discount === true || staff.can_approve_discount === 'true') ? 'selected' : ''}>是</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">狀態</label>
+            <select name="active" class="form-select">
+              <option value="true" ${staff.active !== false && staff.active !== 'false' ? 'selected' : ''}>啟用</option>
+              <option value="false" ${staff.active === false || staff.active === 'false' ? 'selected' : ''}>停用</option>
+            </select>
+          </div>
+          <div style="text-align:right; margin-top:16px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn-primary">儲存</button>
+          </div>
+        </form>
+      `);
+
+      document.getElementById('edit-staff-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const updates = {
+          name: form.name.value.trim(),
+          email: form.email.value.trim(),
+          phone: form.phone.value.trim(),
+          role: form.role.value,
+          can_approve_discount: form.can_approve_discount.value === 'true',
+          active: form.active.value !== 'false'
+        };
+
+        try {
+          await API.updateStaff(staffId, updates);
+          await API.logActivity('update', 'staff', staffId, '編輯員工: ' + updates.name);
+          showSuccess('員工資料已更新');
+          closeModal();
+          loadStaffPage();
+        } catch (e) {
+          showError('更新失敗: ' + e.message);
+        }
+      };
+    }
+
+    async function confirmDeleteStaff(staffId, staffName) {
+      if (!confirm(`確定要停用員工「${staffName}」？\n停用後該員工將無法登入系統。`)) return;
+
+      try {
+        await API.deleteStaff(staffId);
+        await API.logActivity('delete', 'staff', staffId, '停用員工: ' + staffName);
+        showSuccess(`員工「${staffName}」已停用`);
+        loadStaffPage();
+      } catch (e) {
+        showError('停用失敗: ' + e.message);
+      }
+    }
+
+    function renderPermissionMatrix() {
+      const tbody = document.getElementById('permissions-tbody');
+      if (!tbody || !rolePermData) return;
+      clearElement(tbody);
+
+      const allPerms = Object.keys(rolePermData.permissionLabels);
+      const roles = ['admin', 'manager', 'staff', 'viewer'];
+
+      allPerms.forEach(perm => {
+        const row = document.createElement('tr');
+        const label = rolePermData.permissionLabels[perm] || perm;
+
+        let cells = `<td><strong>${label}</strong><br><small style="color:var(--text-secondary);">${perm}</small></td>`;
+        roles.forEach(role => {
+          const perms = rolePermData.roles[role] || [];
+          const has = perms.includes('*') || perms.includes(perm);
+          cells += `<td style="text-align:center;">${has ? '<span style="color:var(--success-color); font-size:18px;">&#10003;</span>' : '<span style="color:#ccc;">—</span>'}</td>`;
+        });
+
+        row.innerHTML = cells;
+        tbody.appendChild(row);
+      });
+    }
+
+    function switchStaffTab(tabName) {
+      // Toggle tab buttons
+      document.querySelectorAll('.staff-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+        btn.style.background = btn.dataset.tab === tabName ? 'var(--primary-color)' : '';
+        btn.style.color = btn.dataset.tab === tabName ? 'white' : '';
+      });
+
+      // Toggle tab content
+      document.querySelectorAll('.staff-tab-content').forEach(content => {
+        content.style.display = 'none';
+      });
+      const target = document.getElementById('staff-tab-' + tabName);
+      if (target) target.style.display = 'block';
+
+      // Load activity logs lazily
+      if (tabName === 'activity-log' && activityLogs.length === 0) {
+        loadActivityLogs();
+      }
+    }
+
+    async function loadActivityLogs() {
+      try {
+        activityLogs = await API.getRecentActivityLogs(100);
+        renderActivityLogs();
+      } catch (e) {
+        showError('載入活動紀錄失敗: ' + e.message);
+      }
+    }
+
+    function renderActivityLogs() {
+      const tbody = document.querySelector('#activity-table tbody');
+      clearElement(tbody);
+
+      const actionFilter = document.getElementById('activity-filter-action').value;
+      const searchText = (document.getElementById('activity-search').value || '').toLowerCase();
+
+      let filtered = activityLogs;
+      if (actionFilter !== 'all') {
+        filtered = filtered.filter(l => l.action === actionFilter);
+      }
+      if (searchText) {
+        filtered = filtered.filter(l =>
+          (l.staff_name || '').toLowerCase().includes(searchText) ||
+          (l.description || '').toLowerCase().includes(searchText) ||
+          (l.target_id || '').toLowerCase().includes(searchText)
+        );
+      }
+
+      const actionLabels = { create: '新增', update: '編輯', delete: '刪除', login: '登入', email: '寄信', advance_status: '推進狀態' };
+      const actionBadges = { create: 'badge-success', update: 'badge-info', delete: 'badge-danger', login: 'badge-primary', email: 'badge-warning' };
+
+      if (filtered.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="6" style="text-align:center; color:var(--text-secondary); padding:24px;">暫無活動紀錄</td>';
+        tbody.appendChild(row);
+        return;
+      }
+
+      filtered.forEach(log => {
+        const row = document.createElement('tr');
+        const timeStr = log.created_at ? new Date(log.created_at).toLocaleString('zh-TW') : '-';
+        row.innerHTML = `
+          <td style="font-size:12px; white-space:nowrap;">${timeStr}</td>
+          <td><strong>${escapeHtml(log.staff_name || log.staff_id || '-')}</strong></td>
+          <td><span class="badge ${actionBadges[log.action] || 'badge-info'}">${actionLabels[log.action] || log.action}</span></td>
+          <td>${log.target_type || '-'}</td>
+          <td style="font-size:12px;">${log.target_id || '-'}</td>
+          <td style="font-size:12px;">${escapeHtml(log.description || '-')}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      // Wire up filters
+      document.getElementById('activity-filter-action').onchange = renderActivityLogs;
+      document.getElementById('activity-search').oninput = debounce(renderActivityLogs, 300);
+    }
+
     // ==================== SCHEDULE / CALENDAR ====================
 
     let calCurrentDate = new Date();
@@ -3512,8 +4020,8 @@
             ? `cal-event rental ${ev.status === 'active' ? 'active' : ev.status === 'overdue' ? 'overdue' : ''}`
             : 'cal-event booking';
           const label = ev.type === 'rental'
-            ? `${ev.customer_name} (${ev.item_count}件)`
-            : `${ev.venue_name} - ${ev.customer_name}`;
+            ? `${escapeHtml(ev.customer_name)} (${ev.item_count}件)`
+            : `${escapeHtml(ev.venue_name)} - ${escapeHtml(ev.customer_name)}`;
           return `<div class="${cls}" title="${label}">${label}</div>`;
         }).join('');
 
@@ -3595,7 +4103,7 @@
         const catSelect = document.getElementById('qr-filter-category');
         const cats = [...new Set(equipmentTypes.filter(t => !t.is_deleted).map(t => t.category || '其他'))];
         catSelect.innerHTML = '<option value="all">全部分類</option>' +
-          cats.map(c => `<option value="${c}">${c}</option>`).join('');
+          cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
       } catch (e) {
         showError('載入分類失敗');
       }
@@ -3627,10 +4135,10 @@
 
         grid.innerHTML = filtered.map(label => `
           <div class="qr-label">
-            <img src="${label.qr_url}" alt="QR ${label.internal_code}">
-            <div class="qr-label-code">${label.internal_code}</div>
-            <div class="qr-label-name">${label.type_name}</div>
-            <div class="qr-label-detail">${label.category || ''} | ${label.serial_number || '無序號'}</div>
+            <img src="${label.qr_url}" alt="QR ${escapeHtml(label.internal_code)}">
+            <div class="qr-label-code">${escapeHtml(label.internal_code)}</div>
+            <div class="qr-label-name">${escapeHtml(label.type_name)}</div>
+            <div class="qr-label-detail">${escapeHtml(label.category || '')} | ${escapeHtml(label.serial_number || '無序號')}</div>
             <div class="qr-label-detail">日租 ${formatCurrency(label.daily_rate)}</div>
           </div>
         `).join('');
@@ -3677,8 +4185,8 @@
         html += `
           <div><span class="label">單號：</span>${data.rental_id}</div>
           <div><span class="label">狀態：</span>${statusLabels[data.status] || data.status}</div>
-          <div><span class="label">客戶：</span>${data.customer.name}${data.customer.company ? ' (' + data.customer.company + ')' : ''}</div>
-          <div><span class="label">電話：</span>${data.customer.phone || '-'}</div>
+          <div><span class="label">客戶：</span>${escapeHtml(data.customer.name)}${data.customer.company ? ' (' + escapeHtml(data.customer.company) + ')' : ''}</div>
+          <div><span class="label">電話：</span>${escapeHtml(data.customer.phone || '-')}</div>
           <div><span class="label">租借期間：</span>${formatDateDisplay(data.rental_start)} ~ ${formatDateDisplay(data.rental_end)}</div>
           <div><span class="label">天數：</span>${data.days} 天</div>
         `;
@@ -3686,8 +4194,8 @@
         html += `
           <div><span class="label">單號：</span>${data.booking_id}</div>
           <div><span class="label">狀態：</span>${statusLabels[data.status] || data.status}</div>
-          <div><span class="label">場地：</span>${data.venue.name}</div>
-          <div><span class="label">客戶：</span>${data.customer.name}</div>
+          <div><span class="label">場地：</span>${escapeHtml(data.venue.name)}</div>
+          <div><span class="label">客戶：</span>${escapeHtml(data.customer.name)}</div>
           <div><span class="label">預約時段：</span>${data.booking_start} ~ ${data.booking_end}</div>
           <div><span class="label">計費：</span>${rateLabels[data.rate_type] || data.rate_type}</div>
         `;
@@ -3701,8 +4209,8 @@
           <tbody>`;
         data.items.forEach(item => {
           html += `<tr>
-            <td>${item.type_name}</td>
-            <td>${item.internal_code}</td>
+            <td>${escapeHtml(item.type_name)}</td>
+            <td>${escapeHtml(item.internal_code)}</td>
             <td>${formatCurrency(item.daily_rate)}</td>
             <td>${item.days}</td>
             <td class="text-right">${formatCurrency(item.line_total)}</td>
@@ -3718,7 +4226,7 @@
           <tbody>`;
         data.services.forEach(s => {
           html += `<tr>
-            <td>${s.description}</td>
+            <td>${escapeHtml(s.description)}</td>
             <td>${formatCurrency(s.unit_price)}</td>
             <td>${s.quantity}</td>
             <td class="text-right">${formatCurrency(s.line_total)}</td>
@@ -3742,13 +4250,13 @@
       if (data.payments && data.payments.length > 0) {
         html += '<div style="margin-top:16px; font-size:12px;"><strong>付款紀錄：</strong><br>';
         data.payments.forEach(p => {
-          html += `${p.date ? formatDateDisplay(p.date) : '-'} | ${p.method || '-'} | ${formatCurrency(p.amount)}<br>`;
+          html += `${p.date ? formatDateDisplay(p.date) : '-'} | ${escapeHtml(p.method || '-')} | ${formatCurrency(p.amount)}<br>`;
         });
         html += '</div>';
       }
 
       if (data.notes) {
-        html += `<div style="margin-top:12px; font-size:12px;"><strong>備註：</strong>${data.notes}</div>`;
+        html += `<div style="margin-top:12px; font-size:12px;"><strong>備註：</strong>${escapeHtml(data.notes)}</div>`;
       }
 
       html += `<div class="receipt-footer">
@@ -3844,7 +4352,7 @@
       const select = document.getElementById('pos-rental-customer-select');
       select.innerHTML = '<option value="">選擇客戶...</option>' +
         customers.filter(c => !c.is_deleted).map(c =>
-          `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''} - ${c.phone || ''}</option>`
+          `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''} - ${escapeHtml(c.phone || '')}</option>`
         ).join('');
     }
 
@@ -3853,7 +4361,7 @@
       const filterBar = document.getElementById('pos-category-filters');
       const categories = [...new Set(equipmentTypes.filter(t => !t.is_deleted).map(t => t.category || '其他'))];
       filterBar.innerHTML = '<div class="pos-filter-chip active" data-cat="all">全部</div>' +
-        categories.map(c => `<div class="pos-filter-chip" data-cat="${c}">${c}</div>`).join('');
+        categories.map(c => `<div class="pos-filter-chip" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</div>`).join('');
 
       filterBar.querySelectorAll('.pos-filter-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -3902,8 +4410,8 @@
         card.innerHTML = `
           <div class="pos-item-badge ${availableCount > 0 ? 'available' : 'rented'}">${availableCount}/${totalCount} 可用</div>
           <div class="pos-item-icon">📷</div>
-          <div class="pos-item-name">${type.type_name || type.type_id}</div>
-          <div class="pos-item-detail">${type.category || '一般'}</div>
+          <div class="pos-item-name">${escapeHtml(type.type_name || type.type_id)}</div>
+          <div class="pos-item-detail">${escapeHtml(type.category || '一般')}</div>
           <div class="pos-item-price">${formatCurrency(type.daily_rate || 0)}/天</div>
         `;
 
@@ -3959,8 +4467,8 @@
       container.innerHTML = posRentalSelectedItems.map((item, idx) => `
         <div class="pos-order-item">
           <div class="pos-order-item-info">
-            <div class="pos-order-item-name">${item.type_name}</div>
-            <div class="pos-order-item-sub">${item.internal_code}</div>
+            <div class="pos-order-item-name">${escapeHtml(item.type_name)}</div>
+            <div class="pos-order-item-sub">${escapeHtml(item.internal_code)}</div>
           </div>
           <div class="pos-order-item-price">${formatCurrency(item.daily_rate)}/天</div>
           <button class="pos-order-item-remove" onclick="posRentalRemoveItem(${idx})">x</button>
@@ -4100,7 +4608,7 @@
       const select = document.getElementById('pos-venue-customer-select');
       select.innerHTML = '<option value="">選擇客戶...</option>' +
         customers.filter(c => !c.is_deleted).map(c =>
-          `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''} - ${c.phone || ''}</option>`
+          `<option value="${c.customer_id}">${escapeHtml(c.name)}${c.company_name ? ' (' + escapeHtml(c.company_name) + ')' : ''} - ${escapeHtml(c.phone || '')}</option>`
         ).join('');
     }
 
@@ -4117,7 +4625,7 @@
       const filterBar = document.getElementById('pos-venue-type-filters');
       const types = [...new Set(venues.filter(v => !v.is_deleted).map(v => v.venue_type || 'other'))];
       filterBar.innerHTML = '<div class="pos-filter-chip active" data-type="all">全部</div>' +
-        types.map(t => `<div class="pos-filter-chip" data-type="${t}">${POS_VENUE_TYPE_LABELS[t] || t}</div>`).join('');
+        types.map(t => `<div class="pos-filter-chip" data-type="${escapeHtml(t)}">${POS_VENUE_TYPE_LABELS[t] || escapeHtml(t)}</div>`).join('');
 
       filterBar.querySelectorAll('.pos-filter-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -4158,7 +4666,7 @@
         card.className = 'pos-item-card' + (isSelected ? ' selected' : '');
         card.innerHTML = `
           <div class="pos-item-icon">${venue.venue_type === 'studio' ? '🎬' : venue.venue_type === 'meeting_room' ? '🏛️' : venue.venue_type === 'event_hall' ? '🎪' : '🏢'}</div>
-          <div class="pos-item-name">${venue.venue_name}</div>
+          <div class="pos-item-name">${escapeHtml(venue.venue_name)}</div>
           <div class="pos-item-detail">${POS_VENUE_TYPE_LABELS[venue.venue_type] || venue.venue_type} / ${venue.capacity || '?'}人</div>
           <div class="pos-item-price">${formatCurrency(venue.hourly_rate || 0)}/hr</div>
           <div class="pos-item-detail" style="margin-top:2px;">半日 ${formatCurrency(venue.half_day_rate || 0)} | 全日 ${formatCurrency(venue.daily_rate || 0)}</div>
@@ -4175,7 +4683,7 @@
       container.innerHTML = `
         <div class="pos-customer-display">
           <div>
-            <div class="name">${venue.venue_name}</div>
+            <div class="name">${escapeHtml(venue.venue_name)}</div>
             <div class="phone">${POS_VENUE_TYPE_LABELS[venue.venue_type] || ''} / 容納 ${venue.capacity || '?'} 人</div>
           </div>
           <button class="pos-order-item-remove" onclick="posVenueClearSelection()">x</button>

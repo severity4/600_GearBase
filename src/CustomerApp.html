@@ -346,6 +346,139 @@
       margin-bottom: 16px;
       color: var(--text-primary);
     }
+
+    /* Availability badge on product cards */
+    .avail-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .avail-badge.in-stock { background: #dcfce7; color: #166534; }
+    .avail-badge.low-stock { background: #fef9c3; color: #854d0e; }
+    .avail-badge.out-of-stock { background: #fee2e2; color: #991b1b; }
+
+    /* Venue mini calendar */
+    .venue-cal {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      margin-top: 12px;
+    }
+    .venue-cal-header {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 4px 0;
+    }
+    .venue-cal-day {
+      text-align: center;
+      padding: 6px 2px;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: default;
+    }
+    .venue-cal-day.available { background: #dcfce7; color: #166534; }
+    .venue-cal-day.booked { background: #fee2e2; color: #991b1b; }
+    .venue-cal-day.past { background: #f3f4f6; color: #9ca3af; }
+    .venue-cal-day.other { color: #d1d5db; }
+
+    .venue-cal-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .venue-cal-nav button {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .venue-cal-nav button:hover { background: #f3f4f6; }
+    .venue-cal-nav span { font-weight: 600; font-size: 14px; }
+
+    /* Lookup results */
+    .lookup-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-md);
+    }
+    .lookup-card h3 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .lookup-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .lookup-item:last-child { border-bottom: none; }
+    .lookup-status {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .lookup-status.active { background: #dbeafe; color: #1e40af; }
+    .lookup-status.reserved { background: #f3e8ff; color: #6b21a8; }
+    .lookup-status.returned, .lookup-status.completed { background: #dcfce7; color: #166534; }
+    .lookup-status.overdue { background: #fee2e2; color: #991b1b; }
+    .lookup-status.draft { background: #f3f4f6; color: #6b7280; }
+    .lookup-empty {
+      text-align: center;
+      color: white;
+      padding: 40px;
+      opacity: 0.8;
+    }
+
+    /* Equipment detail specs */
+    .detail-specs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .detail-spec {
+      background: var(--bg-secondary, #f8f9fa);
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+    .detail-spec-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+    .detail-spec-value {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .detail-accessory-list {
+      margin-top: 12px;
+    }
+    .detail-accessory {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-secondary, #f8f9fa);
+      border-radius: 8px;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .detail-accessory .badge {
+      font-size: 10px;
+    }
   </style>
 </head>
 <body class="customer-app">
@@ -355,6 +488,7 @@
     <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
       <button class="category-btn active" id="tab-equipment" onclick="switchTab('equipment')">器材租借</button>
       <button class="category-btn" id="tab-venues" onclick="switchTab('venues')">場地出租</button>
+      <button class="category-btn" id="tab-lookup" onclick="switchTab('lookup')">進度查詢</button>
     </div>
   </div>
 
@@ -423,11 +557,54 @@
     <button class="btn btn-primary cart-btn" id="checkout-btn">申請租借</button>
   </div>
 
+  <!-- Rental Lookup Section -->
+  <div class="customer-container" id="lookup-section" style="display: none;">
+    <div style="max-width: 500px; margin: 0 auto;">
+      <div style="text-align:center; margin-bottom: 32px; color: white;">
+        <div style="font-size: 48px; margin-bottom: 12px;">🔍</div>
+        <h2 style="font-size: 24px; margin-bottom: 8px;">租借進度查詢</h2>
+        <p style="opacity: 0.8;">輸入您的 Email，我們將寄送驗證碼</p>
+      </div>
+
+      <!-- Step 1: Enter email -->
+      <div id="lookup-step-email" style="background:white; border-radius:16px; padding:28px; box-shadow:var(--shadow-lg);">
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px; font-weight:600; display:block; margin-bottom:6px; color:var(--text-primary);">Email</label>
+          <input type="email" id="lookup-email" class="form-input" placeholder="請輸入您的 Email" style="font-size:16px; padding:12px;">
+        </div>
+        <button class="btn btn-primary w-100" onclick="sendVerificationCode()" style="padding:12px; font-size:16px;" id="send-code-btn">發送驗證碼</button>
+        <div id="lookup-email-msg" style="margin-top:12px; font-size:13px; text-align:center;"></div>
+      </div>
+
+      <!-- Step 2: Enter code (hidden initially) -->
+      <div id="lookup-step-code" style="display:none; background:white; border-radius:16px; padding:28px; box-shadow:var(--shadow-lg);">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:13px; color:var(--text-secondary);">驗證碼已寄送至</div>
+          <div style="font-size:15px; font-weight:600; color:var(--primary-color);" id="lookup-email-display"></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px; font-weight:600; display:block; margin-bottom:6px; color:var(--text-primary);">驗證碼 (6 位數)</label>
+          <input type="text" id="lookup-code" class="form-input" placeholder="000000" maxlength="6" style="font-size:24px; text-align:center; letter-spacing:8px; padding:12px;" autocomplete="one-time-code" inputmode="numeric">
+        </div>
+        <button class="btn btn-primary w-100" onclick="verifyCode()" style="padding:12px; font-size:16px;" id="verify-btn">驗證並查詢</button>
+        <div style="text-align:center; margin-top:12px;">
+          <button class="btn btn-sm btn-outline" onclick="resetLookup()">重新輸入 Email</button>
+          <button class="btn btn-sm btn-outline" onclick="resendCode()" style="margin-left:8px;">重新發送</button>
+        </div>
+        <div id="lookup-code-msg" style="margin-top:12px; font-size:13px; text-align:center;"></div>
+      </div>
+
+      <!-- Results -->
+      <div id="lookup-results" style="margin-top:24px;"></div>
+    </div>
+  </div>
+
   <?!= include('JavaScript') ?>
   <script>
     // Global state
     let allEquipment = [];
     let allTypes = [];
+    let catalogData = []; // Equipment types with availability counts
     let cart = [];
     let selectedCategory = null;
     let filteredEquipment = [];
@@ -438,7 +615,7 @@
       await loadEquipment();
       setupEventListeners();
       renderCategoryButtons();
-      renderProductList(allEquipment);
+      renderProductList(filteredEquipment);
     });
 
     function setupEventListeners() {
@@ -487,20 +664,24 @@
 
     async function loadEquipment() {
       try {
-        allTypes = await API.getEquipmentTypes();
-        allEquipment = await API.getAvailableEquipment(formatDate(new Date()), formatDate(new Date(new Date().getTime() + 86400000)));
-
-        // Enrich equipment with type info
-        allEquipment = allEquipment.map(unit => {
-          const type = allTypes.find(t => t.type_id === unit.type_id);
-          return {
-            ...unit,
-            type_name: type ? type.type_name : 'Unknown',
-            category: type ? type.category : 'other',
-            daily_rate: type ? type.daily_rate : 0,
-            description: type ? type.description : ''
-          };
-        });
+        catalogData = await API.getEquipmentCatalog();
+        // Use catalog data as the display source (grouped by type with availability)
+        allEquipment = catalogData.map(type => ({
+          type_id: type.type_id,
+          type_name: type.type_name,
+          category: type.category,
+          sub_category: type.sub_category,
+          brand: type.brand,
+          model: type.model,
+          daily_rate: type.daily_rate,
+          replacement_value: type.replacement_value,
+          deposit_required: type.deposit_required,
+          description: type.description,
+          total_units: type.total_units,
+          available_units: type.available_units,
+          accessories: type.accessories || [],
+          is_consumable: type.is_consumable
+        }));
 
         filteredEquipment = [...allEquipment];
       } catch (error) {
@@ -513,21 +694,23 @@
 
     function filterAndRender() {
       const searchTerm = document.getElementById('search-input').value.toLowerCase();
-      const selectedStatuses = Array.from(document.querySelectorAll('.status-filter:checked')).map(cb => cb.value);
+      const showOnlyAvailable = document.querySelector('.status-filter') ? document.querySelector('.status-filter').checked : true;
 
       filteredEquipment = allEquipment.filter(item => {
         // Search filter
         const matchesSearch = !searchTerm ||
           item.type_name.toLowerCase().includes(searchTerm) ||
-          item.internal_code.toLowerCase().includes(searchTerm);
+          (item.brand && item.brand.toLowerCase().includes(searchTerm)) ||
+          (item.model && item.model.toLowerCase().includes(searchTerm)) ||
+          (item.category && item.category.toLowerCase().includes(searchTerm));
 
         // Category filter
         const matchesCategory = !selectedCategory || item.category === selectedCategory;
 
-        // Status filter
-        const matchesStatus = selectedStatuses.includes(item.status);
+        // Availability filter
+        const matchesAvail = !showOnlyAvailable || item.available_units > 0;
 
-        return matchesSearch && matchesCategory && matchesStatus;
+        return matchesSearch && matchesCategory && matchesAvail;
       });
 
       renderProductList(filteredEquipment);
@@ -592,7 +775,13 @@
         const card = document.createElement('div');
         card.className = 'product-card';
 
-        const inCart = cart.some(c => c.unit_id === item.unit_id);
+        const inCart = cart.some(c => c.type_id === item.type_id);
+        const avail = item.available_units;
+        const total = item.total_units;
+        let availClass = 'in-stock';
+        let availText = `可租 ${avail}`;
+        if (avail === 0) { availClass = 'out-of-stock'; availText = '已租完'; }
+        else if (avail <= 2) { availClass = 'low-stock'; availText = `僅剩 ${avail}`; }
 
         card.innerHTML = `
           <div class="product-image">
@@ -600,17 +789,17 @@
           </div>
           <div class="product-info">
             <div class="product-category">${getCategoryLabel(item.category)}</div>
-            <div class="product-name">${item.type_name}</div>
+            <div class="product-name">${escapeHtml(item.type_name)}</div>
             <div class="product-desc">
-              編碼: ${item.internal_code}
-              ${item.serial_number ? `<br>序號: ${item.serial_number}` : ''}
+              ${item.brand ? escapeHtml(item.brand) : ''}${item.model ? ' ' + escapeHtml(item.model) : ''}
+              <br><span class="avail-badge ${availClass}">${availText}</span>
             </div>
             <div class="product-price">${formatCurrency(item.daily_rate)}<span style="font-size: 12px; color: var(--text-secondary);">/日</span></div>
             <div class="product-actions">
-              <button class="btn btn-primary btn-sm ${inCart ? 'btn-danger' : ''}" onclick="toggleCart('${item.unit_id}', '${item.type_name}', ${item.daily_rate})">
-                ${inCart ? '移除' : '加入'}
+              <button class="btn btn-primary btn-sm ${inCart ? 'btn-danger' : ''}" ${avail === 0 && !inCart ? 'disabled style="opacity:0.5;"' : ''} onclick="toggleCart('${escapeHtml(item.type_id)}', '${escapeHtml(item.type_name)}', ${item.daily_rate})">
+                ${inCart ? '移除' : avail === 0 ? '已租完' : '加入'}
               </button>
-              <button class="btn btn-outline btn-sm" onclick="showItemDetails(event, '${item.unit_id}')">詳情</button>
+              <button class="btn btn-outline btn-sm" onclick="showItemDetails(event, '${escapeHtml(item.type_id)}')">詳情</button>
             </div>
           </div>
         `;
@@ -663,14 +852,14 @@
       return labels[category] || '其他';
     }
 
-    function toggleCart(unitId, typeName, dailyRate) {
-      const existingItem = cart.find(c => c.unit_id === unitId);
+    function toggleCart(typeId, typeName, dailyRate) {
+      const existingItem = cart.find(c => c.type_id === typeId);
 
       if (existingItem) {
-        cart = cart.filter(c => c.unit_id !== unitId);
+        cart = cart.filter(c => c.type_id !== typeId);
       } else {
         cart.push({
-          unit_id: unitId,
+          type_id: typeId,
           type_name: typeName,
           daily_rate: dailyRate,
           quantity: 1
@@ -698,25 +887,69 @@
       cartTotal.textContent = formatCurrency(total);
     }
 
-    function showItemDetails(e, unitId) {
+    function showItemDetails(e, typeId) {
       e.preventDefault();
-      const item = allEquipment.find(i => i.unit_id === unitId);
+      const item = allEquipment.find(i => i.type_id === typeId);
       if (!item) return;
 
-      const modal = new Modal(`${item.type_name} - 詳情`, `
-        <div style="line-height: 1.8; color: var(--text-primary);">
-          <p><strong>類型:</strong> ${item.type_name}</p>
-          <p><strong>分類:</strong> ${getCategoryLabel(item.category)}</p>
-          <p><strong>內部編碼:</strong> ${item.internal_code}</p>
-          ${item.serial_number ? `<p><strong>序號:</strong> ${item.serial_number}</p>` : ''}
-          <p><strong>日租價格:</strong> ${formatCurrency(item.daily_rate)}</p>
-          <p><strong>狀態:</strong> <span class="badge badge-success">可用</span></p>
-          ${item.description ? `<p><strong>描述:</strong> ${item.description}</p>` : ''}
-          <p><strong>儲存位置:</strong> ${item.location_id || '未指定'}</p>
+      const inCart = cart.some(c => c.type_id === typeId);
+      let availClass = 'in-stock';
+      let availText = `可租 ${item.available_units} / 共 ${item.total_units} 台`;
+      if (item.available_units === 0) { availClass = 'out-of-stock'; availText = `已租完 (共 ${item.total_units} 台)`; }
+      else if (item.available_units <= 2) { availClass = 'low-stock'; availText = `僅剩 ${item.available_units} / 共 ${item.total_units} 台`; }
+
+      // Build accessories section
+      let accessoriesHtml = '';
+      if (item.accessories && item.accessories.length > 0) {
+        accessoriesHtml = `
+          <div class="detail-accessory-list">
+            <strong style="font-size:13px;">搭配配件：</strong>
+            ${item.accessories.map(a => `
+              <div class="detail-accessory">
+                <span>${escapeHtml(a.type_name)}</span>
+                <span class="badge ${a.binding_type === 'mandatory' ? 'badge-danger' : 'badge-info'}">${a.binding_type === 'mandatory' ? '必配' : '選配'}</span>
+              </div>
+            `).join('')}
+          </div>`;
+      }
+
+      const modal = new Modal(`${escapeHtml(item.type_name)}`, `
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:64px; margin-bottom:8px;">${getCategoryEmoji(item.category)}</div>
+          <span class="avail-badge ${availClass}">${availText}</span>
+        </div>
+
+        <div class="detail-specs">
+          <div class="detail-spec">
+            <div class="detail-spec-label">分類</div>
+            <div class="detail-spec-value">${getCategoryLabel(item.category)}</div>
+          </div>
+          <div class="detail-spec">
+            <div class="detail-spec-label">日租價格</div>
+            <div class="detail-spec-value" style="color:var(--primary-color);">${formatCurrency(item.daily_rate)}</div>
+          </div>
+          ${item.brand ? `<div class="detail-spec"><div class="detail-spec-label">品牌</div><div class="detail-spec-value">${escapeHtml(item.brand)}</div></div>` : ''}
+          ${item.model ? `<div class="detail-spec"><div class="detail-spec-label">型號</div><div class="detail-spec-value">${escapeHtml(item.model)}</div></div>` : ''}
+          ${item.deposit_required ? `<div class="detail-spec"><div class="detail-spec-label">押金</div><div class="detail-spec-value">${formatCurrency(item.deposit_required)}</div></div>` : ''}
+          ${item.replacement_value ? `<div class="detail-spec"><div class="detail-spec-label">設備價值</div><div class="detail-spec-value">${formatCurrency(item.replacement_value)}</div></div>` : ''}
+        </div>
+
+        ${item.description ? `<div style="margin-top:16px; padding:12px; background:var(--bg-secondary, #f8f9fa); border-radius:8px; font-size:13px; line-height:1.6;">${escapeHtml(item.description)}</div>` : ''}
+
+        ${accessoriesHtml}
+
+        <div style="margin-top:16px; padding:12px; background:#eff6ff; border-radius:8px; font-size:12px; color:#1e40af; line-height:1.6;">
+          <strong>租借注意事項：</strong><br>
+          - 取件時需出示證件並繳交押金<br>
+          - 請於租借到期日當天歸還<br>
+          - 歸還時將檢查器材狀況<br>
+          ${item.is_consumable ? '- 此為消耗品，使用後不需歸還<br>' : ''}
         </div>
       `, `
         <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
-        <button class="btn btn-primary" onclick="toggleCart('${item.unit_id}', '${item.type_name}', ${item.daily_rate}); document.querySelector('.modal-overlay').remove();">加入購物車</button>
+        <button class="btn btn-primary" ${item.available_units === 0 && !inCart ? 'disabled' : ''} onclick="toggleCart('${escapeHtml(item.type_id)}', '${escapeHtml(item.type_name)}', ${item.daily_rate}); document.querySelector('.modal-overlay').remove();">
+          ${inCart ? '從購物車移除' : item.available_units === 0 ? '已租完' : '加入購物車'}
+        </button>
       `);
 
       modal.open();
@@ -732,7 +965,7 @@
 
       const cartItems = cart.map(item => `
         <tr>
-          <td>${item.type_name}</td>
+          <td>${escapeHtml(item.type_name)}</td>
           <td>${formatCurrency(item.daily_rate)}</td>
         </tr>
       `).join('');
@@ -873,12 +1106,11 @@
 
         // Create rental items with type_id for proper rate snapshotting
         for (const item of cart) {
-          const unitInfo = allEquipment.find(e => e.unit_id === item.unit_id);
           await API.createRentalItem({
             rental_id: rental.rental_id,
-            unit_id: item.unit_id,
-            type_id: unitInfo ? unitInfo.type_id : '',
-            quantity: 1
+            unit_id: '',
+            type_id: item.type_id,
+            quantity: item.quantity || 1
           });
         }
 
@@ -907,16 +1139,23 @@
       currentTab = tab;
       document.getElementById('tab-equipment').classList.toggle('active', tab === 'equipment');
       document.getElementById('tab-venues').classList.toggle('active', tab === 'venues');
+      document.getElementById('tab-lookup').classList.toggle('active', tab === 'lookup');
 
       // Toggle visibility
       document.querySelector('.customer-container').style.display = tab === 'equipment' ? '' : 'none';
       document.getElementById('venue-section').style.display = tab === 'venues' ? '' : 'none';
+      document.getElementById('lookup-section').style.display = tab === 'lookup' ? '' : 'none';
 
       // Toggle sidebar & cart for equipment only
       document.getElementById('toggle-sidebar').style.display = tab === 'equipment' ? '' : 'none';
       if (tab === 'venues' && !allVenues.length) loadVenues();
       if (tab === 'equipment') updateCartDisplay();
       else document.getElementById('cart-summary').style.display = 'none';
+
+      // Focus lookup email input
+      if (tab === 'lookup') {
+        setTimeout(() => document.getElementById('lookup-email').focus(), 100);
+      }
     }
 
     // ==================== VENUE BROWSING ====================
@@ -982,12 +1221,12 @@
           <div class="product-image">${vt.emoji}</div>
           <div class="product-info">
             <div class="product-category">${vt.label}</div>
-            <div class="product-name">${venue.name}</div>
+            <div class="product-name">${escapeHtml(venue.name)}</div>
             <div class="product-desc">
               ${venue.max_capacity ? `容納 ${venue.max_capacity} 人` : ''}
               ${venue.floor_area_sqm ? ` / ${venue.floor_area_sqm} 坪` : ''}
               ${features.length ? `<br>${features.join(' / ')}` : ''}
-              ${venue.amenities ? `<br>設備：${venue.amenities}` : ''}
+              ${venue.amenities ? `<br>設備：${escapeHtml(venue.amenities)}` : ''}
             </div>
             <div class="product-price">
               ${formatCurrency(venue.hourly_rate)}<span style="font-size: 12px; color: var(--text-secondary);">/時</span>
@@ -995,7 +1234,7 @@
             </div>
             <div class="product-actions">
               <button class="btn btn-primary btn-sm" onclick="openVenueBookingModal('${venue.venue_id}')">預約場地</button>
-              <button class="btn btn-outline btn-sm" onclick="showVenueDetails('${venue.venue_id}')">詳情</button>
+              <button class="btn btn-outline btn-sm" onclick="showVenueDetails('${venue.venue_id}')">詳情 / 日曆</button>
             </div>
           </div>
         `;
@@ -1009,24 +1248,41 @@
       if (!venue) return;
       const vt = VENUE_TYPE_MAP[venue.venue_type] || VENUE_TYPE_MAP.other;
 
-      const modal = new Modal(`${venue.name} - 詳情`, `
+      const modal = new Modal(`${escapeHtml(venue.name)} - 詳情`, `
         <div style="line-height: 1.8; color: var(--text-primary);">
-          <p><strong>類型:</strong> ${vt.label}</p>
-          <p><strong>地址:</strong> ${venue.address || '-'}${venue.floor ? ' ' + venue.floor : ''}</p>
-          <p><strong>容納人數:</strong> ${venue.max_capacity || '-'} 人</p>
-          ${venue.floor_area_sqm ? `<p><strong>面積:</strong> ${venue.floor_area_sqm} 平方公尺</p>` : ''}
-          <hr style="margin: 12px 0;">
-          <p><strong>時租:</strong> ${formatCurrency(venue.hourly_rate)}/時</p>
-          ${venue.half_day_rate ? `<p><strong>半日租:</strong> ${formatCurrency(venue.half_day_rate)}/4hr</p>` : ''}
-          ${venue.daily_rate ? `<p><strong>日租:</strong> ${formatCurrency(venue.daily_rate)}/天</p>` : ''}
-          <p><strong>最低預約:</strong> ${venue.min_booking_hours || 2} 小時</p>
+          <div class="detail-specs">
+            <div class="detail-spec"><div class="detail-spec-label">類型</div><div class="detail-spec-value">${vt.label}</div></div>
+            <div class="detail-spec"><div class="detail-spec-label">容納人數</div><div class="detail-spec-value">${venue.max_capacity || '-'} 人</div></div>
+            ${venue.floor_area_sqm ? `<div class="detail-spec"><div class="detail-spec-label">面積</div><div class="detail-spec-value">${venue.floor_area_sqm} 坪</div></div>` : ''}
+            ${venue.ceiling_height_m ? `<div class="detail-spec"><div class="detail-spec-label">天花板高度</div><div class="detail-spec-value">${venue.ceiling_height_m} m</div></div>` : ''}
+          </div>
+
+          <div style="margin-top:16px;">
+            <div class="detail-specs">
+              <div class="detail-spec"><div class="detail-spec-label">時租</div><div class="detail-spec-value" style="color:var(--primary-color);">${formatCurrency(venue.hourly_rate)}</div></div>
+              ${venue.half_day_rate ? `<div class="detail-spec"><div class="detail-spec-label">半日租</div><div class="detail-spec-value">${formatCurrency(venue.half_day_rate)}</div></div>` : ''}
+              ${venue.daily_rate ? `<div class="detail-spec"><div class="detail-spec-label">日租</div><div class="detail-spec-value">${formatCurrency(venue.daily_rate)}</div></div>` : ''}
+              <div class="detail-spec"><div class="detail-spec-label">最低預約</div><div class="detail-spec-value">${venue.min_booking_hours || 2} 小時</div></div>
+            </div>
+          </div>
+
           <p><strong>可預約時段:</strong> ${venue.available_start_time || '09:00'} ~ ${venue.available_end_time || '22:00'}</p>
-          ${venue.amenities ? `<hr style="margin: 12px 0;"><p><strong>設備:</strong> ${venue.amenities}</p>` : ''}
-          ${venue.ceiling_height_m ? `<p><strong>天花板高度:</strong> ${venue.ceiling_height_m} 公尺</p>` : ''}
-          ${venue.power_specs ? `<p><strong>電力規格:</strong> ${venue.power_specs}</p>` : ''}
-          ${venue.parking_info ? `<p><strong>停車:</strong> ${venue.parking_info}</p>` : ''}
-          ${venue.rules ? `<hr style="margin: 12px 0;"><p><strong>場地規範:</strong> ${venue.rules}</p>` : ''}
-          ${venue.description ? `<p><strong>描述:</strong> ${venue.description}</p>` : ''}
+          ${venue.address ? `<p><strong>地址:</strong> ${escapeHtml(venue.address)}${venue.floor ? ' ' + escapeHtml(venue.floor) : ''}</p>` : ''}
+          ${venue.amenities ? `<p><strong>設備:</strong> ${escapeHtml(venue.amenities)}</p>` : ''}
+          ${venue.power_specs ? `<p><strong>電力規格:</strong> ${escapeHtml(venue.power_specs)}</p>` : ''}
+          ${venue.parking_info ? `<p><strong>停車:</strong> ${escapeHtml(venue.parking_info)}</p>` : ''}
+          ${venue.rules ? `<div style="margin-top:8px; padding:12px; background:#fff7ed; border-radius:8px; font-size:12px; color:#9a3412;"><strong>場地規範：</strong><br>${escapeHtml(venue.rules)}</div>` : ''}
+          ${venue.description ? `<p style="margin-top:8px;">${escapeHtml(venue.description)}</p>` : ''}
+
+          <!-- Availability Calendar -->
+          <div style="margin-top:16px; padding:16px; background:var(--bg-secondary, #f8f9fa); border-radius:12px;">
+            <strong style="font-size:14px;">可用日期</strong>
+            <div style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;">
+              <span style="display:inline-block; width:10px; height:10px; background:#dcfce7; border-radius:3px; margin-right:4px;"></span>可預約
+              <span style="display:inline-block; width:10px; height:10px; background:#fee2e2; border-radius:3px; margin-left:12px; margin-right:4px;"></span>已預約
+            </div>
+            <div id="venue-detail-cal-${venueId}">載入中...</div>
+          </div>
         </div>
       `, `
         <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">關閉</button>
@@ -1034,6 +1290,73 @@
       `);
 
       modal.open();
+
+      // Load calendar data
+      loadVenueDetailCalendar(venueId, new Date());
+    }
+
+    async function loadVenueDetailCalendar(venueId, date) {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
+      const containerId = `venue-detail-cal-${venueId}`;
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      try {
+        const scheduleData = await API.getVenueMonthlySchedule(venueId, yearMonth);
+        renderVenueMiniCalendar(container, venueId, year, month, scheduleData.booked_dates || []);
+      } catch (e) {
+        container.innerHTML = '<div style="color:var(--text-secondary); font-size:12px;">載入日曆失敗</div>';
+      }
+    }
+
+    function renderVenueMiniCalendar(container, venueId, year, month, bookedDates) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const firstDay = new Date(year, month - 1, 1);
+      const lastDay = new Date(year, month, 0);
+      const startDow = firstDay.getDay();
+
+      const days = ['日', '一', '二', '三', '四', '五', '六'];
+
+      let html = `
+        <div class="venue-cal-nav">
+          <button onclick="navVenueCal('${venueId}', ${year}, ${month}, -1)">&lt;</button>
+          <span>${year} 年 ${month} 月</span>
+          <button onclick="navVenueCal('${venueId}', ${year}, ${month}, 1)">&gt;</button>
+        </div>
+        <div class="venue-cal">
+        ${days.map(d => `<div class="venue-cal-header">${d}</div>`).join('')}
+      `;
+
+      // Empty cells before first day
+      for (let i = 0; i < startDow; i++) {
+        html += '<div class="venue-cal-day other"></div>';
+      }
+
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateObj = new Date(year, month - 1, d);
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isPast = dateObj < today;
+        const isBooked = bookedDates.includes(dateStr);
+
+        let cls = 'venue-cal-day';
+        if (isPast) cls += ' past';
+        else if (isBooked) cls += ' booked';
+        else cls += ' available';
+
+        html += `<div class="${cls}">${d}</div>`;
+      }
+
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function navVenueCal(venueId, year, month, delta) {
+      const newDate = new Date(year, month - 1 + delta, 1);
+      loadVenueDetailCalendar(venueId, newDate);
     }
 
     function openVenueBookingModal(venueId) {
@@ -1044,7 +1367,7 @@
       if (venue.half_day_rate) rateOptions.push(`<option value="half_day">半日租 (${formatCurrency(venue.half_day_rate)}/4hr)</option>`);
       if (venue.daily_rate) rateOptions.push(`<option value="daily">日租 (${formatCurrency(venue.daily_rate)}/天)</option>`);
 
-      const modal = new Modal(`預約 ${venue.name}`, `
+      const modal = new Modal(`預約 ${escapeHtml(venue.name)}`, `
         <form id="venue-booking-form">
           <input type="hidden" name="venue_id" value="${venueId}">
 
@@ -1183,6 +1506,181 @@
         document.querySelector('.modal-overlay').remove();
       } catch (error) {
         showError('預約提交失敗: ' + error.message);
+      }
+    }
+
+    // ==================== RENTAL LOOKUP (Email + Verification Code) ====================
+
+    let lookupEmail = '';
+
+    // Enter key support
+    document.getElementById('lookup-email').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendVerificationCode();
+    });
+    document.getElementById('lookup-code').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verifyCode();
+    });
+
+    async function sendVerificationCode() {
+      const emailInput = document.getElementById('lookup-email');
+      const email = emailInput.value.trim();
+      const msgEl = document.getElementById('lookup-email-msg');
+      const btn = document.getElementById('send-code-btn');
+
+      if (!email) {
+        msgEl.innerHTML = '<span style="color:var(--danger-color, #dc2626);">請輸入 Email</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '發送中...';
+      msgEl.innerHTML = '';
+
+      try {
+        const result = await API.sendLookupVerificationCode(email);
+        if (result.success) {
+          lookupEmail = email;
+          // Switch to step 2
+          document.getElementById('lookup-step-email').style.display = 'none';
+          document.getElementById('lookup-step-code').style.display = 'block';
+          document.getElementById('lookup-email-display').textContent = email;
+          document.getElementById('lookup-code').value = '';
+          document.getElementById('lookup-code').focus();
+          document.getElementById('lookup-results').innerHTML = '';
+          showSuccess(result.message);
+        } else {
+          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${escapeHtml(result.message)}</span>`;
+        }
+      } catch (error) {
+        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">發送失敗：${escapeHtml(error.message)}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '發送驗證碼';
+      }
+    }
+
+    async function resendCode() {
+      if (!lookupEmail) return;
+      document.getElementById('lookup-code').value = '';
+      document.getElementById('lookup-code-msg').innerHTML = '';
+
+      try {
+        const result = await API.sendLookupVerificationCode(lookupEmail);
+        if (result.success) {
+          showSuccess('驗證碼已重新發送');
+        } else {
+          showWarning(result.message);
+        }
+      } catch (error) {
+        showError('發送失敗：' + error.message);
+      }
+    }
+
+    function resetLookup() {
+      lookupEmail = '';
+      document.getElementById('lookup-step-email').style.display = 'block';
+      document.getElementById('lookup-step-code').style.display = 'none';
+      document.getElementById('lookup-email').value = '';
+      document.getElementById('lookup-email-msg').innerHTML = '';
+      document.getElementById('lookup-results').innerHTML = '';
+      document.getElementById('lookup-email').focus();
+    }
+
+    async function verifyCode() {
+      const code = document.getElementById('lookup-code').value.trim();
+      const msgEl = document.getElementById('lookup-code-msg');
+      const resultsEl = document.getElementById('lookup-results');
+      const btn = document.getElementById('verify-btn');
+
+      if (!code || code.length !== 6) {
+        msgEl.innerHTML = '<span style="color:var(--danger-color, #dc2626);">請輸入 6 位驗證碼</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '驗證中...';
+      msgEl.innerHTML = '';
+
+      try {
+        const data = await API.verifyAndLookup(lookupEmail, code);
+
+        if (!data.verified) {
+          msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${escapeHtml(data.message)}</span>`;
+          btn.disabled = false;
+          btn.textContent = '驗證並查詢';
+          return;
+        }
+
+        if (!data.found) {
+          resultsEl.innerHTML = `<div class="lookup-empty">${escapeHtml(data.message || '查無紀錄')}</div>`;
+          btn.disabled = false;
+          btn.textContent = '驗證並查詢';
+          return;
+        }
+
+        // Render results
+        let html = '';
+
+        if (data.customer_name) {
+          html += `<div style="text-align:center; color:white; margin-bottom:16px; font-size:18px; font-weight:600;">${escapeHtml(data.customer_name)} 的紀錄</div>`;
+        }
+
+        // Rental records
+        if (data.rentals && data.rentals.length > 0) {
+          html += '<div class="lookup-card"><h3>📋 器材租借</h3>';
+          data.rentals.forEach(r => {
+            html += `
+              <div class="lookup-item">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <strong>${r.rental_id}</strong>
+                  <span class="lookup-status ${r.status}">${r.status_label}</span>
+                </div>
+                <div style="font-size:13px; color:var(--text-secondary);">
+                  ${r.rental_start ? formatDateDisplay(r.rental_start) : '-'} ~ ${r.rental_end ? formatDateDisplay(r.rental_end) : '-'}
+                </div>
+                ${r.items && r.items.length ? `<div style="font-size:12px; margin-top:4px; color:var(--text-secondary);">器材：${r.items.map(i => escapeHtml(i.type_name)).join('、')}</div>` : ''}
+                <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:13px;">
+                  <span>金額：${formatCurrency(r.total_amount)}</span>
+                  <span>已付：${formatCurrency(r.paid_amount)}</span>
+                  ${r.total_amount - r.paid_amount > 0 ? `<span style="color:var(--danger-color, #dc2626); font-weight:600;">未付：${formatCurrency(r.total_amount - r.paid_amount)}</span>` : '<span style="color:var(--success-color, #16a34a);">已結清</span>'}
+                </div>
+              </div>`;
+          });
+          html += '</div>';
+        }
+
+        // Venue bookings
+        if (data.bookings && data.bookings.length > 0) {
+          html += '<div class="lookup-card"><h3>📅 場地預約</h3>';
+          data.bookings.forEach(b => {
+            html += `
+              <div class="lookup-item">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <strong>${b.booking_id}</strong>
+                  <span class="lookup-status ${b.status}">${b.status_label}</span>
+                </div>
+                <div style="font-size:13px;">場地：${escapeHtml(b.venue_name || '-')}</div>
+                <div style="font-size:13px; color:var(--text-secondary);">${b.booking_start || '-'} ~ ${b.booking_end || '-'}</div>
+                <div style="font-size:13px; margin-top:4px;">金額：${formatCurrency(b.total_amount)}</div>
+              </div>`;
+          });
+          html += '</div>';
+        }
+
+        if ((!data.rentals || data.rentals.length === 0) && (!data.bookings || data.bookings.length === 0)) {
+          html += '<div class="lookup-empty">目前沒有租借或預約紀錄</div>';
+        }
+
+        resultsEl.innerHTML = html;
+
+        // Hide the code form after success
+        document.getElementById('lookup-step-code').style.display = 'none';
+
+      } catch (error) {
+        msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">查詢失敗：${escapeHtml(error.message)}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '驗證並查詢';
       }
     }
   </script>
