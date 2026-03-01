@@ -26,7 +26,9 @@
     }
 
     .dashboard-grid {
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
     }
 
     .stat-card {
@@ -1117,11 +1119,54 @@
         <form id="rental-form">
           <div class="form-group">
             <label class="form-label required">客戶</label>
-            <select name="customer_id" class="form-select" required>
-              <option value="">選擇客戶...</option>
-              ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name || c.company_name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
-            </select>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select name="customer_id" id="rental-customer-select" class="form-select" required style="flex:1;">
+                <option value="">選擇客戶...</option>
+                ${customers.filter(c => !c.is_deleted).map(c => `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`).join('')}
+              </select>
+              <button type="button" class="btn btn-sm btn-outline" onclick="toggleInlineCustomerForm()" title="新增客戶">+ 新增</button>
+            </div>
           </div>
+
+          <!-- Inline new customer form (hidden by default) -->
+          <div id="inline-customer-form" style="display:none; background:var(--bg-secondary,#f8f9fa); border:1px solid var(--border-color,#dee2e6); border-radius:8px; padding:16px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <strong style="font-size:14px;">新增客戶資料</strong>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="toggleInlineCustomerForm()">取消</button>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">租借人姓名</label>
+                <input type="text" id="new-cust-name" class="form-input" placeholder="姓名">
+              </div>
+              <div class="form-group">
+                <label class="form-label">公司名稱</label>
+                <input type="text" id="new-cust-company" class="form-input" placeholder="公司（選填）">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">電話</label>
+                <input type="tel" id="new-cust-phone" class="form-input" placeholder="電話">
+              </div>
+              <div class="form-group">
+                <label class="form-label">電郵</label>
+                <input type="email" id="new-cust-email" class="form-input" placeholder="email（選填）">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">身分證/統編</label>
+                <input type="text" id="new-cust-id-number" class="form-input" placeholder="選填">
+              </div>
+              <div class="form-group">
+                <label class="form-label">備註</label>
+                <input type="text" id="new-cust-notes" class="form-input" placeholder="選填">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveInlineCustomer()" style="width:100%;">確認新增客戶</button>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label class="form-label required">開始日期</label>
@@ -1143,6 +1188,58 @@
       `);
 
       modal.open();
+    }
+
+    function toggleInlineCustomerForm() {
+      const panel = document.getElementById('inline-customer-form');
+      const select = document.getElementById('rental-customer-select');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        select.removeAttribute('required');
+        select.value = '';
+      } else {
+        panel.style.display = 'none';
+        select.setAttribute('required', '');
+      }
+    }
+
+    async function saveInlineCustomer() {
+      const name = document.getElementById('new-cust-name').value.trim();
+      const phone = document.getElementById('new-cust-phone').value.trim();
+
+      if (!name) { showError('租借人姓名必填'); return; }
+      if (!phone) { showError('電話必填'); return; }
+
+      const custData = { name, phone };
+      const company = document.getElementById('new-cust-company').value.trim();
+      const email = document.getElementById('new-cust-email').value.trim();
+      const idNumber = document.getElementById('new-cust-id-number').value.trim();
+      const notes = document.getElementById('new-cust-notes').value.trim();
+      if (company) custData.company_name = company;
+      if (email) custData.email = email;
+      if (idNumber) custData.id_number = idNumber;
+      if (notes) custData.notes = notes;
+
+      try {
+        const newCustomer = await API.createCustomer(custData);
+        // Refresh global customers list
+        customers = await API.getCustomers();
+        // Update select dropdown and auto-select the new customer
+        const select = document.getElementById('rental-customer-select');
+        select.innerHTML = '<option value="">選擇客戶...</option>' +
+          customers.filter(c => !c.is_deleted).map(c =>
+            `<option value="${c.customer_id}">${c.name}${c.company_name ? ' (' + c.company_name + ')' : ''}</option>`
+          ).join('');
+        // Select the newly created customer (last CU-xxx ID)
+        const newId = newCustomer.customer_id || customers[customers.length - 1]?.customer_id;
+        if (newId) select.value = newId;
+        select.setAttribute('required', '');
+        // Hide inline form
+        document.getElementById('inline-customer-form').style.display = 'none';
+        showSuccess(`客戶「${name}」已新增`);
+      } catch (error) {
+        showError('新增客戶失敗: ' + error.message);
+      }
     }
 
     async function saveRental(e) {
