@@ -417,6 +417,20 @@
         <!-- Reports Page -->
         <div id="reports" class="page-content">
           <div class="section-title">報表</div>
+
+          <!-- Debug Panel -->
+          <div class="card mb-3" style="border: 2px solid #f59e0b;">
+            <div class="card-header" style="background: #fef3c7; color: #92400e;">DEBUG 偵錯面板</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+              <button class="btn btn-primary btn-sm" id="debug-health-check">Health Check</button>
+              <button class="btn btn-primary btn-sm" id="debug-check-sheets">檢查工作表</button>
+              <button class="btn btn-sm" style="background: #dc2626; color: white;" id="debug-create-sheets">建立缺少的工作表</button>
+            </div>
+            <div id="debug-output" style="display: none; background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; max-height: 500px; overflow: auto;">
+              <pre id="debug-output-content" style="margin: 0; font-size: 12px; line-height: 1.6; white-space: pre-wrap;"></pre>
+            </div>
+          </div>
+
           <div class="grid grid-2 mb-3">
             <div class="card">
               <div class="card-header">系統檢查</div>
@@ -585,6 +599,11 @@
       // Reports
       document.getElementById('run-data-integrity-check').addEventListener('click', runDataIntegrityCheck);
       document.getElementById('show-inventory-discrepancies').addEventListener('click', showInventoryDiscrepancies);
+
+      // Debug
+      document.getElementById('debug-health-check').addEventListener('click', debugRunHealthCheck);
+      document.getElementById('debug-check-sheets').addEventListener('click', debugRunCheckSheets);
+      document.getElementById('debug-create-sheets').addEventListener('click', debugRunCreateSheets);
     }
 
     // ==================== DASHBOARD ====================
@@ -2430,6 +2449,128 @@
       } catch (error) {
         showLoading(false);
         showError('生成報告失敗: ' + error.message);
+      }
+    }
+
+    // ==================== DEBUG FUNCTIONS ====================
+
+    function debugShowOutput(data) {
+      const outputDiv = document.getElementById('debug-output');
+      const content = document.getElementById('debug-output-content');
+      outputDiv.style.display = 'block';
+      content.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+
+    async function debugRunHealthCheck() {
+      try {
+        debugShowOutput('Running health check...');
+        const result = await API.debugHealthCheck();
+        let output = '=== HEALTH CHECK ===\n\n';
+
+        // Spreadsheet
+        output += `Spreadsheet: ${result.spreadsheet?.ok ? 'OK' : 'FAIL'}\n`;
+        if (result.spreadsheet?.ok) {
+          output += `  Name: ${result.spreadsheet.name}\n`;
+          output += `  ID: ${result.spreadsheet.id}\n`;
+        }
+
+        // User
+        output += `\nUser: ${result.user?.ok ? 'OK' : 'WARN'}\n`;
+        if (result.user?.ok) {
+          output += `  Staff: ${result.user.staff_id} (${result.user.role})\n`;
+        } else {
+          output += `  ${result.user?.note || result.user?.error || 'Unknown'}\n`;
+        }
+
+        // Sheets
+        output += '\nSheets:\n';
+        for (const [name, info] of Object.entries(result.sheets || {})) {
+          const icon = info.ok ? 'OK' : 'MISSING';
+          output += `  [${icon}] ${name}`;
+          if (info.ok) output += ` (${info.rows} rows)`;
+          if (info.error) output += ` - ${info.error}`;
+          output += '\n';
+        }
+
+        // Dashboard
+        output += `\nDashboard: ${result.dashboard?.ok ? 'OK' : 'FAIL'}\n`;
+        if (result.dashboard?.ok) {
+          output += `  Stats: ${JSON.stringify(result.dashboard.stats, null, 2)}\n`;
+        } else {
+          output += `  Error: ${result.dashboard?.error}\n`;
+          if (result.dashboard?.stack) output += `  Stack: ${result.dashboard.stack}\n`;
+        }
+
+        debugShowOutput(output);
+        showSuccess('Health check 完成');
+      } catch (error) {
+        debugShowOutput(`HEALTH CHECK FAILED:\n${error.message}\n\n可能原因：\n1. 伺服器端程式碼有語法錯誤\n2. Google Sheets 無法存取\n3. 請檢查瀏覽器 Console (F12) 查看詳細錯誤`);
+        showError('Health check 失敗: ' + error.message);
+      }
+    }
+
+    async function debugRunCheckSheets() {
+      try {
+        debugShowOutput('Checking sheets...');
+        const result = await API.debugCheckSheets();
+        let output = '=== SHEET CHECK ===\n\n';
+        output += `Spreadsheet: ${result.spreadsheet_name}\n`;
+        output += `Required: ${result.total_required} sheets\n`;
+        output += `Existing: ${result.existing.length}\n`;
+        output += `Missing: ${result.missing.length}\n\n`;
+
+        if (result.missing.length > 0) {
+          output += 'MISSING SHEETS (need to create):\n';
+          result.missing.forEach(name => {
+            output += `  [MISSING] ${name}\n`;
+          });
+          output += '\n';
+        }
+
+        output += 'EXISTING SHEETS:\n';
+        result.existing.forEach(sheet => {
+          output += `  [OK] ${sheet.name} (${sheet.rows} data rows, ${sheet.headers.length} columns)\n`;
+        });
+
+        output += '\nAll sheets in spreadsheet:\n';
+        result.sheets_in_spreadsheet.forEach(name => {
+          output += `  - ${name}\n`;
+        });
+
+        debugShowOutput(output);
+
+        if (result.missing.length > 0) {
+          showWarning(`有 ${result.missing.length} 個工作表缺少: ${result.missing.join(', ')}`);
+        } else {
+          showSuccess('所有工作表都存在');
+        }
+      } catch (error) {
+        debugShowOutput(`CHECK SHEETS FAILED:\n${error.message}`);
+        showError('檢查失敗: ' + error.message);
+      }
+    }
+
+    async function debugRunCreateSheets() {
+      if (!confirm('確定要建立所有缺少的工作表嗎？這會在 Google Sheets 中新增工作表。')) return;
+
+      try {
+        debugShowOutput('Creating missing sheets...');
+        const result = await API.ensureRequiredSheets();
+        let output = '=== CREATE SHEETS ===\n\n';
+        output += `${result.message}\n\n`;
+
+        if (result.created.length > 0) {
+          output += 'Created:\n';
+          result.created.forEach(name => {
+            output += `  [CREATED] ${name}\n`;
+          });
+        }
+
+        debugShowOutput(output);
+        showSuccess(result.message);
+      } catch (error) {
+        debugShowOutput(`CREATE SHEETS FAILED:\n${error.message}`);
+        showError('建立失敗: ' + error.message);
       }
     }
   </script>

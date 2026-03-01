@@ -7,6 +7,206 @@
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 const SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
 
+// Debug mode flag
+const DEBUG_MODE = true;
+
+/**
+ * ==================== DEBUG / DIAGNOSTICS ====================
+ */
+
+/**
+ * Check all required sheets exist and report status
+ * @return {Object} Diagnostics result
+ */
+function debugCheckSheets() {
+  const requiredSheets = [
+    { name: 'Equipment_Types', headers: ['type_id','type_name','category','sub_category','brand','model','daily_rate','replacement_value','deposit_required','is_consumable','is_batch_item','description','active','created_by','created_at','is_deleted'] },
+    { name: 'Equipment_Units', headers: ['unit_id','type_id','internal_code','serial_number','category','status','current_condition','location_id','notes','created_by','created_at','is_deleted'] },
+    { name: 'Customers', headers: ['customer_id','name','company_name','phone','email','id_number','id_doc_verified','id_doc_return_status','blacklisted','blacklist_reason','credit_balance','notes','created_at','is_deleted'] },
+    { name: 'Rentals', headers: ['rental_id','customer_id','rental_start','rental_end','status','total_amount','paid_amount','tax_rate','deposit_status','delivery_required','invoice_status','prepared_by','handled_by','approved_by','notes','created_at','updated_at','is_deleted'] },
+    { name: 'Rental_Items', headers: ['item_id','rental_id','unit_id','type_id','quantity','daily_rate_snapshot','replacement_value_snapshot','days','line_total','line_total_after_discount','discount_amount','return_status','notes','is_deleted'] },
+    { name: 'Payments', headers: ['payment_id','rental_id','booking_id','payment_type','amount','payment_method','payment_date','received_by','receive_channel','relay_status','notes','is_deleted'] },
+    { name: 'Maintenance_Logs', headers: ['log_id','unit_id','maintenance_type','description','cost','scheduled_date','completed_date','performed_by','status','notes','created_at','is_deleted'] },
+    { name: 'Inventory_Logs', headers: ['log_id','unit_id','change_type','quantity_change','from_location','to_location','reason','performed_by','created_at','is_deleted'] },
+    { name: 'Storage_Locations', headers: ['location_id','location_name','parent_id','location_type','capacity','responsible_staff','notes','is_deleted'] },
+    { name: 'Staff', headers: ['staff_id','name','email','phone','role','can_approve_discount','active','created_at','is_deleted'] },
+    { name: 'Discount_Rules', headers: ['rule_id','rule_name','discount_type','discount_value','min_days','min_amount','applicable_types','applicable_categories','active','created_at','is_deleted'] },
+    { name: 'Accessory_Bindings', headers: ['binding_id','parent_type_id','accessory_type_id','binding_type','notes','is_deleted'] },
+    { name: 'Damage_Records', headers: ['damage_id','rental_id','unit_id','damage_type','description','severity','repair_cost','replacement_cost','reported_by','reported_at','status','notes','is_deleted'] },
+    { name: 'Credit_Notes', headers: ['credit_note_id','rental_id','booking_id','customer_id','credit_type','amount','reason','approved_by','status','created_at','is_deleted'] },
+    { name: 'Service_Items', headers: ['service_item_id','rental_id','booking_id','service_type','description','unit_price','quantity','line_total','notes','is_deleted'] },
+    { name: 'Overdue_Rules', headers: ['overdue_rule_id','rule_name','grace_period_days','daily_penalty_rate','max_penalty_percent','active','is_deleted'] },
+    { name: 'Wear_Tolerance', headers: ['tolerance_id','category','condition_field','acceptable_threshold','notes','is_deleted'] },
+    { name: 'Print_Templates', headers: ['template_id','template_name','template_type','doc_template_id','active','created_at','updated_at','is_deleted'] },
+    { name: 'Rental_Addendums', headers: ['addendum_id','rental_id','addendum_type','description','amount_change','approved_by','created_at','is_deleted'] },
+    { name: 'Stocktake_Plans', headers: ['plan_id','plan_name','plan_type','scope_location_id','scheduled_date','status','assigned_to','supervised_by','created_by','created_at','is_deleted'] },
+    { name: 'Stocktake_Results', headers: ['result_id','plan_id','unit_id','expected_location','actual_location','physical_count','system_count','condition_found','discrepancy_type','resolution','resolved_by','counted_by','recorded_at','is_deleted'] },
+    { name: 'Venues', headers: ['venue_id','name','venue_type','address','floor','floor_area_sqm','max_capacity','hourly_rate','half_day_rate','daily_rate','overtime_hourly_rate','deposit_required','min_booking_hours','available_start_time','available_end_time','amenities','power_specs','ceiling_height_m','has_cyclorama','cyclorama_color','has_blackout','has_loading_dock','parking_info','rules','description','image_urls','floor_plan_url','location_id','active','notes','created_by','created_at','is_deleted'] },
+    { name: 'Venue_Bookings', headers: ['booking_id','venue_id','customer_id','rental_id','booking_start','booking_end','actual_start','actual_end','total_hours','overtime_hours','rate_type','unit_rate','rate_quantity','subtotal','overtime_fee','discount_amount','tax_rate','tax_amount','total_amount','deposit_amount','deposit_status','attendee_count','use_purpose','setup_required','setup_notes','cleanup_included','special_requirements','contract_url','contract_signed','invoice_required','invoice_status','invoice_number','prepared_by','handled_by','approved_by','status','cancellation_date','cancellation_reason','cancellation_fee','post_use_condition','damage_description','damage_fee','notes','paid_amount','created_at','updated_at','is_deleted'] }
+  ];
+
+  const results = {
+    spreadsheet_id: SPREADSHEET_ID,
+    spreadsheet_name: SPREADSHEET.getName(),
+    total_required: requiredSheets.length,
+    existing: [],
+    missing: [],
+    sheets_in_spreadsheet: SPREADSHEET.getSheets().map(s => s.getName())
+  };
+
+  requiredSheets.forEach(req => {
+    const sheet = SPREADSHEET.getSheetByName(req.name);
+    if (sheet) {
+      const headers = sheet.getDataRange().getValues()[0] || [];
+      results.existing.push({
+        name: req.name,
+        rows: sheet.getLastRow() - 1,
+        headers: headers.map(h => String(h).toLowerCase().trim())
+      });
+    } else {
+      results.missing.push(req.name);
+    }
+  });
+
+  return results;
+}
+
+/**
+ * Auto-create all missing sheets with proper headers
+ * @return {Object} Creation result
+ */
+function ensureRequiredSheets() {
+  const diag = debugCheckSheets();
+  const created = [];
+
+  if (diag.missing.length === 0) {
+    return { message: '所有必要的工作表都已存在', created: [] };
+  }
+
+  // Get the sheet definitions from debugCheckSheets
+  const sheetDefs = {
+    'Equipment_Types': ['type_id','type_name','category','sub_category','brand','model','daily_rate','replacement_value','deposit_required','is_consumable','is_batch_item','description','active','created_by','created_at','is_deleted'],
+    'Equipment_Units': ['unit_id','type_id','internal_code','serial_number','category','status','current_condition','location_id','notes','created_by','created_at','is_deleted'],
+    'Customers': ['customer_id','name','company_name','phone','email','id_number','id_doc_verified','id_doc_return_status','blacklisted','blacklist_reason','credit_balance','notes','created_at','is_deleted'],
+    'Rentals': ['rental_id','customer_id','rental_start','rental_end','status','total_amount','paid_amount','tax_rate','deposit_status','delivery_required','invoice_status','prepared_by','handled_by','approved_by','notes','created_at','updated_at','is_deleted'],
+    'Rental_Items': ['item_id','rental_id','unit_id','type_id','quantity','daily_rate_snapshot','replacement_value_snapshot','days','line_total','line_total_after_discount','discount_amount','return_status','notes','is_deleted'],
+    'Payments': ['payment_id','rental_id','booking_id','payment_type','amount','payment_method','payment_date','received_by','receive_channel','relay_status','notes','is_deleted'],
+    'Maintenance_Logs': ['log_id','unit_id','maintenance_type','description','cost','scheduled_date','completed_date','performed_by','status','notes','created_at','is_deleted'],
+    'Inventory_Logs': ['log_id','unit_id','change_type','quantity_change','from_location','to_location','reason','performed_by','created_at','is_deleted'],
+    'Storage_Locations': ['location_id','location_name','parent_id','location_type','capacity','responsible_staff','notes','is_deleted'],
+    'Staff': ['staff_id','name','email','phone','role','can_approve_discount','active','created_at','is_deleted'],
+    'Discount_Rules': ['rule_id','rule_name','discount_type','discount_value','min_days','min_amount','applicable_types','applicable_categories','active','created_at','is_deleted'],
+    'Accessory_Bindings': ['binding_id','parent_type_id','accessory_type_id','binding_type','notes','is_deleted'],
+    'Damage_Records': ['damage_id','rental_id','unit_id','damage_type','description','severity','repair_cost','replacement_cost','reported_by','reported_at','status','notes','is_deleted'],
+    'Credit_Notes': ['credit_note_id','rental_id','booking_id','customer_id','credit_type','amount','reason','approved_by','status','created_at','is_deleted'],
+    'Service_Items': ['service_item_id','rental_id','booking_id','service_type','description','unit_price','quantity','line_total','notes','is_deleted'],
+    'Overdue_Rules': ['overdue_rule_id','rule_name','grace_period_days','daily_penalty_rate','max_penalty_percent','active','is_deleted'],
+    'Wear_Tolerance': ['tolerance_id','category','condition_field','acceptable_threshold','notes','is_deleted'],
+    'Print_Templates': ['template_id','template_name','template_type','doc_template_id','active','created_at','updated_at','is_deleted'],
+    'Rental_Addendums': ['addendum_id','rental_id','addendum_type','description','amount_change','approved_by','created_at','is_deleted'],
+    'Stocktake_Plans': ['plan_id','plan_name','plan_type','scope_location_id','scheduled_date','status','assigned_to','supervised_by','created_by','created_at','is_deleted'],
+    'Stocktake_Results': ['result_id','plan_id','unit_id','expected_location','actual_location','physical_count','system_count','condition_found','discrepancy_type','resolution','resolved_by','counted_by','recorded_at','is_deleted'],
+    'Venues': ['venue_id','name','venue_type','address','floor','floor_area_sqm','max_capacity','hourly_rate','half_day_rate','daily_rate','overtime_hourly_rate','deposit_required','min_booking_hours','available_start_time','available_end_time','amenities','power_specs','ceiling_height_m','has_cyclorama','cyclorama_color','has_blackout','has_loading_dock','parking_info','rules','description','image_urls','floor_plan_url','location_id','active','notes','created_by','created_at','is_deleted'],
+    'Venue_Bookings': ['booking_id','venue_id','customer_id','rental_id','booking_start','booking_end','actual_start','actual_end','total_hours','overtime_hours','rate_type','unit_rate','rate_quantity','subtotal','overtime_fee','discount_amount','tax_rate','tax_amount','total_amount','deposit_amount','deposit_status','attendee_count','use_purpose','setup_required','setup_notes','cleanup_included','special_requirements','contract_url','contract_signed','invoice_required','invoice_status','invoice_number','prepared_by','handled_by','approved_by','status','cancellation_date','cancellation_reason','cancellation_fee','post_use_condition','damage_description','damage_fee','notes','paid_amount','created_at','updated_at','is_deleted']
+  };
+
+  diag.missing.forEach(sheetName => {
+    const headers = sheetDefs[sheetName];
+    if (headers) {
+      const newSheet = SPREADSHEET.insertSheet(sheetName);
+      newSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      // Bold headers and freeze first row
+      newSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+      newSheet.setFrozenRows(1);
+      created.push(sheetName);
+      Logger.log(`Created sheet: ${sheetName} with ${headers.length} columns`);
+    }
+  });
+
+  return {
+    message: `已建立 ${created.length} 個工作表`,
+    created: created,
+    still_missing: diag.missing.filter(name => !created.includes(name))
+  };
+}
+
+/**
+ * Debug wrapper - call any function with error details
+ * @param {string} fnName - Function name
+ * @param {Array} args - Arguments
+ * @return {Object} Result or error details
+ */
+function debugCall(fnName, ...args) {
+  try {
+    const fn = this[fnName];
+    if (!fn) {
+      return { success: false, error: `Function not found: ${fnName}` };
+    }
+    const result = fn.apply(this, args);
+    return { success: true, result: result };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      stack: error.stack,
+      function: fnName,
+      args: args
+    };
+  }
+}
+
+/**
+ * Quick health check - test basic operations
+ * @return {Object} Health check results
+ */
+function debugHealthCheck() {
+  const checks = {};
+
+  // Check spreadsheet access
+  try {
+    checks.spreadsheet = { ok: true, name: SPREADSHEET.getName(), id: SPREADSHEET_ID };
+  } catch (e) {
+    checks.spreadsheet = { ok: false, error: e.message };
+  }
+
+  // Check each sheet read
+  const sheetNames = ['Equipment_Types', 'Equipment_Units', 'Customers', 'Rentals', 'Payments', 'Staff', 'Venues', 'Venue_Bookings'];
+  checks.sheets = {};
+  sheetNames.forEach(name => {
+    try {
+      const sheet = SPREADSHEET.getSheetByName(name);
+      if (!sheet) {
+        checks.sheets[name] = { ok: false, error: 'Sheet not found' };
+      } else {
+        const rows = sheet.getLastRow();
+        checks.sheets[name] = { ok: true, rows: rows, hasHeaders: rows >= 1 };
+      }
+    } catch (e) {
+      checks.sheets[name] = { ok: false, error: e.message };
+    }
+  });
+
+  // Check current user
+  try {
+    const user = getCurrentUser();
+    checks.user = user
+      ? { ok: true, staff_id: user.staff_id, role: user.role }
+      : { ok: false, note: 'No matching staff record (permissions will be denied)' };
+  } catch (e) {
+    checks.user = { ok: false, error: e.message };
+  }
+
+  // Check getDashboardStats
+  try {
+    const stats = getDashboardStats();
+    checks.dashboard = { ok: true, stats: stats };
+  } catch (e) {
+    checks.dashboard = { ok: false, error: e.message, stack: e.stack };
+  }
+
+  return checks;
+}
+
 // Category codes mapping
 const CATEGORY_CODES = {
   'camera': 'CAM',
