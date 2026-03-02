@@ -1454,7 +1454,7 @@
       loadHeaderUserBadge();
       await loadDashboard();
       updateClock();
-      setInterval(updateClock, 60000);
+      setInterval(updateClock, 1000);
 
       // Hide initial splash screen
       const splash = document.getElementById('app-splash');
@@ -1663,14 +1663,21 @@
 
     // ==================== EQUIPMENT PAGE ====================
 
-    async function loadEquipmentPage() {
+    async function loadEquipmentPage(forceReload) {
+      // Render cached data immediately if available
+      if (equipmentTypes.length && equipmentUnits.length && !forceReload) {
+        renderEquipmentTypes();
+        renderEquipmentUnits();
+      }
       try {
-        equipmentTypes = await API.getEquipmentTypes();
-        equipmentUnits = await API.getEquipmentUnits();
+        [equipmentTypes, equipmentUnits] = await Promise.all([
+          API.getEquipmentTypes(),
+          API.getEquipmentUnits()
+        ]);
         renderEquipmentTypes();
         renderEquipmentUnits();
       } catch (error) {
-        showError('載入器材數據失敗');
+        if (!equipmentTypes.length) showError('載入器材數據失敗');
         console.error(error);
       }
     }
@@ -2108,11 +2115,13 @@
     // ==================== RENTALS PAGE ====================
 
     async function loadRentalsPage() {
+      if (rentals.length) renderRentals(); // Show cached data immediately
       try {
         rentals = await API.getRentals();
+        if (!customers.length) customers = await API.getCustomers();
         renderRentals();
       } catch (error) {
-        showError('載入租借數據失敗');
+        if (!rentals.length) showError('載入租借數據失敗');
         console.error(error);
       }
     }
@@ -2452,13 +2461,14 @@
     }
 
     async function loadVenueBookingsPage() {
+      if (venueBookings.length) renderVenueBookings(); // Show cached data immediately
       try {
         venueBookings = await API.getVenueBookings();
         if (!venues.length) venues = await API.getVenues();
         if (!customers.length) customers = await API.getCustomers();
         renderVenueBookings();
       } catch (error) {
-        showError('載入場地預約失敗');
+        if (!venueBookings.length) showError('載入場地預約失敗');
         console.error(error);
       }
     }
@@ -3072,11 +3082,12 @@
     // ==================== CUSTOMERS PAGE ====================
 
     async function loadCustomersPage() {
+      if (customers.length) renderCustomers(); // Show cached data immediately
       try {
         customers = await API.getCustomers();
         renderCustomers();
       } catch (error) {
-        showError('載入客戶數據失敗');
+        if (!customers.length) showError('載入客戶數據失敗');
         console.error(error);
       }
     }
@@ -3669,16 +3680,11 @@
       try {
         const userInfo = await API.getCurrentUserInfo();
 
-        // If not authenticated, check if Staff sheet is empty for bootstrap
-        if (!userInfo || !userInfo.authenticated) {
-          renderCurrentUser(userInfo);
-          return;
-        }
-
-        // Render current user card first
+        // Render current user card (works even if not authenticated)
         renderCurrentUser(userInfo);
 
-        // Load staff list and permissions in parallel
+        // Load staff list and permissions regardless of auth status
+        // (getStaff doesn't require permissions)
         let staffData, permData;
         try {
           [staffData, permData] = await Promise.all([
@@ -4032,13 +4038,22 @@
         activityLogs = await API.getRecentActivityLogs(100) || [];
         renderActivityLogs();
       } catch (e) {
-        showError('載入活動紀錄失敗: ' + e.message);
+        // Show permission errors inline instead of just a toast
+        activityLogs = [];
+        renderActivityLogs(e.message);
       }
     }
 
-    function renderActivityLogs() {
+    function renderActivityLogs(errorMsg) {
       const tbody = document.querySelector('#activity-table tbody');
       clearElement(tbody);
+
+      if (errorMsg) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="6" style="text-align:center; color:var(--danger-color); padding:24px;">載入失敗: ${escapeHtml(errorMsg)}</td>`;
+        tbody.appendChild(row);
+        return;
+      }
 
       const actionFilter = document.getElementById('activity-filter-action').value;
       const searchText = (document.getElementById('activity-search').value || '').toLowerCase();
@@ -4459,18 +4474,19 @@
     let posRentalSelectedItems = []; // [{unit_id, type_name, internal_code, daily_rate}, ...]
 
     async function loadPosRentalPage() {
+      // Set default dates immediately (don't wait for API)
+      const today = formatDate(new Date());
+      const tomorrow = formatDate(new Date(Date.now() + 86400000));
+      document.getElementById('pos-rental-start').value = document.getElementById('pos-rental-start').value || today;
+      document.getElementById('pos-rental-end').value = document.getElementById('pos-rental-end').value || tomorrow;
+      posRentalUpdateDays();
+
       try {
         if (!equipmentTypes.length) equipmentTypes = await API.getEquipmentTypes();
         if (!equipmentUnits.length) equipmentUnits = await API.getEquipmentUnits();
         if (!customers.length) customers = await API.getCustomers();
         posRentalRenderCatalog();
         posRentalPopulateCustomers();
-        // Set default dates
-        const today = formatDate(new Date());
-        const tomorrow = formatDate(new Date(Date.now() + 86400000));
-        document.getElementById('pos-rental-start').value = today;
-        document.getElementById('pos-rental-end').value = tomorrow;
-        posRentalUpdateDays();
       } catch (error) {
         showError('載入器材資料失敗');
         console.error(error);
@@ -4722,6 +4738,18 @@
     let posVenueSelectedVenue = null; // {venue_id, venue_name, hourly_rate, half_day_rate, daily_rate, ...}
 
     async function loadPosVenuePage() {
+      // Set default booking times immediately (don't wait for API)
+      const startEl = document.getElementById('pos-venue-start');
+      const endEl = document.getElementById('pos-venue-end');
+      if (startEl && !startEl.value) {
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        now.setHours(now.getHours() + 1);
+        startEl.value = toDatetimeLocal(now);
+        const end = new Date(now.getTime() + 4 * 3600000); // +4 hours
+        endEl.value = toDatetimeLocal(end);
+      }
+
       try {
         if (!venues.length) venues = await API.getVenues();
         if (!customers.length) customers = await API.getCustomers();
@@ -4731,6 +4759,15 @@
         showError('載入場地資料失敗');
         console.error(error);
       }
+    }
+
+    function toDatetimeLocal(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      const h = String(date.getHours()).padStart(2, '0');
+      const min = String(date.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${d}T${h}:${min}`;
     }
 
     function posVenuePopulateCustomers() {
