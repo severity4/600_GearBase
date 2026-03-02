@@ -2668,7 +2668,7 @@
         await API.createVenue(data);
         showSuccess('場地已新增');
         document.querySelector('.modal-overlay').remove();
-        loadVenuesPage();
+        loadVenueSettingsPage();
       } catch (error) {
         showError('保存失敗: ' + error.message);
       }
@@ -2806,7 +2806,7 @@
         await API.updateVenue(venueId, data);
         showSuccess('場地已更新');
         document.querySelector('.modal-overlay').remove();
-        loadVenuesPage();
+        loadVenueSettingsPage();
       } catch (error) {
         showError('更新失敗: ' + error.message);
       }
@@ -2818,7 +2818,7 @@
       try {
         await API.deleteVenue(button.dataset.id);
         showSuccess('場地已刪除');
-        loadVenuesPage();
+        loadVenueSettingsPage();
       } catch (error) {
         showError('刪除失敗: ' + error.message);
       }
@@ -2942,7 +2942,7 @@
         await API.createVenueBooking(data);
         showSuccess('場地預約已建立');
         document.querySelector('.modal-overlay').remove();
-        loadVenuesPage();
+        loadVenueSettingsPage();
       } catch (error) {
         showError('保存失敗: ' + error.message);
       }
@@ -3061,7 +3061,7 @@
         await API.updateVenueBooking(bookingId, data);
         showSuccess('場地預約已更新');
         document.querySelector('.modal-overlay').remove();
-        loadVenuesPage();
+        loadVenueSettingsPage();
       } catch (error) {
         showError('更新失敗: ' + error.message);
       }
@@ -3073,7 +3073,7 @@
       try {
         await API.deleteVenueBooking(button.dataset.id);
         showSuccess('場地預約已刪除');
-        loadVenuesPage();
+        loadVenueSettingsPage();
       } catch (error) {
         showError('刪除失敗: ' + error.message);
       }
