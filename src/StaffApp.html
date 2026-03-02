@@ -634,12 +634,21 @@
   </style>
 </head>
 <body class="staff-app">
+  <!-- Initial loading splash screen (shown before JS loads) -->
+  <div id="app-splash" style="position:fixed; top:0; left:0; right:0; bottom:0; background:#333; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999; transition:opacity 0.3s ease;">
+    <img src="https://i.ibb.co/vvYLK4jP/LOGO-With-Text-Below-2000.png" alt="IN&amp;OUT Production Studio" style="height:160px; margin-bottom:24px;">
+    <div style="font-size:16px; font-weight:600; color:#e2e8f0; margin-bottom:8px;">GearBase 器材管理系統</div>
+    <div style="width:36px; height:36px; border:3px solid rgba(255,255,255,0.2); border-top-color:#3b82f6; border-radius:50%; animation:splash-spin 0.8s linear infinite; margin-top:20px;"></div>
+    <div style="font-size:13px; color:#94a3b8; margin-top:12px;">系統載入中...</div>
+    <style>@keyframes splash-spin { to { transform: rotate(360deg); } }</style>
+  </div>
+
   <div class="app-wrapper">
     <!-- Sidebar Navigation -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-logo">📹 GearBase</div>
-        <div class="sidebar-subtitle">映奧創意工作室</div>
+        <div class="sidebar-logo"><img src="https://i.ibb.co/vvYLK4jP/LOGO-With-Text-Below-2000.png" alt="IN&amp;OUT" style="height:48px; vertical-align:middle; margin-right:8px; filter:brightness(1.1);">GearBase</div>
+        <div class="sidebar-subtitle">映奧創意工作室 器材管理系統</div>
       </div>
 
       <div class="nav-section">
@@ -1254,8 +1263,11 @@
               <button class="btn btn-primary btn-sm" id="debug-health-check">Health Check</button>
               <button class="btn btn-primary btn-sm" id="debug-check-sheets">檢查工作表</button>
               <button class="btn btn-primary btn-sm" id="debug-validate-schema">資料庫結構檢查</button>
+              <button class="btn btn-primary btn-sm" id="debug-diagnose-data">資料完整性診斷</button>
+              <button class="btn btn-primary btn-sm" id="debug-error-logs">查看錯誤紀錄</button>
               <button class="btn btn-sm" style="background: #dc2626; color: white;" id="debug-create-sheets">建立缺少的工作表</button>
               <button class="btn btn-sm" style="background: #dc2626; color: white;" id="debug-repair-schema">自動修復結構</button>
+              <button class="btn btn-sm" style="background: #dc2626; color: white;" id="debug-clear-errors">清除舊錯誤</button>
             </div>
             <div id="debug-output" style="display: none; background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; max-height: 500px; overflow: auto;">
               <pre id="debug-output-content" style="margin: 0; font-size: 12px; line-height: 1.6; white-space: pre-wrap;"></pre>
@@ -1443,6 +1455,13 @@
       await loadDashboard();
       updateClock();
       setInterval(updateClock, 60000);
+
+      // Hide initial splash screen
+      const splash = document.getElementById('app-splash');
+      if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 300);
+      }
     });
 
     function setupNavigation() {
@@ -1594,6 +1613,9 @@
       document.getElementById('debug-create-sheets').addEventListener('click', debugRunCreateSheets);
       document.getElementById('debug-validate-schema').addEventListener('click', debugRunValidateSchema);
       document.getElementById('debug-repair-schema').addEventListener('click', debugRunRepairSchema);
+      document.getElementById('debug-diagnose-data').addEventListener('click', debugRunDiagnoseData);
+      document.getElementById('debug-error-logs').addEventListener('click', debugRunErrorLogs);
+      document.getElementById('debug-clear-errors').addEventListener('click', debugRunClearErrors);
     }
 
     // ==================== DASHBOARD ====================
@@ -1657,7 +1679,15 @@
       const tbody = document.querySelector('#equipment-types-table tbody');
       clearElement(tbody);
 
-      equipmentTypes.filter(t => !t.is_deleted).forEach(type => {
+      const filtered = equipmentTypes.filter(t => !t.is_deleted);
+      if (filtered.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="5" style="text-align:center; color:var(--text-secondary); padding:24px;">尚未建立器材類型</td>';
+        tbody.appendChild(row);
+        return;
+      }
+
+      filtered.forEach(type => {
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${escapeHtml(type.type_name || '-')}</td>
@@ -1677,7 +1707,15 @@
       const tbody = document.querySelector('#equipment-units-table tbody');
       clearElement(tbody);
 
-      equipmentUnits.filter(u => !u.is_deleted).forEach(unit => {
+      const filtered = equipmentUnits.filter(u => !u.is_deleted);
+      if (filtered.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="6" style="text-align:center; color:var(--text-secondary); padding:24px;">尚未建立器材個體</td>';
+        tbody.appendChild(row);
+        return;
+      }
+
+      filtered.forEach(unit => {
         const type = equipmentTypes.find(t => t.type_id === unit.type_id);
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -2083,7 +2121,15 @@
       const tbody = document.querySelector('#rentals-table tbody');
       clearElement(tbody);
 
-      rentals.filter(r => !r.is_deleted).forEach(rental => {
+      const filtered = rentals.filter(r => !r.is_deleted);
+      if (filtered.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="7" style="text-align:center; color:var(--text-secondary); padding:24px;">目前沒有租借紀錄</td>';
+        tbody.appendChild(row);
+        return;
+      }
+
+      filtered.forEach(rental => {
         const customer = customers.find(c => c.customer_id === rental.customer_id);
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -2127,7 +2173,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label required">租借人姓名</label>
-                <input type="text" id="new-cust-name" class="form-input" placeholder="例如：王小明">
+                <input type="text" id="new-cust-name" class="form-input" required placeholder="例如：王小明">
               </div>
               <div class="form-group">
                 <label class="form-label">公司名稱</label>
@@ -2137,7 +2183,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label required">電話</label>
-                <input type="tel" id="new-cust-phone" class="form-input" placeholder="例如：0912-345-678">
+                <input type="tel" id="new-cust-phone" class="form-input" required placeholder="例如：0912-345-678">
               </div>
               <div class="form-group">
                 <label class="form-label">電郵 <span style="color:var(--danger-color)">*</span></label>
@@ -2445,7 +2491,15 @@
       const tbody = document.querySelector('#bookings-table tbody');
       clearElement(tbody);
 
-      venueBookings.filter(b => !b.is_deleted).forEach(booking => {
+      const filtered = venueBookings.filter(b => !b.is_deleted);
+      if (filtered.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="8" style="text-align:center; color:var(--text-secondary); padding:24px;">目前沒有場地預約紀錄</td>';
+        tbody.appendChild(row);
+        return;
+      }
+
+      filtered.forEach(booking => {
         const venue = venues.find(v => v.venue_id === booking.venue_id);
         const customer = customers.find(c => c.customer_id === booking.customer_id);
         const rateLabels = { hourly: '時租', half_day: '半日租', daily: '日租', custom: '自訂' };
@@ -3101,6 +3155,8 @@
 
     async function saveCustomer(e) {
       const form = document.getElementById('customer-form');
+      // Trigger HTML5 native validation UI (red borders, tooltips)
+      if (!form.reportValidity()) return;
       const errors = validateCustomerForm(form);
 
       if (errors.length > 0) {
@@ -3235,6 +3291,7 @@
 
     async function updateCustomerForm(customerId, e) {
       const form = document.getElementById('edit-customer-form');
+      if (!form.reportValidity()) return;
       const errors = validateCustomerForm(form);
 
       if (errors.length > 0) {
@@ -5115,6 +5172,102 @@
       } catch (error) {
         debugShowOutput(`修復失敗：\n${error.message}`);
         showError('修復失敗: ' + error.message);
+      }
+    }
+
+    // ==================== DATA INTEGRITY DIAGNOSIS ====================
+
+    async function debugRunDiagnoseData() {
+      try {
+        debugShowOutput('正在執行資料完整性診斷...\n（伺服器端檢查，請稍候）');
+        const report = await API.debugDiagnoseData();
+        let output = '';
+        output += '╔══════════════════════════════════════════════╗\n';
+        output += '║         資料完整性診斷報告                    ║\n';
+        output += '╚══════════════════════════════════════════════╝\n\n';
+        output += `⏰ 產生時間：${report.timestamp}\n\n`;
+
+        // Summary
+        const s = report.summary;
+        output += '【摘要】\n';
+        output += `  📊 檢查資料表：${(s.tables_checked || []).length} 張\n`;
+        output += `  📝 總問題數：${s.total_issues || 0}\n`;
+        if (s.errors)   output += `  🔴 錯誤：${s.errors}\n`;
+        if (s.warnings) output += `  🟡 警告：${s.warnings}\n`;
+        if (s.infos)    output += `  🔵 資訊：${s.infos}\n`;
+
+        // Record counts
+        if (s.record_counts) {
+          output += '\n【各表記錄數】\n';
+          Object.entries(s.record_counts).forEach(([k, v]) => {
+            output += `  ${k}: ${v} 筆\n`;
+          });
+        }
+
+        // Issues
+        if (report.issues && report.issues.length > 0) {
+          output += '\n【問題清單】\n';
+          const icons = { error: '🔴', warning: '🟡', info: '🔵', fatal: '💀' };
+          report.issues.forEach((issue, i) => {
+            output += `  ${icons[issue.severity] || '❓'} [${issue.table || '-'}] ${issue.id || ''}: ${issue.detail}\n`;
+          });
+        } else {
+          output += '\n✅ 未發現任何資料完整性問題！\n';
+        }
+
+        debugShowOutput(output);
+        showSuccess(`診斷完成：${s.total_issues || 0} 個問題`);
+      } catch (error) {
+        debugShowOutput(`診斷失敗：\n${error.message}`);
+        showError('診斷失敗: ' + error.message);
+      }
+    }
+
+    // ==================== ERROR LOGS VIEWER ====================
+
+    async function debugRunErrorLogs() {
+      try {
+        debugShowOutput('正在載入錯誤紀錄...');
+        const errors = await API.getRecentErrors(50);
+
+        let output = '';
+        output += '╔══════════════════════════════════════════════╗\n';
+        output += '║         後端錯誤紀錄（最近 50 筆）            ║\n';
+        output += '╚══════════════════════════════════════════════╝\n\n';
+
+        if (!errors || errors.length === 0) {
+          output += '✅ 目前沒有錯誤紀錄！系統運行正常。\n';
+        } else {
+          output += `共 ${errors.length} 筆錯誤紀錄：\n\n`;
+          const icons = { error: '🔴', warning: '🟡', fatal: '💀', info: '🔵' };
+          errors.forEach((err, i) => {
+            const icon = icons[err.severity] || '❓';
+            const time = err.timestamp ? new Date(err.timestamp).toLocaleString('zh-TW') : '?';
+            output += `${icon} #${i + 1}  ${time}\n`;
+            output += `   函數：${err.function_name || '-'}\n`;
+            output += `   訊息：${err.error_message || '-'}\n`;
+            if (err.context) output += `   上下文：${err.context}\n`;
+            if (err.user_email) output += `   使用者：${err.user_email}\n`;
+            if (err.stack_trace) output += `   堆疊：${err.stack_trace.substring(0, 200)}\n`;
+            output += '\n';
+          });
+        }
+
+        debugShowOutput(output);
+      } catch (error) {
+        debugShowOutput(`載入錯誤紀錄失敗：\n${error.message}`);
+        showError('載入失敗: ' + error.message);
+      }
+    }
+
+    async function debugRunClearErrors() {
+      if (!confirm('確定要清除舊錯誤紀錄？（保留最近 200 筆）')) return;
+      try {
+        const result = await API.clearOldErrors(200);
+        showSuccess(`已清除 ${result.cleared} 筆舊錯誤，保留 ${result.remaining} 筆`);
+        debugRunErrorLogs(); // Refresh
+      } catch (error) {
+        showError('清除失敗: ' + error.message);
       }
     }
   </script>

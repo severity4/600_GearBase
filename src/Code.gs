@@ -40,7 +40,8 @@ function getSchemaDefinitions() {
     { name: 'Stocktake_Results', headers: ['result_id','plan_id','unit_id','expected_location_id','actual_location_id','location_match','expected_status','actual_status','status_match','expected_condition','actual_condition','condition_match','expected_quantity','actual_quantity','quantity_match','result','photo_url','resolution_action','resolution_notes','resolved_by','resolved_at','counted_by','counted_at','expected_location','actual_location','physical_count','system_count','condition_found','discrepancy_type','resolution','recorded_at','is_deleted'] },
     { name: 'Venues', headers: ['venue_id','name','venue_type','address','floor','floor_area_sqm','max_capacity','hourly_rate','half_day_rate','daily_rate','overtime_hourly_rate','deposit_required','min_booking_hours','available_start_time','available_end_time','amenities','power_specs','ceiling_height_m','has_cyclorama','cyclorama_color','has_blackout','has_loading_dock','parking_info','rules','description','image_urls','floor_plan_url','location_id','active','notes','created_by','created_at','is_deleted'] },
     { name: 'Venue_Bookings', headers: ['booking_id','venue_id','customer_id','rental_id','booking_start','booking_end','actual_start','actual_end','total_hours','overtime_hours','rate_type','unit_rate','rate_quantity','subtotal','overtime_fee','discount_amount','tax_rate','tax_amount','total_amount','deposit_amount','deposit_status','attendee_count','use_purpose','setup_required','setup_notes','cleanup_included','special_requirements','contract_url','contract_signed','invoice_required','invoice_status','invoice_number','prepared_by','handled_by','approved_by','status','cancellation_date','cancellation_reason','cancellation_fee','post_use_condition','damage_description','damage_fee','notes','paid_amount','created_at','updated_at','is_deleted'] },
-    { name: 'Activity_Logs', headers: ['log_id','staff_id','staff_name','action','target_type','target_id','description','ip_info','created_at'] }
+    { name: 'Activity_Logs', headers: ['log_id','staff_id','staff_name','action','target_type','target_id','description','ip_info','created_at'] },
+    { name: 'Error_Logs', headers: ['error_id','timestamp','function_name','error_message','stack_trace','user_email','severity','context'] }
   ];
 }
 
@@ -349,6 +350,170 @@ function debugHealthCheck() {
   }
 
   return checks;
+}
+
+/**
+ * ==================== ERROR LOGGING ====================
+ * Write errors to Error_Logs sheet for persistent, queryable debugging.
+ * This runs independently of Logger.log and is visible from the debug panel.
+ */
+function logError(functionName, error, severity, context) {
+  try {
+    const sheet = SPREADSHEET.getSheetByName('Error_Logs');
+    if (!sheet) return; // Don't throw if sheet doesn't exist yet
+
+    let email = '';
+    try { email = Session.getActiveUser().getEmail(); } catch (_) {}
+
+    const row = [
+      'ERR-' + Date.now(),
+      new Date(),
+      functionName || '',
+      error instanceof Error ? error.message : String(error || ''),
+      error instanceof Error ? (error.stack || '') : '',
+      email,
+      severity || 'error',
+      typeof context === 'object' ? JSON.stringify(context) : String(context || '')
+    ];
+    sheet.appendRow(row);
+  } catch (e) {
+    // Last resort — don't let error logging itself crash the app
+    Logger.log('logError failed: ' + e.toString());
+  }
+}
+
+/**
+ * Get recent error logs for the debug panel
+ */
+function getRecentErrors(limit) {
+  requirePermission('*', '僅管理員可使用診斷功能');
+  const count = limit || 50;
+  try {
+    const data = getSheetData('Error_Logs');
+    data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return data.slice(0, count);
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Clear old error logs (keep last N entries)
+ */
+function clearOldErrors(keepCount) {
+  requirePermission('*', '僅管理員可使用診斷功能');
+  const keep = keepCount || 200;
+  const sheet = SPREADSHEET.getSheetByName('Error_Logs');
+  if (!sheet) return { cleared: 0 };
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= keep + 1) return { cleared: 0 }; // +1 for header
+  const deleteCount = lastRow - keep - 1;
+  sheet.deleteRows(2, deleteCount); // Keep header row
+  return { cleared: deleteCount, remaining: keep };
+}
+
+/**
+ * Comprehensive data integrity diagnosis.
+ * Checks for orphaned records, broken references, and inconsistencies.
+ * Returns a structured report that Claude or admins can read.
+ */
+function debugDiagnoseData() {
+  requirePermission('*', '僅管理員可使用診斷功能');
+
+  const report = { timestamp: new Date().toISOString(), issues: [], summary: {} };
+
+  try {
+    // Load core data
+    const rentals    = getSheetData('Rentals');
+    const items      = getSheetData('Rental_Items');
+    const payments   = getSheetData('Payments');
+    const customers  = getSheetData('Customers');
+    const types      = getSheetData('Equipment_Types');
+    const units      = getSheetData('Equipment_Units');
+    const staff      = getSheetData('Staff');
+    const bookings   = getSheetData('Venue_Bookings');
+    const venues     = getSheetData('Venues');
+
+    const custIds   = new Set(customers.map(c => c.customer_id));
+    const rentalIds = new Set(rentals.map(r => r.rental_id));
+    const typeIds   = new Set(types.map(t => t.type_id));
+    const unitIds   = new Set(units.map(u => u.unit_id));
+    const staffIds  = new Set(staff.map(s => s.staff_id));
+    const venueIds  = new Set(venues.map(v => v.venue_id));
+
+    // 1. Rentals referencing non-existent customers
+    rentals.filter(r => !r.is_deleted && r.customer_id && !custIds.has(r.customer_id)).forEach(r => {
+      report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Rentals', id: r.rental_id, detail: `customer_id "${r.customer_id}" 不存在於 Customers` });
+    });
+
+    // 2. Rental_Items referencing non-existent rentals
+    items.filter(i => !i.is_deleted && i.rental_id && !rentalIds.has(i.rental_id)).forEach(i => {
+      report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Rental_Items', id: i.item_id, detail: `rental_id "${i.rental_id}" 不存在於 Rentals` });
+    });
+
+    // 3. Rental_Items referencing non-existent types or units
+    items.filter(i => !i.is_deleted && i.type_id && !typeIds.has(i.type_id)).forEach(i => {
+      report.issues.push({ severity: 'warning', type: 'orphan_ref', table: 'Rental_Items', id: i.item_id, detail: `type_id "${i.type_id}" 不存在於 Equipment_Types` });
+    });
+    items.filter(i => !i.is_deleted && i.unit_id && !unitIds.has(i.unit_id)).forEach(i => {
+      report.issues.push({ severity: 'warning', type: 'orphan_ref', table: 'Rental_Items', id: i.item_id, detail: `unit_id "${i.unit_id}" 不存在於 Equipment_Units` });
+    });
+
+    // 4. Payments referencing non-existent rentals
+    payments.filter(p => !p.is_deleted && p.rental_id && !rentalIds.has(p.rental_id)).forEach(p => {
+      report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Payments', id: p.payment_id, detail: `rental_id "${p.rental_id}" 不存在於 Rentals` });
+    });
+
+    // 5. Venue_Bookings referencing non-existent venues or customers
+    bookings.filter(b => !b.is_deleted && b.venue_id && !venueIds.has(b.venue_id)).forEach(b => {
+      report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Venue_Bookings', id: b.booking_id, detail: `venue_id "${b.venue_id}" 不存在於 Venues` });
+    });
+    bookings.filter(b => !b.is_deleted && b.customer_id && !custIds.has(b.customer_id)).forEach(b => {
+      report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Venue_Bookings', id: b.booking_id, detail: `customer_id "${b.customer_id}" 不存在於 Customers` });
+    });
+
+    // 6. Equipment_Units referencing non-existent types
+    units.filter(u => !u.is_deleted && u.type_id && !typeIds.has(u.type_id)).forEach(u => {
+      report.issues.push({ severity: 'warning', type: 'orphan_ref', table: 'Equipment_Units', id: u.unit_id, detail: `type_id "${u.type_id}" 不存在於 Equipment_Types` });
+    });
+
+    // 7. Rentals with payment mismatch
+    rentals.filter(r => !r.is_deleted && r.status !== 'draft' && r.status !== 'cancelled').forEach(r => {
+      const totalPaid = payments
+        .filter(p => !p.is_deleted && p.rental_id === r.rental_id)
+        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const expected = parseFloat(r.total_amount) || 0;
+      if (expected > 0 && Math.abs(totalPaid - expected) > 1) {
+        report.issues.push({ severity: 'info', type: 'payment_mismatch', table: 'Rentals', id: r.rental_id, detail: `應收 ${expected}，已收 ${totalPaid}，差額 ${(expected - totalPaid).toFixed(0)}` });
+      }
+    });
+
+    // 8. Staff with no email (can't login)
+    staff.filter(s => !s.is_deleted && s.active !== false && s.active !== 'false' && !s.email).forEach(s => {
+      report.issues.push({ severity: 'warning', type: 'missing_data', table: 'Staff', id: s.staff_id, detail: `員工「${s.name}」缺少 email，無法登入` });
+    });
+
+    // Summary
+    const errors   = report.issues.filter(i => i.severity === 'error').length;
+    const warnings = report.issues.filter(i => i.severity === 'warning').length;
+    const infos    = report.issues.filter(i => i.severity === 'info').length;
+    report.summary = {
+      total_issues: report.issues.length,
+      errors, warnings, infos,
+      tables_checked: ['Rentals','Rental_Items','Payments','Customers','Equipment_Types','Equipment_Units','Staff','Venue_Bookings','Venues'],
+      record_counts: {
+        rentals: rentals.length, rental_items: items.length, payments: payments.length,
+        customers: customers.length, types: types.length, units: units.length,
+        staff: staff.length, bookings: bookings.length, venues: venues.length
+      }
+    };
+
+  } catch (e) {
+    report.issues.push({ severity: 'fatal', type: 'diagnosis_error', detail: e.message, stack: e.stack });
+    logError('debugDiagnoseData', e, 'fatal');
+  }
+
+  return report;
 }
 
 // Category codes mapping

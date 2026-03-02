@@ -12,8 +12,9 @@ function getSheetData(sheetName) {
   try {
     const sheet = SPREADSHEET.getSheetByName(sheetName);
     if (!sheet) {
-      Logger.log(`Sheet not found: ${sheetName}`);
-      return [];
+      const err = new Error(`找不到工作表: ${sheetName}`);
+      logError('getSheetData', err, 'error', { sheetName });
+      throw err;
     }
 
     const range = sheet.getDataRange();
@@ -37,8 +38,8 @@ function getSheetData(sheetName) {
 
     return data;
   } catch (error) {
-    Logger.log(`Error reading sheet ${sheetName}: ${error.toString()}`);
-    return [];
+    logError('getSheetData', error, 'error', { sheetName });
+    throw error;
   }
 }
 
@@ -97,7 +98,7 @@ function appendSheetRow(sheetName, rowData) {
     Logger.log(`Row appended to ${sheetName}`);
     return true;
   } catch (error) {
-    Logger.log(`Error appending row to ${sheetName}: ${error.toString()}`);
+    logError('appendSheetRow', error, 'error', { sheetName, keys: Object.keys(rowData || {}) });
     throw error;
   }
 }
@@ -152,7 +153,7 @@ function updateSheetRow(sheetName, idColumn, idValue, updates) {
     Logger.log(`Row updated in ${sheetName}: ${idValue}`);
     return true;
   } catch (error) {
-    Logger.log(`Error updating row in ${sheetName}: ${error.toString()}`);
+    logError('updateSheetRow', error, 'error', { sheetName, idColumn, idValue });
     throw error;
   }
 }
@@ -168,7 +169,7 @@ function deleteSheetRow(sheetName, idColumn, idValue) {
   try {
     return updateSheetRow(sheetName, idColumn, idValue, { is_deleted: true });
   } catch (error) {
-    Logger.log(`Error deleting row from ${sheetName}: ${error.toString()}`);
+    logError('deleteSheetRow', error, 'error', { sheetName, idColumn, idValue });
     throw error;
   }
 }

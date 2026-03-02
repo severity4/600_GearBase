@@ -287,8 +287,13 @@
 
     // ==================== LOADING INDICATOR ====================
 
+    let _loadingCount = 0;
+    let _loadingTimeout = null;
+
     /**
-     * Show/hide loading overlay
+     * Show/hide loading overlay with reference counting.
+     * Multiple concurrent API calls each call show(true)/show(false),
+     * the overlay only hides when ALL calls have completed.
      */
     function showLoading(show = true) {
       let overlay = document.getElementById('loading-overlay');
@@ -301,9 +306,23 @@
       }
 
       if (show) {
+        _loadingCount++;
         overlay.classList.add('active');
+        // Safety timeout: auto-hide after 30s to prevent permanent blocking
+        clearTimeout(_loadingTimeout);
+        _loadingTimeout = setTimeout(() => {
+          if (_loadingCount > 0) {
+            console.warn('[Loading] Force-hiding loading overlay after 30s timeout. Pending calls:', _loadingCount);
+            _loadingCount = 0;
+            overlay.classList.remove('active');
+          }
+        }, 30000);
       } else {
-        overlay.classList.remove('active');
+        _loadingCount = Math.max(0, _loadingCount - 1);
+        if (_loadingCount === 0) {
+          overlay.classList.remove('active');
+          clearTimeout(_loadingTimeout);
+        }
       }
     }
 
