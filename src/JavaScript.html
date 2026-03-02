@@ -152,6 +152,11 @@
       debugHealthCheck: () => runAsync('debugHealthCheck'),
       ensureRequiredSheets: () => runAsync('ensureRequiredSheets'),
       debugCall: (fnName, ...args) => runAsync('debugCall', fnName, ...args),
+      validateDatabaseSchema: () => runAsync('validateDatabaseSchema'),
+      repairDatabaseSchema: () => runAsync('repairDatabaseSchema'),
+      debugDiagnoseData: () => runAsync('debugDiagnoseData'),
+      getRecentErrors: (limit) => runAsync('getRecentErrors', limit),
+      clearOldErrors: (keepCount) => runAsync('clearOldErrors', keepCount),
 
       // Venue Bookings
       getVenueBookings: (filters) => runAsync('getVenueBookings', filters),
