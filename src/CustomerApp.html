@@ -165,7 +165,7 @@
       background-color: white;
       border-right: 1px solid var(--border-color);
       overflow-y: auto;
-      z-index: 100;
+      z-index: 1700;
       transform: translateX(-100%);
       transition: transform 0.3s ease;
       padding: 20px;
@@ -260,7 +260,7 @@
       position: fixed;
       left: 20px;
       top: 20px;
-      z-index: 90;
+      z-index: 1600;
       background-color: white;
       border-radius: 50%;
       width: 48px;
@@ -486,9 +486,9 @@
     <h1>📹 映奧創意工作室</h1>
     <p>專業器材租借 & 場地出租服務</p>
     <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
-      <button class="category-btn active" id="tab-equipment" onclick="switchTab('equipment')">器材租借</button>
-      <button class="category-btn" id="tab-venues" onclick="switchTab('venues')">場地出租</button>
-      <button class="category-btn" id="tab-lookup" onclick="switchTab('lookup')">進度查詢</button>
+      <button class="category-btn tab-btn active" id="tab-equipment" onclick="switchTab('equipment')">器材租借</button>
+      <button class="category-btn tab-btn" id="tab-venues" onclick="switchTab('venues')">場地出租</button>
+      <button class="category-btn tab-btn" id="tab-lookup" onclick="switchTab('lookup')">進度查詢</button>
     </div>
   </div>
 
@@ -630,10 +630,10 @@
         document.getElementById('sidebar').classList.remove('active');
       });
 
-      // Category filter
+      // Category filter (exclude tab buttons which share the .category-btn class)
       document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('category-btn')) {
-          document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+        if (e.target.classList.contains('category-btn') && !e.target.classList.contains('tab-btn')) {
+          document.querySelectorAll('.category-btn:not(.tab-btn)').forEach(btn => btn.classList.remove('active'));
           e.target.classList.add('active');
           selectedCategory = e.target.dataset.category || null;
           filterAndRender();

@@ -1320,6 +1320,13 @@ function getRecentActivityLogs(limit) {
  */
 
 function getDashboardStats() {
+  // Use CacheService to avoid loading 6 full sheets on every call
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('dashboardStats');
+  if (cached) {
+    try { return JSON.parse(cached); } catch (_) {}
+  }
+
   const equipmentTypes = getSheetData('Equipment_Types').filter(t => !t.is_deleted);
   const equipmentUnits = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
   const customers = getSheetData('Customers').filter(c => !c.is_deleted);
@@ -1342,7 +1349,7 @@ function getDashboardStats() {
   const completedBookings = venueBookings.filter(b => b.status === 'completed').length;
   const venueRevenue = venueBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
 
-  return {
+  const stats = {
     total_equipment_types: equipmentTypes.length,
     total_equipment_units: equipmentUnits.length,
     available_units: availableUnits,
@@ -1358,6 +1365,10 @@ function getDashboardStats() {
     completed_bookings: completedBookings,
     venue_revenue: venueRevenue
   };
+
+  // Cache for 60 seconds to speed up repeated loads
+  try { cache.put('dashboardStats', JSON.stringify(stats), 60); } catch (_) {}
+  return stats;
 }
 
 /**

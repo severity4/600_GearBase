@@ -95,7 +95,7 @@ function appendSheetRow(sheetName, rowData) {
     }
 
     sheet.appendRow(newRow);
-    Logger.log(`Row appended to ${sheetName}`);
+    try { CacheService.getScriptCache().remove('dashboardStats'); } catch (_) {}
     return true;
   } catch (error) {
     logError('appendSheetRow', error, 'error', { sheetName, keys: Object.keys(rowData || {}) });
@@ -150,7 +150,7 @@ function updateSheetRow(sheetName, idColumn, idValue, updates) {
 
     // Set the updated values back
     range.setValues(values);
-    Logger.log(`Row updated in ${sheetName}: ${idValue}`);
+    try { CacheService.getScriptCache().remove('dashboardStats'); } catch (_) {}
     return true;
   } catch (error) {
     logError('updateSheetRow', error, 'error', { sheetName, idColumn, idValue });
