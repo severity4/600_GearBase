@@ -14,7 +14,7 @@
  */
 function findBestDiscount(typeId, category, rentalDays) {
   const rules = getSheetData('Discount_Rules').filter(r =>
-    !r.is_deleted && r.active === true
+    !isSoftDeleted_(r) && r.active === true
   );
 
   const applicable = rules.filter(rule => {
@@ -72,7 +72,7 @@ function calculateDiscountAmount(lineTotal, dailyRate, days, rule) {
  */
 function findOverdueRule(category) {
   const rules = getSheetData('Overdue_Rules').filter(r =>
-    !r.is_deleted && r.active === true
+    !isSoftDeleted_(r) && r.active === true
   );
 
   // 先找分類專屬規則
@@ -147,9 +147,9 @@ function calculateRentalBreakdown(rentalId) {
   if (!rental) throw new Error('找不到租借單: ' + rentalId);
 
   const items = getSheetDataFiltered('Rental_Items', { rental_id: rentalId })
-    .filter(i => !i.is_deleted);
+    .filter(i => !isSoftDeleted_(i));
   const services = getSheetDataFiltered('Service_Items', { rental_id: rentalId })
-    .filter(s => !s.is_deleted);
+    .filter(s => !isSoftDeleted_(s));
   const types = getSheetData('Equipment_Types');
 
   const startDate = new Date(rental.rental_start || rental.start_date);
@@ -226,7 +226,7 @@ function calculateRentalBreakdown(rentalId) {
 
   // 已付金額
   const payments = getSheetDataFiltered('Payments', { rental_id: rentalId })
-    .filter(p => !p.is_deleted);
+    .filter(p => !isSoftDeleted_(p));
   const paidAmount = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
   return {
@@ -321,7 +321,7 @@ function advanceRentalStatus(rentalId, newStatus, metadata = {}) {
       updates.actual_pickup_date = metadata.pickup_date || new Date();
       // 更新器材狀態為 rented
       const items = getSheetDataFiltered('Rental_Items', { rental_id: rentalId })
-        .filter(i => !i.is_deleted);
+        .filter(i => !isSoftDeleted_(i));
       items.forEach(item => {
         if (item.unit_id) {
           updateSheetRow('Equipment_Units', 'unit_id', item.unit_id, { status: 'rented' });
@@ -346,7 +346,7 @@ function advanceRentalStatus(rentalId, newStatus, metadata = {}) {
       updates.cancellation_approved_by = metadata.approved_by || '';
       // 釋放已預約的器材
       const cancelItems = getSheetDataFiltered('Rental_Items', { rental_id: rentalId })
-        .filter(i => !i.is_deleted);
+        .filter(i => !isSoftDeleted_(i));
       cancelItems.forEach(item => {
         if (item.unit_id) {
           updateSheetRow('Equipment_Units', 'unit_id', item.unit_id, { status: 'available' });
@@ -368,7 +368,7 @@ function checkAndMarkOverdueRentals() {
   today.setHours(0, 0, 0, 0);
 
   const activeRentals = getSheetData('Rentals').filter(r =>
-    !r.is_deleted && r.status === 'active'
+    !isSoftDeleted_(r) && r.status === 'active'
   );
 
   let overdueCount = 0;
@@ -469,7 +469,7 @@ function processEquipmentCheckIn(checkInData) {
   // 更新 Rental_Items 歸還狀態
   if (rental_id) {
     const rentalItems = getSheetDataFiltered('Rental_Items', { rental_id: rental_id })
-      .filter(i => !i.is_deleted && i.unit_id === unit_id);
+      .filter(i => !isSoftDeleted_(i) && i.unit_id === unit_id);
     rentalItems.forEach(item => {
       updateSheetRow('Rental_Items', item.item_id ? 'item_id' : 'rental_item_id',
         item.item_id || item.rental_item_id, {
@@ -482,7 +482,7 @@ function processEquipmentCheckIn(checkInData) {
 
     // 檢查是否所有項目都已歸還
     const allItems = getSheetDataFiltered('Rental_Items', { rental_id: rental_id })
-      .filter(i => !i.is_deleted);
+      .filter(i => !isSoftDeleted_(i));
     const allReturned = allItems.every(i => i.return_status === 'returned');
     if (allReturned) {
       const rental = getSheetDataFiltered('Rentals', { rental_id: rental_id })[0];
@@ -520,7 +520,7 @@ function addWorkingDays(startDate, days) {
 
 function getServiceItems(rentalId) {
   return getSheetDataFiltered('Service_Items', { rental_id: rentalId })
-    .filter(s => !s.is_deleted);
+    .filter(s => !isSoftDeleted_(s));
 }
 
 function createServiceItem(serviceData) {
@@ -556,7 +556,7 @@ function deleteServiceItem(serviceItemId) {
 
 function getRentalAddendums(rentalId) {
   return getSheetDataFiltered('Rental_Addendums', { rental_id: rentalId })
-    .filter(a => !a.is_deleted);
+    .filter(a => !isSoftDeleted_(a));
 }
 
 function createRentalAddendum(addendumData) {
@@ -566,7 +566,7 @@ function createRentalAddendum(addendumData) {
 
   // 產生附約 ID: RENT-2026-001-A1
   const existingAddendums = getSheetDataFiltered('Rental_Addendums', { rental_id: addendumData.rental_id })
-    .filter(a => !a.is_deleted);
+    .filter(a => !isSoftDeleted_(a));
   const addendumNum = existingAddendums.length + 1;
   addendumData.addendum_id = addendumData.rental_id + '-A' + addendumNum;
 
@@ -687,7 +687,7 @@ function recalculateVenueBooking(bookingId, additionalUpdates = {}) {
 
   // Get service items for this booking
   const services = getSheetDataFiltered('Service_Items', { booking_id: bookingId })
-    .filter(s => !s.is_deleted);
+    .filter(s => !isSoftDeleted_(s));
   const serviceTotal = services.reduce((sum, s) => sum + (parseFloat(s.line_total) || 0), 0);
 
   const updates = {
@@ -714,9 +714,9 @@ function calculateVenueBookingBreakdown(bookingId) {
 
   const venue = getSheetDataFiltered('Venues', { venue_id: booking.venue_id })[0];
   const services = getSheetDataFiltered('Service_Items', { booking_id: bookingId })
-    .filter(s => !s.is_deleted);
+    .filter(s => !isSoftDeleted_(s));
   const payments = getSheetDataFiltered('Payments', { booking_id: bookingId })
-    .filter(p => !p.is_deleted);
+    .filter(p => !isSoftDeleted_(p));
 
   const unitRate = parseFloat(booking.unit_rate) || 0;
   const rateQty = parseFloat(booking.rate_quantity) || 1;
@@ -761,7 +761,7 @@ function calculateVenueBookingBreakdown(bookingId) {
  */
 function checkVenueAvailability(venueId, startTime, endTime, excludeBookingId) {
   const bookings = getSheetData('Venue_Bookings').filter(b =>
-    !b.is_deleted &&
+    !isSoftDeleted_(b) &&
     b.venue_id === venueId &&
     !['cancelled', 'completed'].includes(b.status) &&
     b.booking_id !== excludeBookingId
@@ -786,7 +786,7 @@ function checkVenueAvailability(venueId, startTime, endTime, excludeBookingId) {
  */
 function getVenueSchedule(venueId, startDate, endDate) {
   const bookings = getSheetData('Venue_Bookings').filter(b =>
-    !b.is_deleted &&
+    !isSoftDeleted_(b) &&
     b.venue_id === venueId &&
     b.status !== 'cancelled'
   );
@@ -805,7 +805,7 @@ function getVenueSchedule(venueId, startDate, endDate) {
 // ==================== OVERDUE RULES ====================
 
 function getOverdueRules(filters = {}) {
-  return getSheetDataFiltered('Overdue_Rules', filters).filter(r => !r.is_deleted);
+  return getSheetDataFiltered('Overdue_Rules', filters).filter(r => !isSoftDeleted_(r));
 }
 
 function createOverdueRule(ruleData) {
@@ -825,7 +825,7 @@ function updateOverdueRule(ruleId, updates) {
 // ==================== WEAR TOLERANCE ====================
 
 function getWearTolerance(filters = {}) {
-  return getSheetDataFiltered('Wear_Tolerance', filters).filter(r => !r.is_deleted);
+  return getSheetDataFiltered('Wear_Tolerance', filters).filter(r => !isSoftDeleted_(r));
 }
 
 function createWearTolerance(toleranceData) {
@@ -844,7 +844,7 @@ function updateWearTolerance(toleranceId, updates) {
 // ==================== PRINT_TEMPLATES ====================
 
 function getPrintTemplates(filters = {}) {
-  return getSheetDataFiltered('Print_Templates', filters).filter(r => !r.is_deleted);
+  return getSheetDataFiltered('Print_Templates', filters).filter(r => !isSoftDeleted_(r));
 }
 
 function createPrintTemplate(templateData) {

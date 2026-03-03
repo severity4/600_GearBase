@@ -1164,7 +1164,7 @@
 
     async function loadVenues() {
       try {
-        allVenues = await API.getActiveVenues();
+        allVenues = (await API.getActiveVenues()) || [];
         renderVenueList(allVenues);
       } catch (error) {
         showError('載入場地失敗');

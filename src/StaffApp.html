@@ -2117,8 +2117,8 @@
     async function loadRentalsPage() {
       if (rentals.length) renderRentals(); // Show cached data immediately
       try {
-        rentals = await API.getRentals();
-        if (!customers.length) customers = await API.getCustomers();
+        rentals = (await API.getRentals()) || [];
+        if (!customers.length) customers = (await API.getCustomers()) || [];
         renderRentals();
       } catch (error) {
         if (!rentals.length) showError('載入租借數據失敗');
@@ -2280,7 +2280,7 @@
       try {
         const newCustomer = await API.createCustomer(custData);
         // Refresh global customers list
-        customers = await API.getCustomers();
+        customers = (await API.getCustomers()) || [];
         // Update select dropdown and auto-select the new customer
         const select = document.getElementById('rental-customer-select');
         select.innerHTML = '<option value="">選擇客戶...</option>' +
@@ -2452,7 +2452,7 @@
 
     async function loadVenueSettingsPage() {
       try {
-        venues = await API.getVenues();
+        venues = (await API.getVenues()) || [];
         renderVenues();
       } catch (error) {
         showError('載入場地數據失敗');
@@ -2463,9 +2463,9 @@
     async function loadVenueBookingsPage() {
       if (venueBookings.length) renderVenueBookings(); // Show cached data immediately
       try {
-        venueBookings = await API.getVenueBookings();
-        if (!venues.length) venues = await API.getVenues();
-        if (!customers.length) customers = await API.getCustomers();
+        venueBookings = (await API.getVenueBookings()) || [];
+        if (!venues.length) venues = (await API.getVenues()) || [];
+        if (!customers.length) customers = (await API.getCustomers()) || [];
         renderVenueBookings();
       } catch (error) {
         if (!venueBookings.length) showError('載入場地預約失敗');
@@ -3084,7 +3084,7 @@
     async function loadCustomersPage() {
       if (customers.length) renderCustomers(); // Show cached data immediately
       try {
-        customers = await API.getCustomers();
+        customers = (await API.getCustomers()) || [];
         renderCustomers();
       } catch (error) {
         if (!customers.length) showError('載入客戶數據失敗');
@@ -3340,7 +3340,7 @@
 
     async function loadInventoryPage() {
       try {
-        locations = await API.getStorageLocations();
+        locations = (await API.getStorageLocations()) || [];
         renderStorageLocations();
         const logs = await API.getInventoryLogs();
         renderInventoryLogs(logs);
@@ -3513,7 +3513,7 @@
 
     async function loadPaymentsPage() {
       try {
-        payments = await API.getPayments();
+        payments = (await API.getPayments()) || [];
         renderPayments();
       } catch (error) {
         showError('載入付款數據失敗');
@@ -3694,7 +3694,7 @@
         } catch (loadErr) {
           // If permissions fail, still try to load staff list alone
           try {
-            staffData = await API.getStaff();
+            staffData = (await API.getStaff()) || [];
           } catch (e2) { /* ignore */ }
           showWarning('部分資料載入失敗: ' + loadErr.message);
         }
@@ -4242,7 +4242,7 @@
 
     async function loadQRLabelsPage() {
       try {
-        if (!equipmentTypes.length) equipmentTypes = await API.getEquipmentTypes();
+        if (!equipmentTypes.length) equipmentTypes = (await API.getEquipmentTypes()) || [];
         // Populate category filter
         const catSelect = document.getElementById('qr-filter-category');
         const cats = [...new Set(equipmentTypes.filter(t => !isSoftDeleted(t)).map(t => t.category || '其他'))];
@@ -4265,7 +4265,7 @@
         }
         if (statusFilter !== 'all') {
           // Need unit status - fetch units if needed
-          if (!equipmentUnits.length) equipmentUnits = await API.getEquipmentUnits();
+          if (!equipmentUnits.length) equipmentUnits = (await API.getEquipmentUnits()) || [];
           const unitStatusMap = {};
           equipmentUnits.forEach(u => { unitStatusMap[u.unit_id] = u.status; });
           filtered = filtered.filter(l => unitStatusMap[l.unit_id] === statusFilter);
@@ -4482,9 +4482,9 @@
       posRentalUpdateDays();
 
       try {
-        if (!equipmentTypes.length) equipmentTypes = await API.getEquipmentTypes();
-        if (!equipmentUnits.length) equipmentUnits = await API.getEquipmentUnits();
-        if (!customers.length) customers = await API.getCustomers();
+        if (!equipmentTypes.length) equipmentTypes = (await API.getEquipmentTypes()) || [];
+        if (!equipmentUnits.length) equipmentUnits = (await API.getEquipmentUnits()) || [];
+        if (!customers.length) customers = (await API.getCustomers()) || [];
         posRentalRenderCatalog();
         posRentalPopulateCustomers();
       } catch (error) {
@@ -4684,7 +4684,7 @@
 
       try {
         await API.createCustomer(custData);
-        customers = await API.getCustomers();
+        customers = (await API.getCustomers()) || [];
         posRentalPopulateCustomers();
         // Auto-select new customer
         const newCust = customers[customers.length - 1];
@@ -4726,7 +4726,7 @@
         showSuccess(`租借單 ${rental.rental_id} 已建立，共 ${posRentalSelectedItems.length} 項器材`);
         posRentalClear();
         // Refresh units data
-        equipmentUnits = await API.getEquipmentUnits();
+        equipmentUnits = (await API.getEquipmentUnits()) || [];
         posRentalFilterItems();
       } catch (error) {
         showError('建立租借單失敗: ' + error.message);
@@ -4751,8 +4751,8 @@
       }
 
       try {
-        if (!venues.length) venues = await API.getVenues();
-        if (!customers.length) customers = await API.getCustomers();
+        if (!venues.length) venues = (await API.getVenues()) || [];
+        if (!customers.length) customers = (await API.getCustomers()) || [];
         posVenueRenderCatalog();
         posVenuePopulateCustomers();
       } catch (error) {
@@ -4935,7 +4935,7 @@
 
       try {
         await API.createCustomer(custData);
-        customers = await API.getCustomers();
+        customers = (await API.getCustomers()) || [];
         posVenuePopulateCustomers();
         const newCust = customers[customers.length - 1];
         if (newCust) document.getElementById('pos-venue-customer-select').value = newCust.customer_id;
