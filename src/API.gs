@@ -420,9 +420,11 @@ function calculateRentalTotal(rentalId) {
  * @return {Array} Active venues
  */
 function getActiveVenues() {
-  return getSheetData('Venues').filter(v =>
-    !v.is_deleted && (v.active !== false && v.active !== 'false')
-  );
+  return getSheetData('Venues').filter(v => {
+    const deleted = v.is_deleted === true || v.is_deleted === 'true' || v.is_deleted === 'TRUE' || v.is_deleted === '1';
+    const inactive = v.active === false || v.active === 'false' || v.active === 'FALSE' || v.active === '0';
+    return !deleted && !inactive;
+  });
 }
 
 /**
