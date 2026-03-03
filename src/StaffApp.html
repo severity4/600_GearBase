@@ -1622,7 +1622,7 @@
 
     async function loadDashboard() {
       try {
-        const stats = await API.getDashboardStats();
+        const stats = (await API.getDashboardStats()) || {};
         renderDashboardStats(stats);
       } catch (error) {
         showError('載入儀表板失敗');
@@ -3342,7 +3342,7 @@
       try {
         locations = (await API.getStorageLocations()) || [];
         renderStorageLocations();
-        const logs = await API.getInventoryLogs();
+        const logs = (await API.getInventoryLogs()) || [];
         renderInventoryLogs(logs);
       } catch (error) {
         showError('載入庫存數據失敗');
@@ -3443,7 +3443,7 @@
 
     async function loadStocktakePage() {
       try {
-        const plans = await API.getStocktakePlans();
+        const plans = (await API.getStocktakePlans()) || [];
         renderStocktakePlans(plans);
       } catch (error) {
         showError('載入盤點數據失敗');
@@ -4125,7 +4125,7 @@
       const endStr = formatDate(endDate);
 
       try {
-        calScheduleData = await API.getScheduleData(startStr, endStr);
+        calScheduleData = (await API.getScheduleData(startStr, endStr)) || { rentals: [], bookings: [] };
       } catch (e) {
         showError('載入排程失敗');
         console.error(e);
@@ -4258,7 +4258,7 @@
       const statusFilter = document.getElementById('qr-filter-status').value;
 
       try {
-        const allLabels = await API.getEquipmentQRBatch([]);
+        const allLabels = (await API.getEquipmentQRBatch([])) || [];
         let filtered = allLabels;
         if (catFilter !== 'all') {
           filtered = filtered.filter(l => l.category === catFilter);
@@ -4735,7 +4735,7 @@
 
     // ==================== POS VENUE BOOKING ====================
 
-    let posVenueSelectedVenue = null; // {venue_id, venue_name, hourly_rate, half_day_rate, daily_rate, ...}
+    let posVenueSelectedVenue = null; // {venue_id, name, hourly_rate, half_day_rate, daily_rate, ...}
 
     async function loadPosVenuePage() {
       // Set default booking times immediately (don't wait for API)
@@ -5007,7 +5007,7 @@
     async function debugRunHealthCheck() {
       try {
         debugShowOutput('Running health check...');
-        const result = await API.debugHealthCheck();
+        const result = (await API.debugHealthCheck()) || {};
         let output = '=== HEALTH CHECK ===\n\n';
 
         // Spreadsheet
@@ -5055,7 +5055,7 @@
     async function debugRunCheckSheets() {
       try {
         debugShowOutput('Checking sheets...');
-        const result = await API.debugCheckSheets();
+        const result = (await API.debugCheckSheets()) || {};
         let output = '=== SHEET CHECK ===\n\n';
         output += `Spreadsheet: ${result.spreadsheet_name}\n`;
         output += `Required: ${result.total_required} sheets\n`;
@@ -5237,7 +5237,7 @@
     async function debugRunDiagnoseData() {
       try {
         debugShowOutput('正在執行資料完整性診斷...\n（伺服器端檢查，請稍候）');
-        const report = await API.debugDiagnoseData();
+        const report = (await API.debugDiagnoseData()) || {};
         let output = '';
         output += '╔══════════════════════════════════════════════╗\n';
         output += '║         資料完整性診斷報告                    ║\n';
@@ -5285,7 +5285,7 @@
     async function debugRunErrorLogs() {
       try {
         debugShowOutput('正在載入錯誤紀錄...');
-        const errors = await API.getRecentErrors(50);
+        const errors = (await API.getRecentErrors(50)) || [];
 
         let output = '';
         output += '╔══════════════════════════════════════════════╗\n';

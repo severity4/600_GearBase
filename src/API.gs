@@ -253,7 +253,7 @@ function searchEquipment(query) {
 function getAvailableEquipment(startDate, endDate) {
   const allUnits = getSheetData('Equipment_Units').filter(u => !isSoftDeleted_(u) && u.status === 'available');
   const rentals = getSheetData('Rentals').filter(r => !isSoftDeleted_(r) && r.status !== 'cancelled');
-  const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
+  const rentalItems = getSheetData('Rental_Items').filter(ri => !isSoftDeleted_(ri));
 
   const bookedUnitIds = new Set();
   rentals.forEach(rental => {
@@ -320,7 +320,7 @@ function getCustomerRentalHistory(customerId) {
 
   return rentals.map(rental => {
     const items = getSheetData('Rental_Items').filter(ri =>
-      !ri.is_deleted && ri.rental_id === rental.rental_id
+      !isSoftDeleted_(ri) && ri.rental_id === rental.rental_id
     );
     return {
       ...rental,
@@ -348,7 +348,7 @@ function getEquipmentUsageStats() {
   const types = getSheetData('Equipment_Types').filter(t => !isSoftDeleted_(t));
   const units = getSheetData('Equipment_Units').filter(u => !isSoftDeleted_(u));
   const rentals = getSheetData('Rentals').filter(r => !isSoftDeleted_(r) && r.status === 'returned');
-  const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
+  const rentalItems = getSheetData('Rental_Items').filter(ri => !isSoftDeleted_(ri));
 
   return types.map(type => {
     const typeUnits = units.filter(u => u.type_id === type.type_id);
@@ -752,7 +752,7 @@ function verifyAndLookup(email, code) {
 
   // Gather data
   const allRentals = getSheetData('Rentals').filter(r => !isSoftDeleted_(r));
-  const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
+  const rentalItems = getSheetData('Rental_Items').filter(ri => !isSoftDeleted_(ri));
   const types = getSheetData('Equipment_Types');
   const bookings = getSheetData('Venue_Bookings').filter(b => !isSoftDeleted_(b));
   const venues = getSheetData('Venues');
