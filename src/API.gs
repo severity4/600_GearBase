@@ -12,9 +12,8 @@ function getSheetData(sheetName) {
   try {
     const sheet = SPREADSHEET.getSheetByName(sheetName);
     if (!sheet) {
-      const err = new Error(`找不到工作表: ${sheetName}`);
-      logError('getSheetData', err, 'error', { sheetName });
-      throw err;
+      logError('getSheetData', new Error(`找不到工作表: ${sheetName}`), 'warning', { sheetName });
+      return [];
     }
 
     const range = sheet.getDataRange();
@@ -39,7 +38,7 @@ function getSheetData(sheetName) {
     return data;
   } catch (error) {
     logError('getSheetData', error, 'error', { sheetName });
-    throw error;
+    return [];
   }
 }
 
