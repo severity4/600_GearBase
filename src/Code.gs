@@ -11,6 +11,18 @@ const SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
 const DEBUG_MODE = false;
 
 /**
+ * Check if a record is soft-deleted.
+ * Handles boolean, string, and number representations from Google Sheets.
+ * Google Sheets may store booleans as strings ("TRUE"/"FALSE") depending on
+ * how data was entered, and google.script.run serialization can also convert
+ * boolean false to the string "false".
+ */
+function isSoftDeleted_(record) {
+  const v = record.is_deleted;
+  return v === true || v === 'true' || v === 'TRUE' || v === 1 || v === '1';
+}
+
+/**
  * ==================== SCHEMA DEFINITIONS ====================
  * Single source of truth for all sheet definitions.
  * All diagnostic, validation, and repair functions reference this.
@@ -442,45 +454,45 @@ function debugDiagnoseData() {
     const venueIds  = new Set(venues.map(v => v.venue_id));
 
     // 1. Rentals referencing non-existent customers
-    rentals.filter(r => !r.is_deleted && r.customer_id && !custIds.has(r.customer_id)).forEach(r => {
+    rentals.filter(r => !isSoftDeleted_(r) && r.customer_id && !custIds.has(r.customer_id)).forEach(r => {
       report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Rentals', id: r.rental_id, detail: `customer_id "${r.customer_id}" 不存在於 Customers` });
     });
 
     // 2. Rental_Items referencing non-existent rentals
-    items.filter(i => !i.is_deleted && i.rental_id && !rentalIds.has(i.rental_id)).forEach(i => {
+    items.filter(i => !isSoftDeleted_(i) && i.rental_id && !rentalIds.has(i.rental_id)).forEach(i => {
       report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Rental_Items', id: i.item_id, detail: `rental_id "${i.rental_id}" 不存在於 Rentals` });
     });
 
     // 3. Rental_Items referencing non-existent types or units
-    items.filter(i => !i.is_deleted && i.type_id && !typeIds.has(i.type_id)).forEach(i => {
+    items.filter(i => !isSoftDeleted_(i) && i.type_id && !typeIds.has(i.type_id)).forEach(i => {
       report.issues.push({ severity: 'warning', type: 'orphan_ref', table: 'Rental_Items', id: i.item_id, detail: `type_id "${i.type_id}" 不存在於 Equipment_Types` });
     });
-    items.filter(i => !i.is_deleted && i.unit_id && !unitIds.has(i.unit_id)).forEach(i => {
+    items.filter(i => !isSoftDeleted_(i) && i.unit_id && !unitIds.has(i.unit_id)).forEach(i => {
       report.issues.push({ severity: 'warning', type: 'orphan_ref', table: 'Rental_Items', id: i.item_id, detail: `unit_id "${i.unit_id}" 不存在於 Equipment_Units` });
     });
 
     // 4. Payments referencing non-existent rentals
-    payments.filter(p => !p.is_deleted && p.rental_id && !rentalIds.has(p.rental_id)).forEach(p => {
+    payments.filter(p => !isSoftDeleted_(p) && p.rental_id && !rentalIds.has(p.rental_id)).forEach(p => {
       report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Payments', id: p.payment_id, detail: `rental_id "${p.rental_id}" 不存在於 Rentals` });
     });
 
     // 5. Venue_Bookings referencing non-existent venues or customers
-    bookings.filter(b => !b.is_deleted && b.venue_id && !venueIds.has(b.venue_id)).forEach(b => {
+    bookings.filter(b => !isSoftDeleted_(b) && b.venue_id && !venueIds.has(b.venue_id)).forEach(b => {
       report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Venue_Bookings', id: b.booking_id, detail: `venue_id "${b.venue_id}" 不存在於 Venues` });
     });
-    bookings.filter(b => !b.is_deleted && b.customer_id && !custIds.has(b.customer_id)).forEach(b => {
+    bookings.filter(b => !isSoftDeleted_(b) && b.customer_id && !custIds.has(b.customer_id)).forEach(b => {
       report.issues.push({ severity: 'error', type: 'orphan_ref', table: 'Venue_Bookings', id: b.booking_id, detail: `customer_id "${b.customer_id}" 不存在於 Customers` });
     });
 
     // 6. Equipment_Units referencing non-existent types
-    units.filter(u => !u.is_deleted && u.type_id && !typeIds.has(u.type_id)).forEach(u => {
+    units.filter(u => !isSoftDeleted_(u) && u.type_id && !typeIds.has(u.type_id)).forEach(u => {
       report.issues.push({ severity: 'warning', type: 'orphan_ref', table: 'Equipment_Units', id: u.unit_id, detail: `type_id "${u.type_id}" 不存在於 Equipment_Types` });
     });
 
     // 7. Rentals with payment mismatch
-    rentals.filter(r => !r.is_deleted && r.status !== 'draft' && r.status !== 'cancelled').forEach(r => {
+    rentals.filter(r => !isSoftDeleted_(r) && r.status !== 'draft' && r.status !== 'cancelled').forEach(r => {
       const totalPaid = payments
-        .filter(p => !p.is_deleted && p.rental_id === r.rental_id)
+        .filter(p => !isSoftDeleted_(p) && p.rental_id === r.rental_id)
         .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
       const expected = parseFloat(r.total_amount) || 0;
       if (expected > 0 && Math.abs(totalPaid - expected) > 1) {
@@ -489,7 +501,7 @@ function debugDiagnoseData() {
     });
 
     // 8. Staff with no email (can't login)
-    staff.filter(s => !s.is_deleted && s.active !== false && s.active !== 'false' && !s.email).forEach(s => {
+    staff.filter(s => !isSoftDeleted_(s) && s.active !== false && s.active !== 'false' && !s.email).forEach(s => {
       report.issues.push({ severity: 'warning', type: 'missing_data', table: 'Staff', id: s.staff_id, detail: `員工「${s.name}」缺少 email，無法登入` });
     });
 
@@ -745,7 +757,7 @@ function generateYearBasedId(sheetName, idField, prefix, padLength) {
  */
 
 function getEquipmentTypes() {
-  return getSheetData('Equipment_Types').filter(t => !t.is_deleted);
+  return getSheetData('Equipment_Types').filter(t => !isSoftDeleted_(t));
 }
 
 function createEquipmentType(typeData) {
@@ -806,7 +818,7 @@ function validateEquipmentType(data) {
  */
 
 function getEquipmentUnits(filters = {}) {
-  return getSheetDataFiltered('Equipment_Units', filters).filter(u => !u.is_deleted);
+  return getSheetDataFiltered('Equipment_Units', filters).filter(u => !isSoftDeleted_(u));
 }
 
 function createEquipmentUnit(unitData) {
@@ -860,7 +872,7 @@ function validateEquipmentUnit(data) {
  */
 
 function getCustomers(filters = {}) {
-  return getSheetDataFiltered('Customers', filters).filter(c => !c.is_deleted);
+  return getSheetDataFiltered('Customers', filters).filter(c => !isSoftDeleted_(c));
 }
 
 function createCustomer(customerData) {
@@ -925,7 +937,7 @@ function isValidEmail(email) {
  */
 
 function getRentals(filters = {}) {
-  return getSheetDataFiltered('Rentals', filters).filter(r => !r.is_deleted);
+  return getSheetDataFiltered('Rentals', filters).filter(r => !isSoftDeleted_(r));
 }
 
 function createRental(rentalData) {
@@ -1002,7 +1014,7 @@ function validateRental(data) {
  */
 
 function getRentalItems(rentalId) {
-  return getSheetDataFiltered('Rental_Items', { rental_id: rentalId }).filter(ri => !ri.is_deleted);
+  return getSheetDataFiltered('Rental_Items', { rental_id: rentalId }).filter(ri => !isSoftDeleted_(ri));
 }
 
 function createRentalItem(itemData) {
@@ -1053,7 +1065,7 @@ function updateRentalItem(itemId, updates) {
  */
 
 function getPayments(filters = {}) {
-  return getSheetDataFiltered('Payments', filters).filter(p => !p.is_deleted);
+  return getSheetDataFiltered('Payments', filters).filter(p => !isSoftDeleted_(p));
 }
 
 function createPayment(paymentData) {
@@ -1117,7 +1129,7 @@ function validatePayment(data) {
  */
 
 function getMaintenanceLogs(filters = {}) {
-  return getSheetDataFiltered('Maintenance_Logs', filters).filter(l => !l.is_deleted);
+  return getSheetDataFiltered('Maintenance_Logs', filters).filter(l => !isSoftDeleted_(l));
 }
 
 function createMaintenanceLog(logData) {
@@ -1134,7 +1146,7 @@ function createMaintenanceLog(logData) {
  */
 
 function getInventoryLogs(filters = {}) {
-  return getSheetDataFiltered('Inventory_Logs', filters).filter(l => !l.is_deleted);
+  return getSheetDataFiltered('Inventory_Logs', filters).filter(l => !isSoftDeleted_(l));
 }
 
 function createInventoryLog(logData) {
@@ -1151,7 +1163,7 @@ function createInventoryLog(logData) {
  */
 
 function getStocktakePlans(filters = {}) {
-  return getSheetDataFiltered('Stocktake_Plans', filters).filter(p => !p.is_deleted);
+  return getSheetDataFiltered('Stocktake_Plans', filters).filter(p => !isSoftDeleted_(p));
 }
 
 function createStocktakePlan(planData) {
@@ -1165,7 +1177,7 @@ function createStocktakePlan(planData) {
 }
 
 function getStocktakeResults(planId) {
-  return getSheetDataFiltered('Stocktake_Results', { stocktake_plan_id: planId }).filter(r => !r.is_deleted);
+  return getSheetDataFiltered('Stocktake_Results', { stocktake_plan_id: planId }).filter(r => !isSoftDeleted_(r));
 }
 
 function createStocktakeResult(resultData) {
@@ -1219,7 +1231,7 @@ function bootstrapFirstAdmin() {
  */
 
 function getStaff(filters = {}) {
-  return getSheetDataFiltered('Staff', filters).filter(s => !s.is_deleted);
+  return getSheetDataFiltered('Staff', filters).filter(s => !isSoftDeleted_(s));
 }
 
 function createStaff(staffData) {
@@ -1327,12 +1339,12 @@ function getDashboardStats() {
     try { return JSON.parse(cached); } catch (_) {}
   }
 
-  const equipmentTypes = getSheetData('Equipment_Types').filter(t => !t.is_deleted);
-  const equipmentUnits = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
-  const customers = getSheetData('Customers').filter(c => !c.is_deleted);
-  const rentals = getSheetData('Rentals').filter(r => !r.is_deleted);
-  const venues = getSheetData('Venues').filter(v => !v.is_deleted);
-  const venueBookings = getSheetData('Venue_Bookings').filter(b => !b.is_deleted);
+  const equipmentTypes = getSheetData('Equipment_Types').filter(t => !isSoftDeleted_(t));
+  const equipmentUnits = getSheetData('Equipment_Units').filter(u => !isSoftDeleted_(u));
+  const customers = getSheetData('Customers').filter(c => !isSoftDeleted_(c));
+  const rentals = getSheetData('Rentals').filter(r => !isSoftDeleted_(r));
+  const venues = getSheetData('Venues').filter(v => !isSoftDeleted_(v));
+  const venueBookings = getSheetData('Venue_Bookings').filter(b => !isSoftDeleted_(b));
 
   const availableUnits = equipmentUnits.filter(u => u.status === 'available').length;
   const rentedUnits = equipmentUnits.filter(u => u.status === 'rented').length;
@@ -1376,7 +1388,7 @@ function getDashboardStats() {
  */
 
 function getStorageLocations(filters = {}) {
-  return getSheetDataFiltered('Storage_Locations', filters).filter(l => !l.is_deleted);
+  return getSheetDataFiltered('Storage_Locations', filters).filter(l => !isSoftDeleted_(l));
 }
 
 function createStorageLocation(locationData) {
@@ -1393,7 +1405,7 @@ function createStorageLocation(locationData) {
  */
 
 function getDiscountRules(filters = {}) {
-  return getSheetDataFiltered('Discount_Rules', filters).filter(r => !r.is_deleted);
+  return getSheetDataFiltered('Discount_Rules', filters).filter(r => !isSoftDeleted_(r));
 }
 
 function createDiscountRule(ruleData) {
@@ -1410,7 +1422,7 @@ function createDiscountRule(ruleData) {
  */
 
 function getAccessoryBindings(filters = {}) {
-  return getSheetDataFiltered('Accessory_Bindings', filters).filter(b => !b.is_deleted);
+  return getSheetDataFiltered('Accessory_Bindings', filters).filter(b => !isSoftDeleted_(b));
 }
 
 function createAccessoryBinding(bindingData) {
@@ -1427,7 +1439,7 @@ function createAccessoryBinding(bindingData) {
  */
 
 function getDamageRecords(filters = {}) {
-  return getSheetDataFiltered('Damage_Records', filters).filter(d => !d.is_deleted);
+  return getSheetDataFiltered('Damage_Records', filters).filter(d => !isSoftDeleted_(d));
 }
 
 function createDamageRecord(recordData) {
@@ -1444,7 +1456,7 @@ function createDamageRecord(recordData) {
  */
 
 function getCreditNotes(filters = {}) {
-  return getSheetDataFiltered('Credit_Notes', filters).filter(n => !n.is_deleted);
+  return getSheetDataFiltered('Credit_Notes', filters).filter(n => !isSoftDeleted_(n));
 }
 
 function createCreditNote(noteData) {
@@ -1461,7 +1473,7 @@ function createCreditNote(noteData) {
  */
 
 function getVenues(filters = {}) {
-  return getSheetDataFiltered('Venues', filters).filter(v => !v.is_deleted);
+  return getSheetDataFiltered('Venues', filters).filter(v => !isSoftDeleted_(v));
 }
 
 function createVenue(venueData) {
@@ -1514,7 +1526,7 @@ function validateVenue(data) {
  */
 
 function getVenueBookings(filters = {}) {
-  return getSheetDataFiltered('Venue_Bookings', filters).filter(b => !b.is_deleted);
+  return getSheetDataFiltered('Venue_Bookings', filters).filter(b => !isSoftDeleted_(b));
 }
 
 function createVenueBooking(bookingData) {
@@ -1658,9 +1670,9 @@ function getScheduleData(startDate, endDate) {
 
   // Get active rentals in range
   const allRentals = getSheetData('Rentals').filter(r =>
-    !r.is_deleted && r.status !== 'cancelled'
+    !isSoftDeleted_(r) && r.status !== 'cancelled'
   );
-  const rentalItems = getSheetData('Rental_Items').filter(ri => !ri.is_deleted);
+  const rentalItems = getSheetData('Rental_Items').filter(ri => !isSoftDeleted_(ri));
   const types = getSheetData('Equipment_Types');
   const units = getSheetData('Equipment_Units');
   const allCustomers = getSheetData('Customers');
@@ -1697,7 +1709,7 @@ function getScheduleData(startDate, endDate) {
 
   // Get venue bookings in range
   const allBookings = getSheetData('Venue_Bookings').filter(b =>
-    !b.is_deleted && b.status !== 'cancelled'
+    !isSoftDeleted_(b) && b.status !== 'cancelled'
   );
   const allVenues = getSheetData('Venues');
   const venueMap = {};
@@ -1735,15 +1747,15 @@ function getScheduleData(startDate, endDate) {
  * @return {Object} Receipt data for client-side rendering
  */
 function generateRentalReceipt(rentalId) {
-  const rental = getSheetData('Rentals').find(r => r.rental_id === rentalId && !r.is_deleted);
+  const rental = getSheetData('Rentals').find(r => r.rental_id === rentalId && !isSoftDeleted_(r));
   if (!rental) throw new Error('找不到租借單: ' + rentalId);
 
   const customer = getSheetData('Customers').find(c => c.customer_id === rental.customer_id);
-  const items = getSheetData('Rental_Items').filter(ri => ri.rental_id === rentalId && !ri.is_deleted);
+  const items = getSheetData('Rental_Items').filter(ri => ri.rental_id === rentalId && !isSoftDeleted_(ri));
   const types = getSheetData('Equipment_Types');
   const units = getSheetData('Equipment_Units');
-  const payments = getSheetData('Payments').filter(p => p.rental_id === rentalId && !p.is_deleted);
-  const serviceItems = getSheetData('Service_Items').filter(s => s.rental_id === rentalId && !s.is_deleted);
+  const payments = getSheetData('Payments').filter(p => p.rental_id === rentalId && !isSoftDeleted_(p));
+  const serviceItems = getSheetData('Service_Items').filter(s => s.rental_id === rentalId && !isSoftDeleted_(s));
 
   const typeMap = {};
   types.forEach(t => { typeMap[t.type_id] = t; });
@@ -1807,12 +1819,12 @@ function generateRentalReceipt(rentalId) {
  * @return {Object} Booking receipt data
  */
 function generateVenueBookingReceipt(bookingId) {
-  const booking = getSheetData('Venue_Bookings').find(b => b.booking_id === bookingId && !b.is_deleted);
+  const booking = getSheetData('Venue_Bookings').find(b => b.booking_id === bookingId && !isSoftDeleted_(b));
   if (!booking) throw new Error('找不到預約單: ' + bookingId);
 
   const customer = getSheetData('Customers').find(c => c.customer_id === booking.customer_id);
   const venue = getSheetData('Venues').find(v => v.venue_id === booking.venue_id);
-  const payments = getSheetData('Payments').filter(p => p.booking_id === bookingId && !p.is_deleted);
+  const payments = getSheetData('Payments').filter(p => p.booking_id === bookingId && !isSoftDeleted_(p));
 
   return {
     booking_id: bookingId,
@@ -1856,7 +1868,7 @@ function generateVenueBookingReceipt(bookingId) {
  * @return {Object} QR code info
  */
 function getEquipmentQRData(unitId) {
-  const unit = getSheetData('Equipment_Units').find(u => u.unit_id === unitId && !u.is_deleted);
+  const unit = getSheetData('Equipment_Units').find(u => u.unit_id === unitId && !isSoftDeleted_(u));
   if (!unit) throw new Error('找不到器材: ' + unitId);
 
   const type = getSheetData('Equipment_Types').find(t => t.type_id === unit.type_id);
@@ -1889,7 +1901,7 @@ function getEquipmentQRData(unitId) {
  * @return {Object[]} Array of QR data objects
  */
 function getEquipmentQRBatch(unitIds) {
-  const allUnits = getSheetData('Equipment_Units').filter(u => !u.is_deleted);
+  const allUnits = getSheetData('Equipment_Units').filter(u => !isSoftDeleted_(u));
   const types = getSheetData('Equipment_Types');
   const locations = getSheetData('Storage_Locations');
 
@@ -2111,7 +2123,7 @@ function scheduledSendReturnReminders() {
   const tomorrowStr = formatDate(tomorrow);
 
   const rentals = getSheetData('Rentals').filter(r =>
-    !r.is_deleted &&
+    !isSoftDeleted_(r) &&
     (r.status === 'active' || r.status === 'reserved') &&
     formatDate(r.rental_end) === tomorrowStr
   );
@@ -2134,7 +2146,7 @@ function scheduledSendOverdueNotices() {
   const todayStr = formatDate(today);
 
   const rentals = getSheetData('Rentals').filter(r =>
-    !r.is_deleted &&
+    !isSoftDeleted_(r) &&
     r.status === 'overdue'
   );
 

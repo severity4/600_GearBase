@@ -664,7 +664,7 @@
 
     async function loadEquipment() {
       try {
-        catalogData = await API.getEquipmentCatalog();
+        catalogData = (await API.getEquipmentCatalog()) || [];
         // Use catalog data as the display source (grouped by type with availability)
         allEquipment = catalogData.map(type => ({
           type_id: type.type_id,
@@ -1069,7 +1069,7 @@
       // Check if customer exists, if not create
       try {
         // Find existing customer by phone or email
-        const allCustomers = await API.getCustomers();
+        const allCustomers = (await API.getCustomers()) || [];
         let customer = allCustomers.find(c =>
           !isSoftDeleted(c) && (
             (formData.email && c.email === formData.email) ||
@@ -1085,7 +1085,7 @@
             email: formData.email || ''
           });
 
-          const updatedCustomers = await API.getCustomers();
+          const updatedCustomers = (await API.getCustomers()) || [];
           customer = updatedCustomers.find(c =>
             !isSoftDeleted(c) && c.phone === formData.phone
           );
@@ -1164,7 +1164,7 @@
 
     async function loadVenues() {
       try {
-        allVenues = await API.getActiveVenues();
+        allVenues = (await API.getActiveVenues()) || [];
         renderVenueList(allVenues);
       } catch (error) {
         showError('載入場地失敗');
@@ -1304,7 +1304,7 @@
       if (!container) return;
 
       try {
-        const scheduleData = await API.getVenueMonthlySchedule(venueId, yearMonth);
+        const scheduleData = (await API.getVenueMonthlySchedule(venueId, yearMonth)) || {};
         renderVenueMiniCalendar(container, venueId, year, month, scheduleData.booked_dates || []);
       } catch (e) {
         container.innerHTML = '<div style="color:var(--text-secondary); font-size:12px;">載入日曆失敗</div>';
@@ -1468,7 +1468,7 @@
 
       try {
         // Find or create customer
-        const allCustomers = await API.getCustomers();
+        const allCustomers = (await API.getCustomers()) || [];
         let customer = allCustomers.find(c =>
           !isSoftDeleted(c) && (
             (formData.email && c.email === formData.email) ||
@@ -1483,7 +1483,7 @@
             phone: formData.phone,
             email: formData.email || ''
           });
-          const updatedCustomers = await API.getCustomers();
+          const updatedCustomers = (await API.getCustomers()) || [];
           customer = updatedCustomers.find(c => !isSoftDeleted(c) && c.phone === formData.phone);
         }
 
@@ -1602,7 +1602,7 @@
       msgEl.innerHTML = '';
 
       try {
-        const data = await API.verifyAndLookup(lookupEmail, code);
+        const data = (await API.verifyAndLookup(lookupEmail, code)) || {};
 
         if (!data.verified) {
           msgEl.innerHTML = `<span style="color:var(--danger-color, #dc2626);">${escapeHtml(data.message)}</span>`;
