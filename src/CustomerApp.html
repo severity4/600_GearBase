@@ -1071,7 +1071,7 @@
         // Find existing customer by phone or email
         const allCustomers = await API.getCustomers();
         let customer = allCustomers.find(c =>
-          !c.is_deleted && (
+          !isSoftDeleted(c) && (
             (formData.email && c.email === formData.email) ||
             (formData.phone && c.phone === formData.phone)
           )
@@ -1087,7 +1087,7 @@
 
           const updatedCustomers = await API.getCustomers();
           customer = updatedCustomers.find(c =>
-            !c.is_deleted && c.phone === formData.phone
+            !isSoftDeleted(c) && c.phone === formData.phone
           );
         }
 
@@ -1146,8 +1146,8 @@
       document.getElementById('venue-section').style.display = tab === 'venues' ? '' : 'none';
       document.getElementById('lookup-section').style.display = tab === 'lookup' ? '' : 'none';
 
-      // Toggle sidebar & cart for equipment only
-      document.getElementById('toggle-sidebar').style.display = tab === 'equipment' ? '' : 'none';
+      // Toggle sidebar for equipment & venues; cart for equipment only
+      document.getElementById('toggle-sidebar').style.display = (tab === 'equipment' || tab === 'venues') ? '' : 'none';
       if (tab === 'venues' && !allVenues.length) loadVenues();
       if (tab === 'equipment') updateCartDisplay();
       else document.getElementById('cart-summary').style.display = 'none';
@@ -1470,7 +1470,7 @@
         // Find or create customer
         const allCustomers = await API.getCustomers();
         let customer = allCustomers.find(c =>
-          !c.is_deleted && (
+          !isSoftDeleted(c) && (
             (formData.email && c.email === formData.email) ||
             (formData.phone && c.phone === formData.phone)
           )
@@ -1484,7 +1484,7 @@
             email: formData.email || ''
           });
           const updatedCustomers = await API.getCustomers();
-          customer = updatedCustomers.find(c => !c.is_deleted && c.phone === formData.phone);
+          customer = updatedCustomers.find(c => !isSoftDeleted(c) && c.phone === formData.phone);
         }
 
         // Create venue booking

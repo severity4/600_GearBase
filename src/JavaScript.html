@@ -1008,6 +1008,25 @@
     }
 
     /**
+     * Check if a record is soft-deleted.
+     * Handles boolean, string, and number representations that may result
+     * from google.script.run serialization of Google Sheets boolean values.
+     */
+    function isSoftDeleted(record) {
+      const v = record.is_deleted;
+      return v === true || v === 'true' || v === 'TRUE' || v === 1 || v === '1';
+    }
+
+    /**
+     * Check if a record is active.
+     * Handles boolean and string representations.
+     */
+    function isRecordActive(record) {
+      const v = record.active;
+      return v !== false && v !== 'false' && v !== 'FALSE' && v !== 0 && v !== '0';
+    }
+
+    /**
      * Clear element children
      */
     function clearElement(element) {
