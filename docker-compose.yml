@@ -1,0 +1,19 @@
+# 本地開發用（如果不想用 Railway 遠端 DB 的話）
+# 啟動：docker compose up -d
+# 停止：docker compose down
+# 清除資料：docker compose down -v
+
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: gearbase
+      POSTGRES_USER: gearbase
+      POSTGRES_PASSWORD: gearbase_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

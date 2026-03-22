@@ -1,0 +1,16 @@
+{
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.exclude": {
+    "node_modules": true,
+    "public/staff.html": true,
+    "public/customer.html": true
+  },
+  "search.exclude": {
+    "node_modules": true,
+    "package-lock.json": true,
+    "public/staff.html": true,
+    "public/customer.html": true
+  }
+}

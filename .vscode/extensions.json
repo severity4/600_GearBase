@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "rangav.vscode-thunder-client",
+    "ckolkman.vscode-postgres",
+    "ms-azuretools.vscode-docker"
+  ]
+}

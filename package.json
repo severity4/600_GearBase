@@ -10,7 +10,11 @@
     "start": "node server/index.js",
     "build": "node build.js",
     "migrate": "node server/migrate.js",
-    "dev": "node build.js && node server/index.js",
+    "dev": "node build.js && npx nodemon server/index.js",
+    "dev:server": "npx nodemon server/index.js",
+    "dev:build": "node build.js --watch",
+    "db:local": "docker compose up -d",
+    "db:local:stop": "docker compose down",
     "gas:push": "clasp push",
     "gas:pull": "clasp pull",
     "gas:deploy": "clasp push --force && clasp deploy -d \"Manual deploy $(date +%Y-%m-%d_%H:%M)\""
