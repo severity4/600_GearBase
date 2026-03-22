@@ -12,6 +12,9 @@ node_modules/
 .vscode/
 .idea/
 
+# Env
+.env
+
 # Temp
 *.tmp
 *.log

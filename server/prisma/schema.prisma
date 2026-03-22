@@ -1,0 +1,763 @@
+// 映奧創意工作室 — 器材管理租賃系統
+// PostgreSQL Database Schema (migrated from Google Sheets)
+// Version: v1.2 | Date: 2026-03-22
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 1. 存放位置 Storage_Locations ====================
+model StorageLocation {
+  location_id       String  @id // LOC-001
+  name              String
+  location_type     String  // warehouse / floor / zone / shelf / other
+  parent_location_id String?
+  floor_number      String?
+  address           String?
+  capacity_note     String?
+  responsible_staff String?
+  active            Boolean @default(true)
+  notes             String?
+  is_deleted        Boolean @default(false)
+
+  // Relations
+  parent   StorageLocation?  @relation("LocationHierarchy", fields: [parent_location_id], references: [location_id])
+  children StorageLocation[] @relation("LocationHierarchy")
+
+  equipment_units    EquipmentUnit[]
+  inventory_from     InventoryLog[]    @relation("FromLocation")
+  inventory_to       InventoryLog[]    @relation("ToLocation")
+  stocktake_plans    StocktakePlan[]
+  stocktake_expected StocktakeResult[] @relation("ExpectedLocation")
+  stocktake_actual   StocktakeResult[] @relation("ActualLocation")
+  venues             Venue[]
+
+  @@map("storage_locations")
+}
+
+// ==================== 2. 器材類型 Equipment_Types ====================
+model EquipmentType {
+  type_id           String   @id // ET-001
+  name              String
+  category          String   // camera / lens / audio / lighting / ...
+  sub_category      String?
+  model             String?  @map("model_name")
+  brand             String?
+  daily_rate        Decimal  @db.Decimal(10, 2)
+  replacement_value Decimal  @db.Decimal(10, 2)
+  deposit_required  Decimal? @db.Decimal(10, 2)
+  is_consumable     Boolean  @default(false)
+  is_batch_item     Boolean  @default(false)
+  batch_unit        String?
+  description       String?
+  image_url         String?
+  active            Boolean  @default(true)
+  created_by        String
+  created_at        DateTime @default(now())
+  is_deleted        Boolean  @default(false)
+
+  // Relations
+  units               EquipmentUnit[]
+  rental_items        RentalItem[]
+  accessory_as_parent AccessoryBinding[] @relation("ParentType")
+  accessory_as_child  AccessoryBinding[] @relation("AccessoryType")
+
+  @@map("equipment_types")
+}
+
+// ==================== 3. 器材個體 Equipment_Units ====================
+model EquipmentUnit {
+  unit_id           String   @id // EU-001
+  type_id           String
+  serial_number     String?
+  internal_code     String   // CAM-2026-001
+  purchase_date     DateTime?
+  purchase_cost     Decimal? @db.Decimal(10, 2)
+  current_condition String   // excellent / good / fair / poor
+  location_id       String?
+  batch_quantity    Int?
+  status            String   @default("available") // available / reserved / rented / maintenance / retired
+  notes             String?
+  created_by        String
+  created_at        DateTime @default(now())
+  category          String?
+  is_deleted        Boolean  @default(false)
+
+  // Relations
+  equipment_type     EquipmentType     @relation(fields: [type_id], references: [type_id])
+  storage_location   StorageLocation?  @relation(fields: [location_id], references: [location_id])
+  rental_items       RentalItem[]
+  maintenance_logs   MaintenanceLog[]
+  inventory_logs     InventoryLog[]
+  damage_records     DamageRecord[]
+  stocktake_results  StocktakeResult[]
+
+  @@map("equipment_units")
+}
+
+// ==================== 4. 配件綁定 Accessory_Bindings ====================
+model AccessoryBinding {
+  binding_id        String  @id
+  parent_type_id    String
+  accessory_type_id String
+  quantity          Int
+  is_mandatory      Boolean @default(true)
+  notes             String?
+  binding_type      String?
+  is_deleted        Boolean @default(false)
+
+  // Relations
+  parent_type    EquipmentType @relation("ParentType", fields: [parent_type_id], references: [type_id])
+  accessory_type EquipmentType @relation("AccessoryType", fields: [accessory_type_id], references: [type_id])
+
+  @@map("accessory_bindings")
+}
+
+// ==================== 5. 保養紀錄 Maintenance_Logs ====================
+model MaintenanceLog {
+  log_id           String    @id
+  unit_id          String
+  maintenance_type String    // routine / repair / firmware / calibration / cleaning
+  description      String
+  performed_by     String
+  vendor           String?
+  cost             Decimal?  @db.Decimal(10, 2)
+  start_date       DateTime
+  end_date         DateTime?
+  next_scheduled   DateTime?
+  before_photo_url String?
+  after_photo_url  String?
+  status           String    @default("scheduled") // scheduled / in_progress / completed
+  notes            String?
+  scheduled_date   DateTime?
+  completed_date   DateTime?
+  created_at       DateTime  @default(now())
+  is_deleted       Boolean   @default(false)
+
+  // Relations
+  equipment_unit EquipmentUnit @relation(fields: [unit_id], references: [unit_id])
+
+  @@map("maintenance_logs")
+}
+
+// ==================== 6. 客戶資料 Customers ====================
+model Customer {
+  customer_id        String    @id // CU-001
+  name               String
+  phone              String
+  email              String?
+  id_number          String?
+  company_name       String?
+  id_doc_url         String?
+  id_doc_verified    Boolean   @default(false)
+  id_doc_verified_by String?
+  id_doc_verified_at DateTime?
+  id_doc_return_status String  @default("na") // not_collected / held / returned / na
+  id_doc_return_date DateTime?
+  blacklisted        Boolean   @default(false)
+  blacklist_reason   String?
+  notes              String?
+  created_at         DateTime  @default(now())
+  credit_balance     Decimal?  @db.Decimal(10, 2) @default(0)
+  is_deleted         Boolean   @default(false)
+
+  // Relations
+  rentals        Rental[]
+  venue_bookings VenueBooking[]
+  credit_notes   CreditNote[]
+
+  @@map("customers")
+}
+
+// ==================== 7. 員工 Staff ====================
+model Staff {
+  staff_id             String   @id
+  name                 String
+  email                String   @unique
+  phone                String?
+  role                 String   // admin / manager / staff / viewer
+  can_approve_discount Boolean  @default(false)
+  active               Boolean  @default(true)
+  created_at           DateTime @default(now())
+  is_deleted           Boolean  @default(false)
+
+  @@map("staff")
+}
+
+// ==================== 8. 租借單（主約）Rentals ====================
+model Rental {
+  rental_id                String    @id // RENT-2026-001
+  customer_id              String
+  rental_start             DateTime
+  rental_end               DateTime
+  actual_pickup_date       DateTime?
+  actual_return_date       DateTime?
+  total_days               Int?
+  subtotal                 Decimal?  @db.Decimal(10, 2)
+  discount_total           Decimal?  @db.Decimal(10, 2)
+  overdue_fee              Decimal?  @db.Decimal(10, 2)
+  tax_rate                 Decimal   @default(0.05) @db.Decimal(4, 2)
+  tax_amount               Decimal?  @db.Decimal(10, 2)
+  total_amount             Decimal?  @db.Decimal(10, 2)
+  deposit_amount           Decimal?  @db.Decimal(10, 2)
+  deposit_status           String    @default("pending") // pending / received / returned / deducted
+  deposit_received_by      String?
+  delivery_required        Boolean   @default(false)
+  delivery_address         String?
+  delivery_contact         String?
+  delivery_contact_phone   String?
+  delivery_notes           String?
+  use_purpose              String?
+  use_risk_category        String?   // standard / outdoor_run / car_mount / water_activity / aerial / pyro_fx / extreme_weather / other_high_risk
+  risk_acknowledged        Boolean?
+  risk_surcharge           Decimal?  @db.Decimal(10, 2)
+  risk_doc_url             String?
+  contract_url             String?
+  contract_signed          Boolean   @default(false)
+  invoice_required         Boolean   @default(false)
+  tax_id_number            String?
+  invoice_title            String?
+  invoice_number           String?
+  invoice_status           String    @default("not_required") // not_required / pending / issued / voided
+  invoice_url              String?
+  rental_detail_pdf_url    String?
+  prepared_by              String
+  handled_by               String
+  approved_by              String?
+  status                   String    @default("draft") // draft / reserved / active / returned / overdue / cancelled
+  cancellation_date        DateTime?
+  cancellation_reason      String?
+  cancellation_fee         Decimal?  @db.Decimal(10, 2)
+  cancellation_refund_amount Decimal? @db.Decimal(10, 2)
+  cancellation_approved_by String?
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
+  paid_amount              Decimal?  @db.Decimal(10, 2)
+  notes                    String?
+  is_deleted               Boolean   @default(false)
+
+  // Relations
+  customer       Customer        @relation(fields: [customer_id], references: [customer_id])
+  rental_items   RentalItem[]
+  payments       Payment[]
+  service_items  ServiceItem[]
+  addendums      RentalAddendum[]
+  damage_records DamageRecord[]
+  credit_notes   CreditNote[]
+  inventory_logs InventoryLog[]
+  venue_bookings VenueBooking[]
+
+  @@map("rentals")
+}
+
+// ==================== 9. 租借明細 Rental_Items ====================
+model RentalItem {
+  item_id                  String    @id
+  rental_id                String
+  type_id                  String
+  unit_id                  String?
+  quantity                 Int       @default(1)
+  daily_rate_snapshot      Decimal   @db.Decimal(10, 2)
+  replacement_value_snapshot Decimal @db.Decimal(10, 2)
+  days                     Int
+  line_total               Decimal   @db.Decimal(10, 2)
+  discount_rule_id         String?
+  discount_amount          Decimal?  @db.Decimal(10, 2)
+  line_total_after_discount Decimal  @db.Decimal(10, 2)
+  condition_out            String?
+  condition_out_photo_url  String?
+  condition_in             String?
+  condition_in_photo_url   String?
+  checked_out_by           String?
+  checked_in_by            String?
+  return_status            String    @default("with_customer") // with_customer / returned / partial_returned / lost
+  returned_quantity        Int?
+  return_date              DateTime?
+  notes                    String?
+  is_deleted               Boolean   @default(false)
+
+  // Relations
+  rental         Rental         @relation(fields: [rental_id], references: [rental_id])
+  equipment_type EquipmentType  @relation(fields: [type_id], references: [type_id])
+  equipment_unit EquipmentUnit? @relation(fields: [unit_id], references: [unit_id])
+
+  @@map("rental_items")
+}
+
+// ==================== 10. 服務項目 Service_Items ====================
+model ServiceItem {
+  service_item_id String    @id
+  rental_id       String?
+  booking_id      String?
+  service_type    String    // teaching / delivery / setup / pickup / insurance / venue_setup / venue_cleanup / catering / other
+  description     String
+  quantity        Int
+  unit            String    // 小時 / 趟 / 組
+  unit_price      Decimal   @db.Decimal(10, 2)
+  line_total      Decimal   @db.Decimal(10, 2)
+  performed_by    String?
+  service_date    DateTime?
+  service_address String?
+  notes           String?
+  is_deleted      Boolean   @default(false)
+
+  // Relations
+  rental        Rental?       @relation(fields: [rental_id], references: [rental_id])
+  venue_booking VenueBooking? @relation(fields: [booking_id], references: [booking_id])
+
+  @@map("service_items")
+}
+
+// ==================== 11. 附約 Rental_Addendums ====================
+model RentalAddendum {
+  addendum_id          String    @id // RENT-2026-001-A1
+  rental_id            String
+  addendum_type        String    // extension / add_item / remove_item / date_change / other
+  description          String
+  original_end_date    DateTime?
+  new_end_date         DateTime?
+  additional_amount    Decimal?  @db.Decimal(10, 2)
+  addendum_contract_url String?
+  signed               Boolean   @default(false)
+  created_by           String
+  approved_by          String?
+  created_at           DateTime  @default(now())
+  amount_change        Decimal?  @db.Decimal(10, 2)
+  is_deleted           Boolean   @default(false)
+
+  // Relations
+  rental Rental @relation(fields: [rental_id], references: [rental_id])
+
+  @@map("rental_addendums")
+}
+
+// ==================== 12. 折扣規則 Discount_Rules ====================
+model DiscountRule {
+  rule_id              String   @id
+  rule_name            String
+  applies_to           String   // equipment / category / all
+  target_id            String?
+  min_days             Int
+  max_days             Int?
+  discount_type        String   // percentage / fixed_per_day
+  discount_value       Decimal  @db.Decimal(10, 2)
+  requires_approval    Boolean  @default(false)
+  active               Boolean  @default(true)
+  created_at           DateTime @default(now())
+  min_amount           Decimal? @db.Decimal(10, 2)
+  applicable_types     String?
+  applicable_categories String?
+  is_deleted           Boolean  @default(false)
+
+  @@map("discount_rules")
+}
+
+// ==================== 13. 逾期規則 Overdue_Rules ====================
+model OverdueRule {
+  overdue_rule_id     String   @id
+  applies_to          String   // category / all
+  target_category     String?
+  multiplier          Decimal  @db.Decimal(4, 2)
+  grace_period_hours  Int?
+  max_penalty_rate    Decimal? @db.Decimal(4, 2)
+  forced_purchase_days Int?
+  forced_purchase_note String?
+  active              Boolean  @default(true)
+  rule_name           String?
+  grace_period_days   Int?
+  daily_penalty_rate  Decimal? @db.Decimal(4, 2)
+  max_penalty_percent Decimal? @db.Decimal(4, 2)
+  is_deleted          Boolean  @default(false)
+
+  @@map("overdue_rules")
+}
+
+// ==================== 14. 損壞賠償 Damage_Records ====================
+model DamageRecord {
+  damage_id            String    @id
+  rental_id            String
+  unit_id              String
+  damage_description   String?
+  damage_severity      String?   // minor / moderate / severe / total_loss
+  within_tolerance     Boolean?
+  repair_cost          Decimal?  @db.Decimal(10, 2)
+  compensation_amount  Decimal?  @db.Decimal(10, 2)
+  photo_url            String?
+  assessed_by          String?
+  status               String    @default("pending") // pending / customer_notified / resolved / disputed
+  resolution_notes     String?
+  damage_report_pdf_url String?
+  created_at           DateTime  @default(now())
+  damage_type          String?
+  description          String?
+  severity             String?
+  replacement_cost     Decimal?  @db.Decimal(10, 2)
+  reported_by          String?
+  reported_at          DateTime?
+  notes                String?
+  is_deleted           Boolean   @default(false)
+
+  // Relations
+  rental         Rental        @relation(fields: [rental_id], references: [rental_id])
+  equipment_unit EquipmentUnit @relation(fields: [unit_id], references: [unit_id])
+
+  @@map("damage_records")
+}
+
+// ==================== 15. 損耗容忍度 Wear_Tolerance ====================
+model WearTolerance {
+  tolerance_id         String  @id
+  category             String
+  acceptable_wear      String
+  unacceptable_wear    String
+  assessment_checklist String?
+  notes                String?
+  condition_field      String?
+  acceptable_threshold String?
+  is_deleted           Boolean @default(false)
+
+  @@map("wear_tolerance")
+}
+
+// ==================== 16. 折讓/退款單 Credit_Notes ====================
+model CreditNote {
+  credit_note_id   String    @id // CN-2026-001
+  rental_id        String?
+  booking_id       String?
+  credit_type      String    // equipment_malfunction / early_return / service_issue / venue_issue / goodwill / deposit_deduction / overcharge / other
+  related_item_id  String?
+  related_damage_id String?
+  original_amount  Decimal   @db.Decimal(10, 2)
+  credit_amount    Decimal   @db.Decimal(10, 2)
+  reason           String
+  evidence_url     String?
+  requested_by     String
+  approved_by      String?
+  approval_status  String    @default("pending") // pending / approved / rejected
+  rejection_reason String?
+  refund_method    String?   // cash / transfer / deposit_offset / next_rental_credit
+  refund_status    String    @default("pending") // pending / completed / offset
+  created_at       DateTime  @default(now())
+  customer_id      String?
+  amount           Decimal?  @db.Decimal(10, 2)
+  is_deleted       Boolean   @default(false)
+
+  // Relations
+  rental        Rental?       @relation(fields: [rental_id], references: [rental_id])
+  venue_booking VenueBooking? @relation(fields: [booking_id], references: [booking_id])
+  customer      Customer?     @relation(fields: [customer_id], references: [customer_id])
+  payments      Payment[]
+
+  @@map("credit_notes")
+}
+
+// ==================== 17. 付款紀錄 Payments ====================
+model Payment {
+  payment_id        String    @id
+  rental_id         String?
+  booking_id        String?
+  payment_type      String    // deposit / rental_fee / venue_fee / overdue_fee / damage_fee / deposit_refund / refund / credit_note / overtime_fee
+  amount            Decimal   @db.Decimal(10, 2)
+  credit_note_id    String?
+  payment_method    String    // cash / transfer / credit_card / line_pay / other
+  payer_account_last5 String?
+  receive_channel   String    // company_direct / staff_relay
+  received_by       String
+  relay_status      String?   // pending / transferred / na
+  relay_date        DateTime?
+  relay_proof_url   String?
+  payment_date      DateTime
+  receipt_url       String?
+  receipt_pdf_url   String?
+  notes             String?
+  is_deleted        Boolean   @default(false)
+
+  // Relations
+  rental        Rental?       @relation(fields: [rental_id], references: [rental_id])
+  venue_booking VenueBooking? @relation(fields: [booking_id], references: [booking_id])
+  credit_note   CreditNote?   @relation(fields: [credit_note_id], references: [credit_note_id])
+
+  @@map("payments")
+}
+
+// ==================== 18. 出入庫紀錄 Inventory_Logs ====================
+model InventoryLog {
+  log_id                      String    @id
+  unit_id                     String
+  rental_id                   String?
+  log_type                    String    // check_out / check_in / new_stock / transfer / maintenance_out / maintenance_in
+  log_date                    DateTime
+  performed_by                String
+  from_location_id            String?
+  to_location_id              String?
+  condition_before            String    // excellent / good / fair / poor / damaged
+  condition_after             String?
+  checklist_completed         Boolean   @default(false)
+  checklist_details           String?
+  accessories_complete        Boolean?
+  missing_accessories         String?
+  needs_maintenance           Boolean   @default(false)
+  needs_cleaning              Boolean   @default(false)
+  damage_found                Boolean   @default(false)
+  damage_id                   String?
+  photo_urls                  String?
+  inspection_certificate_url  String?
+  inspection_deadline         DateTime?
+  inspection_completed_at     DateTime?
+  inspection_overdue          Boolean   @default(false)
+  checklist_pdf_url           String?
+  notes                       String?
+  change_type                 String?
+  quantity_change             Int?
+  from_location               String?
+  to_location                 String?
+  reason                      String?
+  created_at                  DateTime  @default(now())
+  is_deleted                  Boolean   @default(false)
+
+  // Relations
+  equipment_unit  EquipmentUnit    @relation(fields: [unit_id], references: [unit_id])
+  rental          Rental?          @relation(fields: [rental_id], references: [rental_id])
+  from_storage    StorageLocation? @relation("FromLocation", fields: [from_location_id], references: [location_id])
+  to_storage      StorageLocation? @relation("ToLocation", fields: [to_location_id], references: [location_id])
+
+  @@map("inventory_logs")
+}
+
+// ==================== 19. 列印範本 Print_Templates ====================
+model PrintTemplate {
+  template_id            String   @id // TPL-001
+  template_name          String
+  template_type          String   // rental_detail / checklist / receipt / damage_report
+  google_doc_template_id String?
+  output_folder_id       String?
+  paper_size             String   @default("A4") // A4 / letter / A5
+  orientation            String   @default("portrait") // portrait / landscape
+  include_company_header Boolean  @default(true)
+  include_signature_line Boolean  @default(true)
+  include_photos         Boolean  @default(false)
+  version                String   @default("1.0")
+  active                 Boolean  @default(true)
+  notes                  String?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+  doc_template_id        String?
+  is_deleted             Boolean  @default(false)
+
+  @@map("print_templates")
+}
+
+// ==================== 20. 盤點計畫 Stocktake_Plans ====================
+model StocktakePlan {
+  plan_id           String    @id // SP-2026-001
+  plan_name         String
+  stocktake_type    String    // full / cycle / spot_check
+  scope_type        String    // all / category / location
+  scope_categories  String?
+  scope_location_id String?
+  scheduled_date    DateTime
+  deadline          DateTime
+  assigned_to       String
+  supervised_by     String?
+  status            String    @default("scheduled") // scheduled / in_progress / completed / cancelled
+  total_expected    Int?
+  total_counted     Int?
+  total_matched     Int?
+  total_discrepancy Int?
+  completion_rate   Decimal?  @db.Decimal(5, 2)
+  summary_notes     String?
+  report_pdf_url    String?
+  created_by        String
+  created_at        DateTime  @default(now())
+  completed_at      DateTime?
+  plan_type         String?
+  is_deleted        Boolean   @default(false)
+
+  // Relations
+  scope_location    StorageLocation?  @relation(fields: [scope_location_id], references: [location_id])
+  stocktake_results StocktakeResult[]
+
+  @@map("stocktake_plans")
+}
+
+// ==================== 21. 盤點結果明細 Stocktake_Results ====================
+model StocktakeResult {
+  result_id            String    @id
+  plan_id              String
+  unit_id              String
+  expected_location_id String?
+  actual_location_id   String?
+  location_match       Boolean
+  expected_status      String
+  actual_status        String
+  status_match         Boolean
+  expected_condition   String
+  actual_condition     String
+  condition_match      Boolean
+  expected_quantity    Int?
+  actual_quantity      Int?
+  quantity_match       Boolean?
+  result               String    // matched / location_wrong / status_wrong / condition_wrong / quantity_wrong / missing / extra / multiple_issues
+  photo_url            String?
+  resolution_action    String?
+  resolution_notes     String?
+  resolved_by          String?
+  resolved_at          DateTime?
+  counted_by           String
+  counted_at           DateTime
+  expected_location    String?
+  actual_location      String?
+  physical_count       Int?
+  system_count         Int?
+  condition_found      String?
+  discrepancy_type     String?
+  resolution           String?
+  recorded_at          DateTime?
+  is_deleted           Boolean   @default(false)
+
+  // Relations
+  stocktake_plan    StocktakePlan    @relation(fields: [plan_id], references: [plan_id])
+  equipment_unit    EquipmentUnit    @relation(fields: [unit_id], references: [unit_id])
+  expected_loc      StorageLocation? @relation("ExpectedLocation", fields: [expected_location_id], references: [location_id])
+  actual_loc        StorageLocation? @relation("ActualLocation", fields: [actual_location_id], references: [location_id])
+
+  @@map("stocktake_results")
+}
+
+// ==================== 22. 場地 Venues ====================
+model Venue {
+  venue_id             String   @id // VN-001
+  name                 String
+  venue_type           String   // studio / meeting_room / event_space / outdoor / warehouse / other
+  address              String
+  floor                String?
+  floor_area_sqm       Decimal? @db.Decimal(8, 2)
+  max_capacity         Int
+  hourly_rate          Decimal  @db.Decimal(10, 2)
+  half_day_rate        Decimal? @db.Decimal(10, 2)
+  daily_rate           Decimal? @db.Decimal(10, 2)
+  overtime_hourly_rate Decimal? @db.Decimal(10, 2)
+  deposit_required     Decimal? @db.Decimal(10, 2)
+  min_booking_hours    Int      @default(2)
+  available_start_time String   @default("09:00")
+  available_end_time   String   @default("22:00")
+  amenities            String?
+  power_specs          String?
+  ceiling_height_m     Decimal? @db.Decimal(4, 2)
+  has_cyclorama        Boolean? @default(false)
+  cyclorama_color      String?
+  has_blackout         Boolean? @default(false)
+  has_loading_dock     Boolean? @default(false)
+  parking_info         String?
+  rules                String?
+  description          String?
+  image_urls           String?
+  floor_plan_url       String?
+  location_id          String?
+  active               Boolean  @default(true)
+  notes                String?
+  created_by           String
+  created_at           DateTime @default(now())
+  is_deleted           Boolean  @default(false)
+
+  // Relations
+  storage_location StorageLocation? @relation(fields: [location_id], references: [location_id])
+  venue_bookings   VenueBooking[]
+
+  @@map("venues")
+}
+
+// ==================== 23. 場地預約 Venue_Bookings ====================
+model VenueBooking {
+  booking_id           String    @id // VB-2026-001
+  venue_id             String
+  customer_id          String
+  rental_id            String?
+  booking_start        DateTime
+  booking_end          DateTime
+  actual_start         DateTime?
+  actual_end           DateTime?
+  total_hours          Decimal?  @db.Decimal(6, 2)
+  overtime_hours       Decimal?  @db.Decimal(6, 2)
+  rate_type            String    // hourly / half_day / daily / custom
+  unit_rate            Decimal   @db.Decimal(10, 2)
+  rate_quantity        Decimal   @db.Decimal(6, 2)
+  subtotal             Decimal?  @db.Decimal(10, 2)
+  overtime_fee         Decimal?  @db.Decimal(10, 2)
+  discount_amount      Decimal?  @db.Decimal(10, 2)
+  tax_rate             Decimal   @default(0.05) @db.Decimal(4, 2)
+  tax_amount           Decimal?  @db.Decimal(10, 2)
+  total_amount         Decimal?  @db.Decimal(10, 2)
+  deposit_amount       Decimal?  @db.Decimal(10, 2)
+  deposit_status       String    @default("pending")
+  attendee_count       Int?
+  use_purpose          String?
+  setup_required       Boolean   @default(false)
+  setup_notes          String?
+  cleanup_included     Boolean   @default(false)
+  special_requirements String?
+  contract_url         String?
+  contract_signed      Boolean   @default(false)
+  invoice_required     Boolean   @default(false)
+  invoice_status       String    @default("not_required")
+  invoice_number       String?
+  prepared_by          String?
+  handled_by           String?
+  approved_by          String?
+  status               String    @default("draft") // draft / confirmed / active / completed / cancelled
+  cancellation_date    DateTime?
+  cancellation_reason  String?
+  cancellation_fee     Decimal?  @db.Decimal(10, 2)
+  post_use_condition   String?
+  damage_description   String?
+  damage_fee           Decimal?  @db.Decimal(10, 2)
+  notes                String?
+  paid_amount          Decimal?  @db.Decimal(10, 2)
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  is_deleted           Boolean   @default(false)
+
+  // Relations
+  venue         Venue         @relation(fields: [venue_id], references: [venue_id])
+  customer      Customer      @relation(fields: [customer_id], references: [customer_id])
+  rental        Rental?       @relation(fields: [rental_id], references: [rental_id])
+  payments      Payment[]
+  service_items ServiceItem[]
+  credit_notes  CreditNote[]
+
+  @@map("venue_bookings")
+}
+
+// ==================== 24. 活動日誌 Activity_Logs ====================
+model ActivityLog {
+  log_id      String   @id @default(cuid())
+  staff_id    String?
+  staff_name  String?
+  action      String
+  target_type String?
+  target_id   String?
+  description String?
+  ip_info     String?
+  created_at  DateTime @default(now())
+
+  @@map("activity_logs")
+}
+
+// ==================== 25. 錯誤日誌 Error_Logs ====================
+model ErrorLog {
+  error_id      String   @id @default(cuid())
+  timestamp     DateTime @default(now())
+  function_name String?
+  error_message String?
+  stack_trace   String?
+  user_email    String?
+  severity      String?
+  context       String?
+
+  @@map("error_logs")
+}
