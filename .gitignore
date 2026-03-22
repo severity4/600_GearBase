@@ -8,9 +8,18 @@ node_modules/
 # Clasp credentials (DO NOT commit)
 .clasprc.json
 
-# IDE
-.vscode/
+# IDE (keep .vscode/settings.json and extensions.json for team consistency)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
+
+# Environment
+.env
+
+# Built frontend (generated from src/ by build.js)
+public/staff.html
+public/customer.html
 
 # Temp
 *.tmp

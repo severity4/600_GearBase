@@ -1,18 +1,31 @@
 {
   "name": "600-gearbase",
-  "version": "1.1.0",
-  "description": "映奧創意工作室 - 器材管理與租賃系統 (Google Apps Script Web App)",
+  "version": "2.0.0",
+  "description": "映奧創意工作室 - 器材管理與租賃系統 (Node.js + PostgreSQL)",
   "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "push": "clasp push",
-    "push:watch": "clasp push --watch",
-    "pull": "clasp pull",
-    "deploy": "clasp push --force && clasp deploy -d \"Manual deploy $(date +%Y-%m-%d_%H:%M)\"",
-    "open": "clasp open",
-    "open:web": "clasp open --webapp",
-    "logs": "clasp logs",
-    "status": "clasp status",
-    "versions": "clasp versions"
+    "start": "node server/index.js",
+    "build": "node build.js",
+    "migrate": "node server/migrate.js",
+    "dev": "node build.js && npx nodemon server/index.js",
+    "dev:server": "npx nodemon server/index.js",
+    "dev:build": "node build.js --watch",
+    "db:local": "docker compose up -d",
+    "db:local:stop": "docker compose down",
+    "gas:push": "clasp push",
+    "gas:pull": "clasp pull",
+    "gas:deploy": "clasp push --force && clasp deploy -d \"Manual deploy $(date +%Y-%m-%d_%H:%M)\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.14",
+    "pg": "^8.13.0"
   },
   "devDependencies": {
     "@google/clasp": "^2.4.2",
